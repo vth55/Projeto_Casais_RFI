@@ -1,0 +1,29 @@
+{
+  "name": "CASAIS Fleet Intelligence",
+  "short_name": "CASAIS Fleet",
+  "description": "Sistema de Gestão Inteligente de Frotas para Grupo Casais",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#005EB8",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "pt-PT",
+  "dir": "ltr",
+  "prefer_related_applications": false
+}
+

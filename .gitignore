@@ -1,0 +1,157 @@
+# ============================================
+# CASAIS FLEET INTELLIGENCE - .gitignore
+# ============================================
+
+# ============================================
+# NODE.JS
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.eslintcache
+
+# ============================================
+# FIREBASE
+# ============================================
+.firebase/
+.firebaserc
+firebase-debug.log*
+firebase-debug.*.log*
+.firebase/
+.firebaserc
+firebase.json.backup
+
+# ============================================
+# BUILD / DIST
+# ============================================
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+
+# ============================================
+# AMBIENTE / VARIÁVEIS
+# ============================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ============================================
+# IDEs / EDITORES
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# LOGS
+# ============================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ============================================
+# TESTES
+# ============================================
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# ============================================
+# TEMPORÁRIOS / BACKUP
+# ============================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+.cache/
+
+# ============================================
+# PYTHON (Bridge)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# ============================================
+# ARDUINO / HARDWARE
+# ============================================
+*.hex
+*.elf
+*.bin
+*.eep
+*.lss
+*.map
+*.sym
+
+# ============================================
+# SISTEMA OPERATIVO
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# FICHEIROS TEMPORÁRIOS DO PROJETO
+# ============================================
+# NOTA: Estes ficheiros são temporários e serão apagados antes da entrega
+# Mas NÃO devem estar no git para não poluir o repositório
+APAGAR_ANTES_ENTREGAR_DevLog.md
+INICIAR_NOVA_SESSAO.txt
+NOTAS_RAPIDAS.txt
+FLUXO_SISTEMA.txt
+ROADMAP_6_MESES.md
+INDEX_FICHEIROS.txt
+CHECKLIST_PRE_ENTREGA.txt
+RESUMO_SESSAO_07_DEZ_2025.md
+IDEIAS_COMPLEMENTARES.md
+PLANO_IMPLEMENTACAO_IDEIAS.md
+ALTERNATIVAS_NOMENCLATURA.md
+DEBATE_HISTORICO_HORAS.md
+LISTA_FICHEIROS_TEMPORARIOS.txt
+PROXIMOS_PASSOS.md
+
+# ============================================
+# SEGREDOS / CREDENCIAIS
+# ============================================
+# NUNCA commitar:
+# - Firebase service account keys (.json)
+# - API keys hardcoded
+# - Passwords
+# - Tokens de acesso
+serviceAccountKey.json
+firebase-adminsdk-*.json
+*.pem
+*.key
+secrets/
+
