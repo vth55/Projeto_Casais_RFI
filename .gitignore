@@ -155,3 +155,6 @@ firebase-adminsdk-*.json
 *.key
 secrets/
 
+
+# Memória do AI (opcional - pode commitar se quiser)
+# memoria/

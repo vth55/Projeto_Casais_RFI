@@ -350,5 +350,5 @@ Ano: 2024-2025
 
 ---
 
-**Última atualização:** Dezembro 2024
+**Última atualização:** Dezembro 2025
 
