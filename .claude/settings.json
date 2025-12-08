@@ -8,11 +8,8 @@
       "Glob(*)",
       "Grep(*)",
       "WebFetch(*)",
-      "mcp__gemini-api__*"
+      "Task(*)"
     ],
     "deny": []
-  },
-  "env": {
-    "GEMINI_API_KEY": "${GEMINI_API_KEY}"
   }
 }

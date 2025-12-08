@@ -1,164 +1,111 @@
-# Definição de Papéis dos AI Agents
+# Sistema de Agentes - Claude Code
 
-Este documento define os papéis e responsabilidades de cada AI Agent no projeto CASAIS FLEET INTELLIGENCE.
+## Modelos Disponíveis
 
----
+| Modelo | Uso | Comando |
+|--------|-----|---------|
+| **Sonnet 4.5** | Tarefas complexas, implementação | `sonnet` ou `--model sonnet` |
+| **Haiku 4** | Tarefas simples, pesquisas | `haiku` ou `--model haiku` |
 
-## Agent 1: Consultor (Claude Sonnet / Gemini Pro)
+## Agentes Configurados (/agents)
 
-**Modelo Recomendado:** Gemini Pro 2.0 Thinking (contexto 1M tokens, grátis)
+### 1. haiku-rapido (Económico)
+**Modelo:** Haiku 4
+**Acesso:** READ-ONLY (Glob, Grep, Read)
 
-### Responsabilidades
-- **Discussões de Arquitetura:** Analisar decisões técnicas, propor alternativas
-- **Planeamento de Features:** Quebrar features grandes em tarefas menores
-- **Code Reviews:** Analisar código existente, sugerir melhorias
-- **Análise de Decisões Técnicas:** Avaliar trade-offs (performance vs. simplicidade, etc.)
-- **Brainstorming de Soluções:** Gerar ideias, explorar possibilidades
-- **Documentação:** Escrever/atualizar documentação técnica
+**Usar para:**
+- Pesquisas no código
+- Análises rápidas
+- Perguntas simples
+- Verificações
 
-### Restrições
-- **READ-ONLY no código:** Não edita ficheiros, apenas analisa
-- **Não implementa:** Apenas aconselha, não escreve código
-- **Pode analisar ficheiros grandes:** Contexto grande permite análise completa
-
-### Quando Usar
-- "Analisa esta decisão técnica..."
-- "Como devemos implementar X?"
-- "Review este código..."
-- "Planeia a feature Y..."
-- "Documenta esta funcionalidade..."
-
-### Exemplo de Prompt
-```
-Analisa a arquitetura atual do sistema de sessões. 
-Sugere melhorias para escalabilidade quando tivermos 100+ máquinas.
-Considera: performance, custos Firebase, complexidade.
-```
+**Exemplo:** "Usa o haiku-rapido para encontrar onde está definido o componente X"
 
 ---
 
-## Agent 2: Implementador (Claude Sonnet 4.5)
+### 2. sonnet-dev (Completo)
+**Modelo:** Sonnet 4.5
+**Acesso:** FULL (Read, Write, Edit, Bash)
 
-**Modelo Recomendado:** Claude Sonnet 4.5 (tokens pagos - usar sabiamente)
+**Usar para:**
+- Implementar features
+- Editar código
+- Criar ficheiros
+- Refatorar
 
-### Responsabilidades
-- **Implementação de Código:** Escrever código novo, modificar existente
-- **Criação/Edição de Ficheiros:** Criar componentes, views, utils
-- **Instalação de Dependências:** Adicionar packages ao package.json
-- **Refactoring:** Melhorar código existente sem mudar funcionalidade
-- **Correção de Bugs:** Identificar e corrigir erros
-- **Integração:** Conectar componentes, fazer tudo funcionar junto
-
-### Restrições
-- **Código limpo, "humano":** Não perfeito demais, estilo de estudante
-- **Comentários mínimos:** Só quando necessário, não código óbvio
-- **Segue decisões do Consultor:** Implementa o que foi decidido
-- **Nomes simples:** `authToken` não `userAuthenticationToken`
-
-### Quando Usar
-- "Implementa a feature X..."
-- "Corrige este bug..."
-- "Cria o componente Y..."
-- "Refatora este código..."
-- "Adiciona a dependência Z..."
-
-### Exemplo de Prompt
-```
-Implementa o sistema de tarifários versionados.
-Cria a view FinanceiroView.jsx com formulário de tarifário.
-Adiciona campo costPerHour nas máquinas.
-Calcula custos por sessão automaticamente.
-```
+**Exemplo:** "Usa o sonnet-dev para implementar o sistema de tarifários"
 
 ---
 
-## Agent 3: Testador (Gemini Flash / Claude - Opcional)
+## Quando Usar Cada Modelo
 
-**Modelo Recomendado:** Gemini Flash 2.0 (rápido, grátis)
+### Haiku 4 (Barato) ✅
+- Pesquisas no código
+- Perguntas de contexto
+- Análises simples
+- Formatação de texto
+- Verificar se ficheiro existe
 
-### Responsabilidades
-- **Escrever Testes:** Testes unitários, integração, E2E
-- **Validar Funcionalidades:** Verificar se features funcionam corretamente
-- **Encontrar Edge Cases:** Identificar cenários não testados
-- **Testes de Regressão:** Verificar se mudanças quebraram algo
-- **Testes de Performance:** Verificar se código é rápido o suficiente
-
-### Restrições
-- **Foco em testes:** Não implementa features, só testa
-- **Rápido e eficiente:** Usar modelo rápido (Flash) para testes simples
-
-### Quando Usar
-- "Escreve testes para X..."
-- "Valida se Y funciona..."
-- "Encontra edge cases em Z..."
-- "Testa regressão após mudança..."
-
-### Exemplo de Prompt
-```
-Escreve testes para o sistema de sessões.
-Testa: cartão válido, cartão inválido, sessão duplicada, timeout.
-```
+### Sonnet 4.5 (Principal) ⚡
+- Implementação de código
+- Refatoração complexa
+- Debugging
+- Criação de componentes
+- Lógica de negócio
 
 ---
 
 ## Fluxo de Trabalho Recomendado
 
-### 1. Planeamento (Agent Consultor)
 ```
-Consultor: Analisa requisito → Sugere arquitetura → Define tarefas
-```
+1. PLANEAR (Sonnet ou conversa normal)
+   - Discutir o que fazer
+   - Definir tarefas
 
-### 2. Implementação (Agent Implementador)
-```
-Implementador: Implementa tarefa 1 → Implementa tarefa 2 → ...
-```
+2. PESQUISAR (Haiku - economiza tokens)
+   - Encontrar ficheiros relevantes
+   - Verificar código existente
 
-### 3. Validação (Agent Testador - Opcional)
-```
-Testador: Escreve testes → Valida funcionalidade → Reporta problemas
-```
+3. IMPLEMENTAR (Sonnet)
+   - Criar/editar código
+   - Testar
 
-### 4. Refinamento (Agent Consultor + Implementador)
-```
-Consultor: Review código → Sugere melhorias
-Implementador: Aplica melhorias
+4. VALIDAR (Haiku ou manual)
+   - Verificar se funciona
+   - Code review rápido
 ```
 
 ---
 
-## Regras Gerais para Todos os Agents
+## Como Forçar Modelo
 
-1. **Sempre ler CLAUDE.md primeiro** - Contexto completo do projeto
-2. **Seguir estilo de código "humano"** - Não perfeito demais
-3. **Documentar decisões importantes** - Atualizar CLAUDE.md se necessário
-4. **Comunicar problemas** - Se algo não faz sentido, perguntar
-5. **Respeitar arquitetura existente** - Não refatorar tudo sem necessidade
+**Terminal:**
+```bash
+sonnet          # Abre com Sonnet
+haiku           # Abre com Haiku
+```
 
----
+**Dentro do Claude Code:**
+```
+/model sonnet   # Muda para Sonnet
+/model haiku    # Muda para Haiku
+```
 
-## Exemplo de Sessão Completa
-
-**Utilizador:** "Preciso de sistema de notificações push"
-
-**Agent Consultor:**
-- Analisa requisito
-- Sugere: Service Worker + Firebase Cloud Messaging
-- Define tarefas: 1) Criar Service Worker, 2) Configurar FCM, 3) Implementar UI
-
-**Agent Implementador:**
-- Cria `public/sw.js` (Service Worker)
-- Adiciona FCM ao `firebase.js`
-- Cria `utils/notifications.js`
-- Integra no `App.jsx`
-
-**Agent Testador (opcional):**
-- Testa se notificações aparecem
-- Testa se funcionam offline
-- Valida edge cases
-
-**Resultado:** Sistema de notificações funcional e testado
+**Agentes:**
+```
+/agents         # Ver agentes disponíveis
+```
 
 ---
 
-**Última atualização:** 2025-01-XX
+## Economizar Tokens
 
+1. **Não debater muito** - Ir direto ao ponto
+2. **Usar Haiku para pesquisas** - É mais barato
+3. **Sonnet só para implementar** - Quando precisa de editar
+4. **Resumos curtos** - Não pedir explicações longas
+5. **Uma tarefa de cada vez** - Evitar listas gigantes
+
+---
+
+**Última atualização:** 08 Dezembro 2025
