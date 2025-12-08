@@ -1,326 +1,158 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, onSnapshot, orderBy, where } from 'firebase/firestore';
-import { db, projectId } from '../config/firebase';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { ClipboardList, Activity, Calendar, AlertTriangle, Clock, User, Truck } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Clock, Play, Search, Download, Truck, User, Timer, Activity, CheckCircle, Calendar } from 'lucide-react';
+import useStore from '../store/useStore';
+import { Card, StatCard, Button, Badge, StatusBadge, Table, EmptyState, Skeleton } from '../components/ui';
 
-const SessoesView = ({ activeView }) => {
-  const getInitialTab = () => {
-    if (activeView === 'sessoes-ativas') return 'ativas';
-    if (activeView === 'sessoes-validacoes') return 'validacoes';
-    return 'historico';
-  };
-  const [activeTab, setActiveTab] = useState(getInitialTab());
-  
-  useEffect(() => {
-    const tab = getInitialTab();
-    setActiveTab(tab);
-  }, [activeView]);
-  const [sessions, setSessions] = useState([]);
-  const [machines, setMachines] = useState([]);
-  const [operators, setOperators] = useState([]);
-  const [loading, setLoading] = useState(true);
+const TabNav = ({ tabs, activeTab, onChange }) => (
+  <div className="flex border-b border-slate-200">
+    {tabs.map(tab => (
+      <button key={tab.id} onClick={() => onChange(tab.id)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+        {tab.label}
+        {tab.count !== undefined && <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600'}`}>{tab.count}</span>}
+      </button>
+    ))}
+  </div>
+);
 
-  useEffect(() => {
-    if (!db) {
-      console.error('Firestore não inicializado');
-      setLoading(false);
-      return;
-    }
+const ActiveSessionCard = ({ session, machine, operator }) => {
+  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+  const now = new Date();
+  const durationMs = now - startTime;
+  const hours = Math.floor(durationMs / (1000 * 60 * 60));
+  const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  const isLong = hours >= 5;
 
-    const basePath = `artifacts/${projectId}/public/data`;
+  return (
+    <Card className={`border-l-4 ${isLong ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isLong ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+            <Play className={`w-6 h-6 ${isLong ? 'text-amber-600' : 'text-emerald-600'}`} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-slate-900">{machine?.name || session.machineId}</h3>
+              {isLong && <Badge variant="warning">+5h</Badge>}
+            </div>
+            <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+              <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" />{operator?.name || session.cardId}</span>
+              <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className={`text-2xl font-bold tabular-nums ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}>{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}</div>
+          <p className="text-xs text-slate-500">em curso</p>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
-    const unsubscribeSessions = onSnapshot(
-      query(collection(db, `${basePath}/sessions`), orderBy('startTime', 'desc')),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setSessions(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Erro ao carregar sessões:', error);
-        setLoading(false);
-      }
-    );
+const SessoesView = () => {
+  const { activeView, sessions, machines, operators, getFilteredSessions, loading } = useStore();
+  const [activeTab, setActiveTab] = useState(activeView === 'sessoes-historico' ? 'history' : activeView === 'sessoes-validacoes' ? 'validations' : 'active');
+  const [searchTerm, setSearchTerm] = useState('');
 
-    const unsubscribeMachines = onSnapshot(
-      collection(db, `${basePath}/machines`),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setMachines(data);
-      },
-      (error) => {
-        console.error('Erro ao carregar máquinas:', error);
-      }
-    );
+  const filteredSessions = getFilteredSessions();
+  const activeSessions = useMemo(() => sessions.filter(s => s.status === 'OPEN'), [sessions]);
+  const closedSessions = useMemo(() => filteredSessions.filter(s => s.status === 'CLOSED'), [filteredSessions]);
+  const pendingValidations = useMemo(() => closedSessions.filter(s => s.durationHours >= 5 && s.validationStatus !== 'VALIDATED'), [closedSessions]);
 
-    const unsubscribeOperators = onSnapshot(
-      collection(db, `${basePath}/operators`),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setOperators(data);
-      },
-      (error) => {
-        console.error('Erro ao carregar operadores:', error);
-      }
-    );
-
-    return () => {
-      unsubscribeSessions();
-      unsubscribeMachines();
-      unsubscribeOperators();
+  const stats = useMemo(() => {
+    const totalHours = closedSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+    return {
+      active: activeSessions.length,
+      closed: closedSessions.length,
+      totalHours: Math.round(totalHours),
+      avgDuration: closedSessions.length > 0 ? Math.round((totalHours / closedSessions.length) * 10) / 10 : 0,
+      pendingValidations: pendingValidations.length,
     };
-  }, []);
+  }, [activeSessions, closedSessions, pendingValidations]);
 
-  const filteredSessions = useMemo(() => {
-    switch (activeTab) {
-      case 'ativas':
-        return sessions.filter((s) => s.status === 'OPEN');
-      case 'historico':
-        return sessions.filter((s) => s.status === 'CLOSED');
-      case 'validacoes':
-        // TODO: Implementar quando houver sistema de validação
-        return [];
-      default:
-        return sessions;
+  const getDisplayedSessions = () => {
+    let list = activeTab === 'active' ? activeSessions : activeTab === 'history' ? closedSessions : pendingValidations;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(s => {
+        const machine = machines.find(m => m.id === s.machineId);
+        const operator = operators.find(o => o.id === s.cardId);
+        return machine?.name?.toLowerCase().includes(term) || operator?.name?.toLowerCase().includes(term);
+      });
     }
-  }, [sessions, activeTab]);
-
-  // Calcular duração para sessões ativas
-  const getActiveDuration = (session) => {
-    if (session.status !== 'OPEN' || !session.startTime) return null;
-    const start = session.startTime.toDate
-      ? session.startTime.toDate()
-      : new Date(session.startTime);
-    const now = new Date();
-    const diffHours = (now - start) / (1000 * 60 * 60);
-    return diffHours;
+    return list;
   };
 
-  const formatDuration = (hours) => {
-    if (!hours) return '-';
-    const h = Math.floor(hours);
-    const m = Math.floor((hours - h) * 60);
-    return `${h}h ${m}min`;
-  };
+  const displayedSessions = getDisplayedSessions();
+  const tabs = [{ id: 'active', label: 'Ativas', count: stats.active }, { id: 'history', label: 'Histórico', count: stats.closed }, { id: 'validations', label: 'Validações', count: stats.pendingValidations }];
 
-  const tabs = [
-    {
-      id: 'ativas',
-      label: 'Sessões Ativas',
-      icon: Activity,
-      count: sessions.filter((s) => s.status === 'OPEN').length,
-      description: 'Em curso agora',
-    },
-    {
-      id: 'historico',
-      label: 'Histórico Completo',
-      icon: Calendar,
-      count: sessions.filter((s) => s.status === 'CLOSED').length,
-      description: 'Todas as sessões',
-    },
-    {
-      id: 'validacoes',
-      label: 'Validações Pendentes',
-      icon: AlertTriangle,
-      count: 0, // TODO: Implementar quando houver sistema de validação
-      description: 'Aguardar confirmação',
-    },
-  ];
+  if (loading) return <div className="space-y-6"><Skeleton variant="title" className="w-48" /><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton.Stat key={i} />)}</div><Skeleton.Card lines={10} /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Sessões</h1>
-        <p className="text-slate-600 mt-1">Gestão completa de sessões de operação</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div><h2 className="text-2xl font-bold text-slate-900">Sessões</h2><p className="text-slate-500 mt-1">Histórico de utilização</p></div>
+        <Button variant="outline" icon={Download}>Exportar CSV</Button>
       </div>
 
-      {/* Tabs - Design Profissional */}
-      <Card variant="elevated" className="overflow-hidden">
-        <div className="flex gap-1 border-b border-slate-200 bg-slate-50/50 px-2 pt-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-3 font-medium text-sm transition-all duration-200 rounded-t-lg relative ${
-                  isActive
-                    ? 'bg-white text-primary-600 shadow-sm border-t-2 border-x border-primary-500 -mt-px'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-primary-600' : 'text-slate-500'}`} />
-                <span className="font-semibold">{tab.label}</span>
-                {tab.count > 0 && (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-bold min-w-[24px] text-center ${
-                      isActive
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-slate-200 text-slate-600'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500"></div>
-                )}
-              </button>
-            );
-          })}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard icon={Play} title="Ativas" value={stats.active} color={stats.active > 0 ? 'emerald' : 'slate'} />
+        <StatCard icon={Clock} title="Total" value={stats.closed} color="primary" />
+        <StatCard icon={Timer} title="Horas" value={stats.totalHours} unit="h" color="primary" />
+        <StatCard icon={Activity} title="Média" value={stats.avgDuration} unit="h" color="slate" />
+      </div>
+
+      <Card padding="none">
+        <TabNav tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <div className="p-4 border-b border-slate-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input type="text" placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+          </div>
         </div>
-
-        {/* Conteúdo da Tab */}
-        <div className="mt-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-              <p className="text-slate-600 mt-2">A carregar dados...</p>
-            </div>
-          ) : filteredSessions.length === 0 ? (
-            <div className="text-center py-12">
-              <ClipboardList className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600">
-                {activeTab === 'ativas'
-                  ? 'Nenhuma sessão ativa no momento'
-                  : activeTab === 'validacoes'
-                  ? 'Nenhuma validação pendente'
-                  : 'Nenhuma sessão encontrada'}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                      Máquina
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                      Operador
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                      Início
-                    </th>
-                    {activeTab === 'historico' && (
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                        Fim
-                      </th>
-                    )}
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                      Duração
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSessions.map((session) => {
-                    const operator = operators.find((o) => o.id === session.cardId);
-                    const machine = machines.find((m) => m.id === session.machineId);
-                    const startTime = session.startTime?.toDate
-                      ? session.startTime.toDate()
-                      : new Date(session.startTime);
-                    const endTime = session.endTime?.toDate
-                      ? session.endTime.toDate()
-                      : session.endTime
-                      ? new Date(session.endTime)
-                      : null;
-
-                    const duration =
-                      activeTab === 'ativas'
-                        ? getActiveDuration(session)
-                        : session.durationHours;
-
-                    return (
-                      <tr
-                        key={session.id}
-                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                      >
-                        <td className="py-3 px-4 text-sm text-slate-900">
-                          <div className="flex items-center gap-2">
-                            <Truck className="w-4 h-4 text-slate-400" />
-                            <span className="font-medium">
-                              {machine?.name || session.machineId}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-slate-700">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-slate-400" />
-                            <span>{operator?.name || session.cardId}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-slate-700">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-slate-400" />
-                            <span>
-                              {startTime.toLocaleString('pt-PT', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </div>
-                        </td>
-                        {activeTab === 'historico' && (
-                          <td className="py-3 px-4 text-sm text-slate-700">
-                            {endTime
-                              ? endTime.toLocaleString('pt-PT', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : '-'}
-                          </td>
-                        )}
-                        <td className="py-3 px-4 text-sm text-slate-700">
-                          {duration ? (
-                            <span className="font-medium">
-                              {activeTab === 'ativas'
-                                ? formatDuration(duration)
-                                : `${duration.toFixed(1)}h`}
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              session.status === 'OPEN'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-slate-100 text-slate-800'
-                            }`}
-                          >
-                            {session.status === 'OPEN' ? 'Ativa' : 'Fechada'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div className="p-6">
+          {activeTab === 'active' && (displayedSessions.length === 0 ? <EmptyState icon={Play} title="Sem sessões ativas" /> : <div className="space-y-4">{displayedSessions.map(s => <ActiveSessionCard key={s.id} session={s} machine={machines.find(m => m.id === s.machineId)} operator={operators.find(o => o.id === s.cardId)} />)}</div>)}
+          {activeTab === 'history' && (displayedSessions.length === 0 ? <EmptyState icon={Clock} title="Sem sessões" /> : (
+            <Table>
+              <Table.Head><Table.Row><Table.Header>Equipamento</Table.Header><Table.Header>Operador</Table.Header><Table.Header>Data</Table.Header><Table.Header align="right">Início</Table.Header><Table.Header align="right">Fim</Table.Header><Table.Header align="right">Duração</Table.Header><Table.Header align="center">Estado</Table.Header></Table.Row></Table.Head>
+              <Table.Body>
+                {displayedSessions.slice(0, 20).map(s => {
+                  const machine = machines.find(m => m.id === s.machineId);
+                  const operator = operators.find(o => o.id === s.cardId);
+                  const startTime = s.startTime?.toDate?.() || new Date(s.startTime);
+                  const endTime = s.endTime?.toDate?.() || new Date(s.endTime);
+                  return (
+                    <Table.Row key={s.id}>
+                      <Table.Cell><div className="flex items-center gap-2"><Truck className="w-4 h-4 text-slate-400" /><span className="font-medium">{machine?.name || s.machineId}</span></div></Table.Cell>
+                      <Table.Cell>{operator?.name || s.cardId}</Table.Cell>
+                      <Table.Cell>{startTime.toLocaleDateString('pt-PT')}</Table.Cell>
+                      <Table.Cell align="right">{startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</Table.Cell>
+                      <Table.Cell align="right">{endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</Table.Cell>
+                      <Table.Cell align="right"><span className={`font-medium ${s.durationHours >= 5 ? 'text-amber-600' : ''}`}>{s.durationHours?.toFixed(1)}h</span></Table.Cell>
+                      <Table.Cell align="center"><StatusBadge status={s.validationStatus || s.status} /></Table.Cell>
+                    </Table.Row>
+                  );
+                })}
+              </Table.Body>
+            </Table>
+          ))}
+          {activeTab === 'validations' && (displayedSessions.length === 0 ? <EmptyState icon={CheckCircle} title="Sem validações pendentes" /> : <div className="space-y-3">{displayedSessions.map(s => {
+            const machine = machines.find(m => m.id === s.machineId);
+            const operator = operators.find(o => o.id === s.cardId);
+            const startTime = s.startTime?.toDate?.() || new Date(s.startTime);
+            return (
+              <div key={s.id} className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center"><Timer className="w-5 h-5 text-amber-600" /></div>
+                  <div><p className="font-medium text-slate-900">{machine?.name}</p><p className="text-sm text-slate-500">{operator?.name} • {startTime.toLocaleDateString('pt-PT')}</p></div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right"><p className="text-lg font-bold text-amber-600">{s.durationHours?.toFixed(1)}h</p><Badge variant="warning" size="sm">Validar</Badge></div>
+                  <Button variant="outline" size="sm">Validar</Button>
+                </div>
+              </div>
+            );
+          })}</div>)}
         </div>
       </Card>
     </div>
