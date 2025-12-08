@@ -5,6 +5,7 @@ import { auth, db, projectId } from './config/firebase';
 import { createAllMockData } from './utils/mockData';
 import useStore from './store/useStore';
 import { Layout } from './components/layout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Views
 import DashboardView from './views/DashboardView';
@@ -90,8 +91,10 @@ export default function App() {
   }
 
   return (
-    <Layout>
-      {renderView()}
-    </Layout>
+    <ErrorBoundary>
+      <Layout>
+        {renderView()}
+      </Layout>
+    </ErrorBoundary>
   );
 }

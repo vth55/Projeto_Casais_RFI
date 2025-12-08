@@ -12,6 +12,7 @@ import {
   Wallet,
   CheckCircle,
   LogOut,
+  Activity,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 
@@ -28,7 +29,6 @@ const navigation = [
     submenu: [
       { id: 'maquinas-lista', label: 'Lista de Equipamentos' },
       { id: 'maquinas-categorias', label: 'Categorias' },
-      { id: 'maquinas-localizacoes', label: 'Localizações' },
     ],
   },
   {
@@ -43,7 +43,6 @@ const navigation = [
     submenu: [
       { id: 'sessoes-ativas', label: 'Sessões Ativas' },
       { id: 'sessoes-historico', label: 'Histórico' },
-      { id: 'sessoes-validacoes', label: 'Validações' },
     ],
   },
   {
@@ -52,7 +51,6 @@ const navigation = [
     icon: Wrench,
     submenu: [
       { id: 'manutencao-alertas', label: 'Alertas' },
-      { id: 'manutencao-calendario', label: 'Calendário' },
       { id: 'manutencao-historico', label: 'Histórico' },
     ],
   },
@@ -62,29 +60,18 @@ const navigation = [
     icon: Wallet,
     submenu: [
       { id: 'financeiro-tarifarios', label: 'Tarifários' },
-      { id: 'financeiro-custos', label: 'Análise de Custos' },
-      { id: 'financeiro-rentabilidade', label: 'Rentabilidade' },
+      { id: 'financeiro-custos', label: 'Custos' },
     ],
   },
   {
     id: 'qualidade',
-    label: 'Qualidade de Dados',
+    label: 'Qualidade',
     icon: CheckCircle,
-    submenu: [
-      { id: 'qualidade-validacoes', label: 'Validações Pendentes' },
-      { id: 'qualidade-alertas', label: 'Alertas de Fadiga' },
-      { id: 'qualidade-historico', label: 'Histórico' },
-    ],
   },
   {
     id: 'analises',
     label: 'Análises',
     icon: BarChart3,
-    submenu: [
-      { id: 'analises-geral', label: 'Visão Geral' },
-      { id: 'analises-emissoes', label: 'Emissões CO₂' },
-      { id: 'analises-utilizacao', label: 'Utilização' },
-    ],
   },
   {
     id: 'relatorios',
@@ -99,9 +86,8 @@ const navigation = [
 ];
 
 const Sidebar = () => {
-  const { activeView, setActiveView } = useStore();
+  const { activeView, setActiveView, machines, sessions } = useStore();
   const [expandedMenus, setExpandedMenus] = useState(() => {
-    // Expandir menu que contém a view ativa
     for (const item of navigation) {
       if (item.submenu?.some(sub => sub.id === activeView)) {
         return [item.id];
@@ -121,17 +107,41 @@ const Sidebar = () => {
   const isActive = (id) => activeView === id || activeView.startsWith(id + '-');
   const isExpanded = (id) => expandedMenus.includes(id);
 
+  // KPIs para mostrar na sidebar
+  const activeSessions = sessions.filter(s => s.status === 'OPEN').length;
+  const totalMachines = machines.length;
+
   return (
-    <aside className="hidden md:flex w-64 flex-col bg-white border-r border-slate-200">
+    <aside className="hidden md:flex w-64 flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-100">
+      <div className="h-20 flex items-center px-6 border-b border-slate-700/50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">C</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25">
+            <span className="text-white font-bold text-lg">C</span>
           </div>
           <div>
-            <span className="font-bold text-slate-900 text-sm">CASAIS</span>
-            <span className="text-slate-500 text-xs block -mt-0.5">Fleet Intelligence</span>
+            <span className="font-bold text-white text-lg tracking-tight">CASAIS</span>
+            <span className="text-primary-400 text-xs font-medium block -mt-0.5">Fleet Intelligence</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="px-4 py-4 border-b border-slate-700/50">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs text-slate-400">Ativas</span>
+            </div>
+            <p className="text-xl font-bold text-white mt-1">{activeSessions}</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+            <div className="flex items-center gap-2">
+              <Truck className="w-4 h-4 text-primary-400" />
+              <span className="text-xs text-slate-400">Equip.</span>
+            </div>
+            <p className="text-xl font-bold text-white mt-1">{totalMachines}</p>
           </div>
         </div>
       </div>
@@ -158,18 +168,18 @@ const Sidebar = () => {
                     w-full flex items-center justify-between px-3 py-2.5 rounded-lg
                     text-sm font-medium transition-all duration-200
                     ${itemActive
-                      ? 'bg-primary-50 text-primary-600'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <item.icon className={`w-5 h-5 ${itemActive ? 'text-primary-500' : 'text-slate-400'}`} />
+                    <item.icon className={`w-5 h-5 ${itemActive ? 'text-primary-400' : 'text-slate-500'}`} />
                     <span>{item.label}</span>
                   </div>
                   {hasSubmenu && (
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                      className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
                         menuExpanded ? 'rotate-180' : ''
                       }`}
                     />
@@ -178,7 +188,7 @@ const Sidebar = () => {
 
                 {/* Submenu */}
                 {hasSubmenu && menuExpanded && (
-                  <ul className="mt-1 ml-8 space-y-1">
+                  <ul className="mt-1 ml-4 pl-4 border-l border-slate-700 space-y-1">
                     {item.submenu.map((subItem) => {
                       const subActive = activeView === subItem.id;
                       return (
@@ -189,8 +199,8 @@ const Sidebar = () => {
                               w-full text-left px-3 py-2 rounded-lg text-sm
                               transition-colors duration-200
                               ${subActive
-                                ? 'text-primary-600 bg-primary-50/50 font-medium'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                ? 'text-primary-400 bg-primary-500/10 font-medium'
+                                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                               }
                             `}
                           >
@@ -208,16 +218,16 @@ const Sidebar = () => {
       </nav>
 
       {/* User */}
-      <div className="p-4 border-t border-slate-100">
+      <div className="p-4 border-t border-slate-700/50">
         <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-            <span className="text-white text-sm font-semibold">VH</span>
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg">
+            <span className="text-white text-sm font-bold">VH</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">Vitor Hugo</p>
-            <p className="text-xs text-slate-500">Gestor</p>
+            <p className="text-sm font-medium text-white truncate">Vitor Hugo</p>
+            <p className="text-xs text-slate-500">Gestor de Frota</p>
           </div>
-          <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+          <button className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
             <LogOut className="w-4 h-4" />
           </button>
         </div>

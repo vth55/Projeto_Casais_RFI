@@ -6,14 +6,14 @@ import {
   Line,
   AreaChart,
   Area,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import {
   Activity,
@@ -24,17 +24,19 @@ import {
   AlertTriangle,
   Wrench,
   TrendingUp,
-  TrendingDown,
   ArrowRight,
+  Play,
+  User,
+  MapPin,
   Calendar,
+  Zap,
 } from 'lucide-react';
 import useStore from '../store/useStore';
-import { Card, StatCard, Button, Badge, StatusBadge, Skeleton } from '../components/ui';
+import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
 
 // Filtros de período
 const DateFilters = () => {
   const { dateFilter, setDateFilter } = useStore();
-
   const filters = [
     { id: 'today', label: 'Hoje' },
     { id: 'week', label: '7 dias' },
@@ -44,15 +46,15 @@ const DateFilters = () => {
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+    <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
       {filters.map(filter => (
         <button
           key={filter.id}
           onClick={() => setDateFilter(filter.id)}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             dateFilter === filter.id
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-primary-500 text-white shadow-md'
+              : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           {filter.label}
@@ -62,23 +64,54 @@ const DateFilters = () => {
   );
 };
 
-// Tooltip customizado para gráficos
-const CustomTooltip = ({ active, payload, label, valuePrefix = '', valueSuffix = '' }) => {
-  if (!active || !payload?.length) return null;
+// Card de Sessão Ativa
+const ActiveSessionCard = ({ session, machine, operator }) => {
+  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+  const now = new Date();
+  const durationMs = now - startTime;
+  const hours = Math.floor(durationMs / (1000 * 60 * 60));
+  const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  const isLong = hours >= 5;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3">
-      <p className="text-sm font-medium text-slate-900 mb-1">{label}</p>
+    <div className={`flex items-center gap-4 p-4 rounded-xl border-2 ${
+      isLong ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
+    }`}>
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+        isLong ? 'bg-amber-500' : 'bg-emerald-500'
+      }`}>
+        <Play className="w-6 h-6 text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-900 truncate">
+          {machine?.name || session.machineId}
+        </p>
+        <div className="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
+          <User className="w-3.5 h-3.5" />
+          <span className="truncate">{operator?.name || session.cardId}</span>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className={`text-2xl font-bold tabular-nums ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}>
+          {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}
+        </div>
+        <p className="text-xs text-slate-500">em curso</p>
+      </div>
+    </div>
+  );
+};
+
+// Tooltip customizado
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-slate-900 text-white rounded-lg shadow-xl p-3 border border-slate-700">
+      <p className="text-sm font-medium mb-1">{label}</p>
       {payload.map((entry, index) => (
         <div key={index} className="flex items-center gap-2 text-sm">
-          <div
-            className="w-2.5 h-2.5 rounded-full"
-            style={{ backgroundColor: entry.color }}
-          />
-          <span className="text-slate-600">{entry.name}:</span>
-          <span className="font-medium text-slate-900">
-            {valuePrefix}{typeof entry.value === 'number' ? entry.value.toLocaleString('pt-PT') : entry.value}{valueSuffix}
-          </span>
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span className="text-slate-300">{entry.name}:</span>
+          <span className="font-semibold">{entry.value.toLocaleString('pt-PT')}</span>
         </div>
       ))}
     </div>
@@ -86,14 +119,18 @@ const CustomTooltip = ({ active, payload, label, valuePrefix = '', valueSuffix =
 };
 
 const DashboardView = () => {
-  const { machines, getFilteredSessions, getKPIs, loading } = useStore();
+  const { machines, operators, sessions, getFilteredSessions, getKPIs, loading } = useStore();
   const filteredSessions = getFilteredSessions();
   const kpis = getKPIs();
+
+  // Sessões ativas
+  const activeSessions = useMemo(() =>
+    sessions.filter(s => s.status === 'OPEN').slice(0, 4),
+  [sessions]);
 
   // Dados para gráficos
   const chartData = useMemo(() => {
     if (!filteredSessions.length) {
-      // Dados demo
       return [
         { name: 'Seg', horas: 45, combustivel: 120, co2: 320 },
         { name: 'Ter', horas: 52, combustivel: 140, co2: 375 },
@@ -105,17 +142,13 @@ const DashboardView = () => {
       ];
     }
 
-    // Agregar dados reais por dia
     const grouped = {};
     filteredSessions.forEach(session => {
       if (session.startTime && session.durationHours) {
         const date = session.startTime.toDate?.() || new Date(session.startTime);
         const day = date.toLocaleDateString('pt-PT', { weekday: 'short' });
-        if (!grouped[day]) {
-          grouped[day] = { horas: 0, combustivel: 0, co2: 0 };
-        }
+        if (!grouped[day]) grouped[day] = { horas: 0, combustivel: 0, co2: 0 };
         grouped[day].horas += session.durationHours || 0;
-
         const machine = machines.find(m => m.id === session.machineId);
         if (machine) {
           const consumption = (machine.consumptionRate || 0) * (session.durationHours || 0);
@@ -133,59 +166,44 @@ const DashboardView = () => {
     }));
   }, [filteredSessions, machines]);
 
-  // Dados para gráfico de utilização por equipamento
+  // Dados utilização
   const utilizationData = useMemo(() => {
     if (!machines.length) {
       return [
-        { name: 'Escavadora 01', value: 85 },
-        { name: 'Grua 02', value: 72 },
-        { name: 'Retroescavadora', value: 64 },
-        { name: 'Betoneira 01', value: 45 },
-        { name: 'Compactador', value: 38 },
+        { name: 'Escavadora 01', value: 85, status: 'active' },
+        { name: 'Grua 02', value: 72, status: 'active' },
+        { name: 'Retroescavadora', value: 64, status: 'idle' },
+        { name: 'Betoneira 01', value: 45, status: 'idle' },
+        { name: 'Compactador', value: 38, status: 'maintenance' },
       ];
     }
 
     return machines.slice(0, 5).map(machine => {
-      const machineSessions = filteredSessions.filter(
-        s => s.machineId === machine.id && s.status === 'CLOSED'
-      );
+      const machineSessions = filteredSessions.filter(s => s.machineId === machine.id && s.status === 'CLOSED');
       const hours = machineSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-      // Assumindo 8h/dia, 22 dias/mês
       const maxHours = 176;
-      const utilization = Math.min(100, Math.round((hours / maxHours) * 100));
-
       return {
         name: machine.name || machine.id,
-        value: utilization,
+        value: Math.min(100, Math.round((hours / maxHours) * 100)),
+        status: machine.status?.toLowerCase() || 'idle',
       };
     });
   }, [machines, filteredSessions]);
 
-  const COLORS = ['#005EB8', '#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd'];
+  // Alertas manutenção
+  const maintenanceAlerts = machines.filter(m => (m.partialHours || m.totalHours || 0) >= 120);
 
-  // Sessões recentes
-  const recentSessions = filteredSessions.slice(0, 5);
-
-  // Alertas de manutenção
-  const maintenanceAlerts = machines
-    .filter(m => (m.partialHours || m.totalHours || 0) >= 120)
-    .slice(0, 4);
+  const COLORS = ['#005EB8', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <Skeleton variant="title" className="w-48" />
-          <Skeleton className="w-64 h-10" />
+          <Skeleton className="w-64 h-12" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton.Stat key={i} />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton.Card lines={8} />
-          <Skeleton.Card lines={8} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <Skeleton.Stat key={i} />)}
         </div>
       </div>
     );
@@ -193,16 +211,16 @@ const DashboardView = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header com filtros */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Visão Geral</h2>
-          <p className="text-slate-500 mt-1">Métricas e indicadores principais</p>
+          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Visão geral da frota • {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <DateFilters />
       </div>
 
-      {/* KPIs Principais */}
+      {/* KPIs Principais - Gradient Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Activity}
@@ -210,8 +228,8 @@ const DashboardView = () => {
           value={kpis.totalHours}
           unit="h"
           color="primary"
+          variant="gradient"
           trend={12}
-          trendLabel="vs mês anterior"
         />
         <StatCard
           icon={Truck}
@@ -219,8 +237,8 @@ const DashboardView = () => {
           value={kpis.utilizationRate}
           unit="%"
           color="emerald"
+          variant="gradient"
           trend={5}
-          trendLabel="vs mês anterior"
         />
         <StatCard
           icon={Fuel}
@@ -228,8 +246,8 @@ const DashboardView = () => {
           value={kpis.totalFuel}
           unit="L"
           color="amber"
+          variant="gradient"
           trend={-3}
-          trendLabel="eficiência"
         />
         <StatCard
           icon={Leaf}
@@ -237,22 +255,59 @@ const DashboardView = () => {
           value={kpis.totalCO2}
           unit="kg"
           color="slate"
+          variant="gradient"
         />
       </div>
 
-      {/* Segunda linha de KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Alerta de Manutenção */}
+      {maintenanceAlerts.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 shadow-lg">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white">Manutenção Necessária</h3>
+              <p className="text-white/80 mt-1">
+                {maintenanceAlerts.length} equipamento{maintenanceAlerts.length > 1 ? 's' : ''} próximo{maintenanceAlerts.length > 1 ? 's' : ''} do limite de horas
+              </p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {maintenanceAlerts.slice(0, 3).map(machine => (
+                  <div key={machine.id} className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                    <span className="text-sm font-medium text-white">
+                      {machine.name}: {machine.partialHours || machine.totalHours}h
+                    </span>
+                  </div>
+                ))}
+                {maintenanceAlerts.length > 3 && (
+                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                    <span className="text-sm font-medium text-white">
+                      +{maintenanceAlerts.length - 3} mais
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button className="bg-white text-amber-600 hover:bg-amber-50" icon={ArrowRight} iconPosition="right">
+              Ver Todos
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* KPIs Secundários */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          icon={Clock}
+          icon={Play}
           title="Sessões Ativas"
           value={kpis.activeSessions}
-          color="primary"
+          color={kpis.activeSessions > 0 ? 'emerald' : 'slate'}
         />
         <StatCard
           icon={Wrench}
-          title="Alertas Manutenção"
-          value={kpis.maintenanceAlerts}
-          color={kpis.maintenanceAlerts > 0 ? 'red' : 'emerald'}
+          title="Alertas"
+          value={maintenanceAlerts.length}
+          color={maintenanceAlerts.length > 0 ? 'red' : 'emerald'}
         />
         <StatCard
           icon={TrendingUp}
@@ -262,181 +317,148 @@ const DashboardView = () => {
           color="violet"
         />
         <StatCard
-          icon={TrendingDown}
-          title="Downtime"
-          value={kpis.downtime}
+          icon={Zap}
+          title="Eficiência"
+          value={100 - kpis.downtime}
           unit="%"
-          color={kpis.downtime > 30 ? 'red' : 'emerald'}
+          color={kpis.downtime < 20 ? 'emerald' : 'amber'}
         />
       </div>
 
-      {/* Alertas de Manutenção */}
-      {maintenanceAlerts.length > 0 && (
-        <Card className="border-l-4 border-l-amber-500">
-          <div className="flex items-start gap-4">
-            <div className="p-2.5 bg-amber-100 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-slate-900">Manutenção Necessária</h3>
-              <p className="text-sm text-slate-600 mt-0.5">
-                {maintenanceAlerts.length} equipamento{maintenanceAlerts.length > 1 ? 's' : ''} próximo{maintenanceAlerts.length > 1 ? 's' : ''} do limite de horas
-              </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {maintenanceAlerts.map(machine => (
-                  <Badge key={machine.id} variant="warning">
-                    {machine.name}: {machine.partialHours || machine.totalHours}h
-                  </Badge>
-                ))}
+      {/* Gráficos e Sessões */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Gráfico Principal - Atividade */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Atividade Semanal</h3>
+                <p className="text-sm text-slate-500">Horas trabalhadas e consumo de combustível</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-primary-500" />
+                  <span className="text-sm text-slate-600">Horas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span className="text-sm text-slate-600">Combustível</span>
+                </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" icon={ArrowRight} iconPosition="right">
-              Ver todos
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Atividade Semanal */}
-        <Card>
-          <Card.Header>
-            <Card.Title>Atividade Semanal</Card.Title>
-            <Card.Description>Horas trabalhadas e consumo</Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={chartData} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip valueSuffix="h" />} />
-                <Bar dataKey="horas" fill="#005EB8" name="Horas" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="combustivel" fill="#0ea5e9" name="Combustível (L)" radius={[4, 4, 0, 0]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="horas" fill="#005EB8" name="Horas" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="combustivel" fill="#f59e0b" name="Combustível (L)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </Card.Content>
-        </Card>
+          </Card>
+        </div>
 
-        {/* Tendência de Emissões */}
-        <Card>
-          <Card.Header>
-            <Card.Title>Emissões CO₂</Card.Title>
-            <Card.Description>Tendência semanal</Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorCO2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#005EB8" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#005EB8" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip valueSuffix=" kg" />} />
-                <Area
-                  type="monotone"
-                  dataKey="co2"
-                  stroke="#005EB8"
-                  strokeWidth={2}
-                  fill="url(#colorCO2)"
-                  name="CO₂"
+        {/* Sessões Ativas */}
+        <Card className="h-full">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Sessões Ativas</h3>
+              <p className="text-sm text-slate-500">{activeSessions.length} em curso</p>
+            </div>
+            <div className={`w-3 h-3 rounded-full ${activeSessions.length > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+          </div>
+          <div className="space-y-3">
+            {activeSessions.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-500">Nenhuma sessão ativa</p>
+              </div>
+            ) : (
+              activeSessions.map(session => (
+                <ActiveSessionCard
+                  key={session.id}
+                  session={session}
+                  machine={machines.find(m => m.id === session.machineId)}
+                  operator={operators.find(o => o.id === session.cardId)}
                 />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Card.Content>
+              ))
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* Segunda linha de gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Emissões CO2 */}
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Emissões CO₂</h3>
+              <p className="text-sm text-slate-500">Tendência semanal</p>
+            </div>
+            <Badge variant="success" className="flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5" />
+              -3% vs anterior
+            </Badge>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorCO2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="co2" stroke="#10b981" strokeWidth={3} fill="url(#colorCO2)" name="CO₂ (kg)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </Card>
 
         {/* Utilização por Equipamento */}
         <Card>
-          <Card.Header>
-            <Card.Title>Utilização por Equipamento</Card.Title>
-            <Card.Description>Top 5 mais utilizados</Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div className="space-y-4">
-              {utilizationData.map((item, index) => (
-                <div key={item.name} className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-slate-600 w-32 truncate">
-                    {item.name}
-                  </span>
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Utilização por Equipamento</h3>
+              <p className="text-sm text-slate-500">Top 5 mais utilizados</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {utilizationData.map((item, index) => (
+              <div key={item.name} className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  item.status === 'active' ? 'bg-emerald-100' :
+                  item.status === 'maintenance' ? 'bg-red-100' : 'bg-slate-100'
+                }`}>
+                  <Truck className={`w-5 h-5 ${
+                    item.status === 'active' ? 'text-emerald-600' :
+                    item.status === 'maintenance' ? 'text-red-600' : 'text-slate-500'
+                  }`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-slate-700 truncate">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900">{item.value}%</span>
+                  </div>
+                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${item.value}%`,
-                        backgroundColor: COLORS[index % COLORS.length],
+                        background: `linear-gradient(90deg, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 1) % COLORS.length]})`,
                       }}
                     />
                   </div>
-                  <span className="text-sm font-semibold text-slate-900 w-12 text-right">
-                    {item.value}%
-                  </span>
                 </div>
-              ))}
-            </div>
-          </Card.Content>
-        </Card>
-
-        {/* Sessões Recentes */}
-        <Card>
-          <Card.Header
-            action={
-              <Button variant="ghost" size="sm" icon={ArrowRight} iconPosition="right">
-                Ver todas
-              </Button>
-            }
-          >
-            <Card.Title>Sessões Recentes</Card.Title>
-            <Card.Description>Últimas atividades registadas</Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div className="space-y-3">
-              {recentSessions.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">
-                  Sem sessões no período selecionado
-                </p>
-              ) : (
-                recentSessions.map(session => {
-                  const machine = machines.find(m => m.id === session.machineId);
-                  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
-
-                  return (
-                    <div
-                      key={session.id}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                          <Truck className="w-5 h-5 text-primary-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">
-                            {machine?.name || session.machineId}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {startTime.toLocaleDateString('pt-PT')} às {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {session.durationHours && (
-                          <span className="text-sm font-medium text-slate-700">
-                            {session.durationHours.toFixed(1)}h
-                          </span>
-                        )}
-                        <StatusBadge status={session.status} />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </Card.Content>
+              </div>
+            ))}
+          </div>
         </Card>
       </div>
     </div>
