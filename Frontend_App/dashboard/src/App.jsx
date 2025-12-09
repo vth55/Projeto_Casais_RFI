@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Views
 import DashboardView from './views/DashboardView';
+import ObrasView from './views/ObrasView';
 import MaquinasView from './views/MaquinasView';
 import OperadoresView from './views/OperadoresView';
 import SessoesView from './views/SessoesView';
@@ -67,6 +68,7 @@ export default function App() {
 
   const renderView = () => {
     // Mapear view para componente
+    if (activeView.startsWith('obras')) return <ObrasView />;
     if (activeView.startsWith('maquinas')) return <MaquinasView />;
     if (activeView === 'operadores') return <OperadoresView />;
     if (activeView.startsWith('sessoes')) return <SessoesView />;

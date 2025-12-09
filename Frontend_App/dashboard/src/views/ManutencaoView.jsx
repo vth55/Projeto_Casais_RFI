@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
+import { getCategoryName } from '../utils/safeRender';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
   <div className="flex border-b border-slate-200">
@@ -33,7 +34,7 @@ const MaintenanceCard = ({ machine, onSchedule, onComplete }) => {
               {isUrgent && <Badge variant="danger">Urgente</Badge>}
               {isWarning && !isUrgent && <Badge variant="warning">Atenção</Badge>}
             </div>
-            <p className="text-sm text-slate-500 mt-0.5">{machine.category || 'Equipamento'}</p>
+            <p className="text-sm text-slate-500 mt-0.5">{getCategoryName(machine.category)}</p>
           </div>
         </div>
         <div className="text-right">

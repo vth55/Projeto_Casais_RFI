@@ -13,6 +13,7 @@ import {
   CheckCircle,
   LogOut,
   Activity,
+  Building2,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 
@@ -23,12 +24,21 @@ const navigation = [
     icon: LayoutDashboard,
   },
   {
+    id: 'obras',
+    label: 'Obras',
+    icon: Building2,
+    submenu: [
+      { id: 'obras-lista', label: 'Lista de Obras' },
+      { id: 'obras-mapa', label: 'Mapa Geral' },
+    ],
+  },
+  {
     id: 'maquinas',
     label: 'Equipamentos',
     icon: Truck,
     submenu: [
       { id: 'maquinas-lista', label: 'Lista de Equipamentos' },
-      { id: 'maquinas-categorias', label: 'Categorias' },
+      { id: 'maquinas-localizacao', label: 'Mudar Localização' },
     ],
   },
   {

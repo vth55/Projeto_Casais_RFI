@@ -10,6 +10,7 @@ const useStore = create((set, get) => ({
   sessions: [],
   machines: [],
   operators: [],
+  obras: [],
   tariffs: [],
   maintenanceRecords: [],
   loading: true,
@@ -90,6 +91,17 @@ const useStore = create((set, get) => ({
           set({ maintenanceRecords: data });
         },
         (error) => console.error('Erro maintenance:', error)
+      )
+    );
+
+    // Obras listener
+    unsubscribers.push(
+      onSnapshot(collection(db, `${basePath}/obras`),
+        (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          set({ obras: data });
+        },
+        (error) => console.error('Erro obras:', error)
       )
     );
 
@@ -271,6 +283,19 @@ const useStore = create((set, get) => ({
     }
   },
 
+  updateOperator: async (id, data) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      await updateDoc(doc(db, `${basePath}/operators`, id), {
+        ...data,
+        updatedAt: Timestamp.now(),
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
   // Actions para tarifários
   addTariff: async (tariffData) => {
     if (!db) return { success: false, error: 'DB não inicializado' };
@@ -308,6 +333,68 @@ const useStore = create((set, get) => ({
       }
 
       return { success: true, id };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Actions para obras
+  addObra: async (obraData) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      const id = obraData.code || `obra_${Date.now()}`;
+      await setDoc(doc(db, `${basePath}/obras`, id), {
+        ...obraData,
+        id,
+        createdAt: Timestamp.now(),
+      });
+      return { success: true, id };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  updateObra: async (id, data) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      await updateDoc(doc(db, `${basePath}/obras`, id), {
+        ...data,
+        updatedAt: Timestamp.now(),
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  deleteObra: async (id) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      await deleteDoc(doc(db, `${basePath}/obras`, id));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Mover máquinas para uma obra
+  moveMachinesToObra: async (machineIds, obraId) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      const { obras } = get();
+      const obra = obras.find(o => o.id === obraId);
+
+      for (const machineId of machineIds) {
+        await updateDoc(doc(db, `${basePath}/machines`, machineId), {
+          location: obra ? {
+            workId: obra.id,
+            workName: obra.name,
+            gps: obra.gps || null,
+            lastUpdated: Timestamp.now(),
+          } : null,
+        });
+      }
+      return { success: true, count: machineIds.length };
     } catch (error) {
       return { success: false, error: error.message };
     }
