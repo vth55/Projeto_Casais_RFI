@@ -21,7 +21,7 @@ import { Card, StatCard, Button, Badge, StatusBadge, Modal, Input, Select, Table
 import { getCategoryName, getLocationName, getCategoryId } from '../utils/safeRender';
 
 // Card de máquina
-const MachineCard = ({ machine, onEdit, onDelete, selected, onSelect, selectionMode }) => {
+const MachineCard = ({ machine, onEdit, onDelete: _onDelete, selected, onSelect, selectionMode }) => {
   const hoursProgress = Math.min(100, ((machine.partialHours || 0) / 150) * 100);
   const needsMaintenance = hoursProgress >= 80;
 

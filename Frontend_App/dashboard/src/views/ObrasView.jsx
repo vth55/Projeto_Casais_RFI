@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
-import { getLocationName } from '../utils/safeRender';
 
 // Status das obras
 const OBRA_STATUS = {
@@ -28,11 +27,10 @@ const OBRA_STATUS = {
 };
 
 // Card de Obra
-const ObraCard = ({ obra, machines, operators, onEdit, onOpenMap }) => {
+const ObraCard = ({ obra, machines, onEdit, onOpenMap }) => {
   const machinesInObra = machines.filter(m =>
     (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
   );
-  const activeOperators = new Set();
 
   const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
   const StatusIcon = status.icon;
@@ -124,13 +122,6 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
         longitude: parseFloat(formData.gps?.longitude) || null,
       },
     });
-  };
-
-  const openGoogleMaps = () => {
-    if (formData.address) {
-      const query = encodeURIComponent(`${formData.address}, ${formData.city || 'Portugal'}`);
-      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-    }
   };
 
   const getCoordinatesFromAddress = async () => {
@@ -345,7 +336,8 @@ const ObrasView = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (obra) => {
+  // Função de eliminar reservada - será usada no modal de edição
+  const _handleDelete = async (obra) => {
     if (confirm(`Eliminar a obra "${obra.name}"?`)) {
       await deleteObra(obra.id);
     }
