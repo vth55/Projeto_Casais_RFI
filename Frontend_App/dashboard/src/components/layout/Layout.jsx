@@ -83,7 +83,7 @@ const Layout = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden transition-colors duration-300">
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -96,7 +96,7 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900">
           <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
             {children}
           </div>

@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark mode base styles */
+@layer base {
+  html {
+    @apply transition-colors duration-300;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+  }
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Animações personalizadas */
 @keyframes slide-in {
   from {

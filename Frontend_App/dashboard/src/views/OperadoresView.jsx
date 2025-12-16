@@ -1,19 +1,39 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X } from 'lucide-react';
+import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Truck, Award } from 'lucide-react';
 import useStore from '../store/useStore';
+import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
+import { PERMISSIONS, getLevelLabel } from '../config/permissions';
 
-// Definição de cargos disponíveis
+/**
+ * Definição de cargos de TRABALHO (job roles - o que a pessoa FAZ no terreno)
+ * Estes são diferentes dos perfis de SISTEMA (system roles - o que a pessoa pode ACEDER no PWA)
+ *
+ * NOTA: Operadores de máquinas normalmente NÃO acedem ao PWA.
+ * Eles apenas usam RFID para login/logout nas máquinas.
+ * O PWA é para gestores, supervisores e pessoal de escritório.
+ */
 const EMPLOYEE_ROLES = [
-  { id: 'operador', label: 'Operador', color: 'primary', description: 'Opera equipamentos pesados' },
-  { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra' },
-  { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras' },
-  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Manutenção de equipamentos' },
-  { id: 'gestor_frota', label: 'Gestor de Frota', color: 'blue', description: 'Gestão geral da frota' },
-  { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas' },
+  { id: 'operador', label: 'Operador de Máquinas', color: 'primary', description: 'Opera equipamentos pesados (usa apenas RFID)', suggestedSystemRole: null },
+  { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra', suggestedSystemRole: 'encarregado_obra' },
+  { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras', suggestedSystemRole: 'gestor_frota' },
+  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Manutenção de equipamentos', suggestedSystemRole: 'visualizador' },
+  { id: 'gestor_frota', label: 'Gestor de Frota', color: 'blue', description: 'Gestão geral da frota', suggestedSystemRole: 'gestor_frota' },
+  { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas', suggestedSystemRole: 'visualizador' },
 ];
 
 const getRoleInfo = (roleId) => EMPLOYEE_ROLES.find(r => r.id === roleId) || EMPLOYEE_ROLES[0];
+
+// Tipos de carta/licença de máquinas
+const LICENSE_TYPES = [
+  { id: 'escavadoras', label: 'Escavadoras', icon: '🚜', description: 'Escavadoras e retroescavadoras' },
+  { id: 'gruas', label: 'Gruas', icon: '🏗️', description: 'Gruas torre e móveis' },
+  { id: 'empilhadores', label: 'Empilhadores', icon: '📦', description: 'Empilhadores e telehandlers' },
+  { id: 'camioes', label: 'Camiões', icon: '🚛', description: 'Camiões e dumpers' },
+  { id: 'compactadores', label: 'Compactadores', icon: '🛞', description: 'Cilindros e compactadores' },
+  { id: 'geradores', label: 'Geradores', icon: '⚡', description: 'Geradores e compressores' },
+  { id: 'plataformas', label: 'Plataformas', icon: '📐', description: 'Plataformas elevatórias' },
+];
 
 const RoleBadge = ({ roleId }) => {
   const role = getRoleInfo(roleId);
@@ -34,20 +54,35 @@ const RoleBadge = ({ roleId }) => {
   );
 };
 
-const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel }) => {
+const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assignableRoles, canAssignRoles }) => {
   const [formData, setFormData] = useState(operator || {
     name: '',
     cardId: lastScannedCard || '',
-    department: '',
     phone: '',
     role: 'operador',
+    systemRole: null, // Operadores de máquinas normalmente não têm acesso ao PWA
     assignedObraId: '',
     email: '',
+    licenses: [], // Tipos de máquinas que pode operar
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
+  };
+
+  // Quando muda o cargo de trabalho, sugerir perfil de sistema correspondente
+  const handleJobRoleChange = (newRole) => {
+    const roleInfo = getRoleInfo(newRole);
+    // null significa que o funcionário não precisa de acesso ao PWA (ex: operadores de máquinas)
+    const suggestedSystemRole = roleInfo.suggestedSystemRole;
+
+    setFormData({
+      ...formData,
+      role: newRole,
+      // Só atualiza systemRole se é novo operador (para existentes mantém o que já tem)
+      systemRole: !operator ? suggestedSystemRole : formData.systemRole,
+    });
   };
 
   const activeObras = obras.filter(o => o.status === 'ACTIVE' || o.status === 'PLANNED');
@@ -85,10 +120,15 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel }) =>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Cargo</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            <div className="flex items-center gap-1.5">
+              <Briefcase className="w-4 h-4" />
+              Cargo de Trabalho
+            </div>
+          </label>
           <select
             value={formData.role}
-            onChange={e => setFormData({ ...formData, role: e.target.value })}
+            onChange={e => handleJobRoleChange(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
           >
             {EMPLOYEE_ROLES.map(role => (
@@ -112,28 +152,99 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel }) =>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Departamento"
-          value={formData.department}
-          onChange={e => setFormData({ ...formData, department: e.target.value })}
-          placeholder="Ex: Operações"
-        />
-        <Input
-          label="Telefone"
-          value={formData.phone}
-          onChange={e => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="Ex: 912 345 678"
-        />
-      </div>
+      {/* Perfil de Sistema - só visível se tiver permissão */}
+      {canAssignRoles && assignableRoles.length > 0 && (
+        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-4 h-4" />
+              Perfil de Acesso ao Sistema
+            </div>
+          </label>
+          <select
+            value={formData.systemRole}
+            onChange={e => setFormData({ ...formData, systemRole: e.target.value })}
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+          >
+            {assignableRoles.map(role => (
+              <option key={role.id} value={role.id}>{role.name} - {getLevelLabel(role.level)}</option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-slate-500">
+            <Key className="w-3 h-3 inline mr-1" />
+            Define o que este utilizador pode ver e fazer na aplicação
+          </p>
+        </div>
+      )}
+
+      {/* Licenças/Tipos de Máquinas */}
+      {(formData.role === 'operador' || formData.role === 'tecnico_manutencao') && (
+        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            <div className="flex items-center gap-1.5">
+              <Award className="w-4 h-4" />
+              Licenças de Operação
+            </div>
+          </label>
+          <p className="text-xs text-slate-500 mb-3">
+            Selecione os tipos de máquinas que este operador está autorizado a operar
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {LICENSE_TYPES.map(license => {
+              const isSelected = formData.licenses?.includes(license.id);
+              return (
+                <button
+                  key={license.id}
+                  type="button"
+                  onClick={() => {
+                    const newLicenses = isSelected
+                      ? formData.licenses.filter(l => l !== license.id)
+                      : [...(formData.licenses || []), license.id];
+                    setFormData({ ...formData, licenses: newLicenses });
+                  }}
+                  className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
+                    isSelected
+                      ? 'bg-primary-50 border-primary-300 text-primary-700'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  <span className="text-lg">{license.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{license.label}</p>
+                  </div>
+                  {isSelected && <Check className="w-4 h-4 text-primary-500 flex-shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+          {formData.licenses?.length > 0 && (
+            <p className="mt-2 text-xs text-primary-600">
+              {formData.licenses.length} tipo(s) de máquina selecionado(s)
+            </p>
+          )}
+        </div>
+      )}
 
       <Input
-        label="Email"
-        type="email"
-        value={formData.email}
-        onChange={e => setFormData({ ...formData, email: e.target.value })}
-        placeholder="Ex: joao.silva@casais.pt"
+        label="Telefone"
+        value={formData.phone}
+        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+        placeholder="Ex: 912 345 678"
       />
+
+      <div>
+        <Input
+          label="Email Institucional"
+          type="email"
+          value={formData.email}
+          onChange={e => setFormData({ ...formData, email: e.target.value })}
+          placeholder="Ex: joao.silva@casais.pt"
+          required
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Obrigatório - usado para enviar alertas de validação de sessões
+        </p>
+      </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button variant="ghost" type="button" onClick={onCancel}>Cancelar</Button>
@@ -207,6 +318,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
 
 const OperadoresView = () => {
   const { operators, sessions, obras, machines, loading, addOperator, deleteOperator, updateOperator } = useStore();
+  const { can, getAssignableRoles, getAllRoles } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -214,21 +326,29 @@ const OperadoresView = () => {
   const [obraFilter, setObraFilter] = useState('all');
   const [dismissedSuggestions, setDismissedSuggestions] = useState([]);
 
+  // Permissões
+  const canAssignRoles = can(PERMISSIONS.OPERATORS_ASSIGN_ROLE);
+  const assignableRoles = useMemo(() => getAssignableRoles(), [getAssignableRoles]);
+  const allSystemRoles = useMemo(() => getAllRoles(), [getAllRoles]);
+
   const operatorStats = useMemo(() => {
     return operators.map(op => {
       const opSessions = sessions.filter(s => s.cardId === op.id);
       const totalHours = opSessions.filter(s => s.status === 'CLOSED').reduce((sum, s) => sum + (s.durationHours || 0), 0);
       const isActive = opSessions.some(s => s.status === 'OPEN');
       const assignedObra = obras.find(o => o.id === op.assignedObraId);
+      const systemRoleInfo = allSystemRoles[op.systemRole];
       return {
         ...op,
         totalHours: Math.round(totalHours * 10) / 10,
         sessionCount: opSessions.length,
         isActive,
-        assignedObraName: assignedObra?.name || null
+        assignedObraName: assignedObra?.name || null,
+        systemRoleName: systemRoleInfo?.name || 'Operador',
+        systemRoleLevel: systemRoleInfo?.level,
       };
     });
-  }, [operators, sessions, obras]);
+  }, [operators, sessions, obras, allSystemRoles]);
 
   // Calcular sugestões de auto-assign baseado no uso de máquinas
   const autoAssignSuggestions = useMemo(() => {
@@ -425,7 +545,7 @@ const OperadoresView = () => {
               <Table.Row>
                 <Table.Header>Operador</Table.Header>
                 <Table.Header>Cargo</Table.Header>
-                <Table.Header>ID Cartão</Table.Header>
+                <Table.Header>Licenças</Table.Header>
                 <Table.Header>Obra Atribuída</Table.Header>
                 <Table.Header align="right">Sessões</Table.Header>
                 <Table.Header align="right">Horas</Table.Header>
@@ -448,7 +568,23 @@ const OperadoresView = () => {
                     </div>
                   </Table.Cell>
                   <Table.Cell><RoleBadge roleId={op.role} /></Table.Cell>
-                  <Table.Cell><code className="text-xs bg-slate-100 px-2 py-0.5 rounded">{op.id}</code></Table.Cell>
+                  <Table.Cell>
+                    {op.licenses?.length > 0 ? (
+                      <div className="flex items-center gap-1" title={op.licenses.map(l => LICENSE_TYPES.find(lt => lt.id === l)?.label).join(', ')}>
+                        {op.licenses.slice(0, 3).map(licenseId => {
+                          const license = LICENSE_TYPES.find(l => l.id === licenseId);
+                          return license ? (
+                            <span key={licenseId} className="text-base" title={license.label}>{license.icon}</span>
+                          ) : null;
+                        })}
+                        {op.licenses.length > 3 && (
+                          <span className="text-xs text-slate-500 ml-1">+{op.licenses.length - 3}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-sm">-</span>
+                    )}
+                  </Table.Cell>
                   <Table.Cell>
                     {op.assignedObraName ? (
                       <div className="flex items-center gap-1.5 text-sm">
@@ -499,6 +635,8 @@ const OperadoresView = () => {
           obras={obras}
           onSave={handleSave}
           onCancel={handleCloseModal}
+          assignableRoles={assignableRoles}
+          canAssignRoles={canAssignRoles}
         />
       </Modal>
     </div>

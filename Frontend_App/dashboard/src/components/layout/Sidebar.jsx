@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   LayoutDashboard,
   Truck,
@@ -14,8 +14,10 @@ import {
   LogOut,
   Activity,
   Building2,
+  Shield,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
+import useAuthStore from '../../store/useAuthStore';
 
 const navigation = [
   {
@@ -53,6 +55,8 @@ const navigation = [
     submenu: [
       { id: 'sessoes-ativas', label: 'Sessões Ativas' },
       { id: 'sessoes-historico', label: 'Histórico' },
+      { id: 'sessoes-validacoes', label: 'Validações' },
+      { id: 'sessoes-corrigidas', label: 'Corrigidas' },
     ],
   },
   {
@@ -97,6 +101,7 @@ const navigation = [
 
 const Sidebar = () => {
   const { activeView, setActiveView, machines, sessions } = useStore();
+  const { currentUser, canAccess, logout, getRole } = useAuthStore();
   const [expandedMenus, setExpandedMenus] = useState(() => {
     for (const item of navigation) {
       if (item.submenu?.some(sub => sub.id === activeView)) {
@@ -106,11 +111,22 @@ const Sidebar = () => {
     return [];
   });
 
+  // Filtrar navegação baseado em permissões do utilizador
+  const filteredNavigation = useMemo(() => {
+    return navigation.filter(item => canAccess(item.id));
+  }, [canAccess]);
+
+  // Obter info do role atual
+  const currentRole = useMemo(() => {
+    return getRole(currentUser?.systemRole);
+  }, [currentUser, getRole]);
+
+  // Comportamento accordion: só um menu aberto de cada vez
   const toggleMenu = (menuId) => {
     setExpandedMenus(prev =>
       prev.includes(menuId)
-        ? prev.filter(id => id !== menuId)
-        : [...prev, menuId]
+        ? [] // Fecha se já está aberto
+        : [menuId] // Substitui pelo novo (só 1 aberto)
     );
   };
 
@@ -120,6 +136,14 @@ const Sidebar = () => {
   // KPIs para mostrar na sidebar
   const activeSessions = sessions.filter(s => s.status === 'OPEN').length;
   const totalMachines = machines.length;
+
+  // Iniciais do utilizador
+  const userInitials = currentUser?.name
+    ?.split(' ')
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'U';
 
   return (
     <aside className="hidden md:flex w-64 flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">
@@ -159,7 +183,7 @@ const Sidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         <ul className="space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const hasSubmenu = item.submenu && item.submenu.length > 0;
             const itemActive = isActive(item.id);
             const menuExpanded = isExpanded(item.id);
@@ -231,13 +255,20 @@ const Sidebar = () => {
       <div className="p-4 border-t border-slate-700/50">
         <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg">
-            <span className="text-white text-sm font-bold">VH</span>
+            <span className="text-white text-sm font-bold">{userInitials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">Vitor Hugo</p>
-            <p className="text-xs text-slate-500">Gestor de Frota</p>
+            <p className="text-sm font-medium text-white truncate">{currentUser?.name || 'Utilizador'}</p>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <Shield className="w-3 h-3" />
+              <span className="truncate">{currentRole?.name || 'Sem perfil'}</span>
+            </div>
           </div>
-          <button className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+          <button
+            onClick={logout}
+            className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            title="Terminar sessão"
+          >
             <LogOut className="w-4 h-4" />
           </button>
         </div>

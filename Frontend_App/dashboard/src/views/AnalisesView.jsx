@@ -199,10 +199,45 @@ const AnalisesView = () => {
 
   const tabs = [
     { id: 'general', label: 'Visão Geral' },
+    { id: 'hourly', label: 'Por Hora' },
     { id: 'comparison', label: 'Comparação' },
     { id: 'emissions', label: 'Emissões CO₂' },
     { id: 'utilization', label: 'Utilização' },
   ];
+
+  // Dados por hora do dia (0h-23h)
+  const hourlyData = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    return hours.map(hour => {
+      // Padrão realista de atividade (mais atividade 7h-18h)
+      let baseActivity;
+      if (hour >= 7 && hour <= 18) {
+        baseActivity = seededValue(hour + 50, 60, 100);
+      } else if (hour >= 6 || hour <= 19) {
+        baseActivity = seededValue(hour + 50, 20, 50);
+      } else {
+        baseActivity = seededValue(hour + 50, 0, 15);
+      }
+
+      return {
+        hora: `${hour.toString().padStart(2, '0')}h`,
+        sessoes: Math.max(0, Math.round(baseActivity / 10)),
+        horas: baseActivity,
+        combustivel: Math.round(baseActivity * 1.5),
+      };
+    });
+  }, []);
+
+  // Estatísticas por hora
+  const hourlyStats = useMemo(() => {
+    const peakHour = hourlyData.reduce((max, item) =>
+      item.sessoes > max.sessoes ? item : max, hourlyData[0]);
+    const totalSessoes = hourlyData.reduce((sum, item) => sum + item.sessoes, 0);
+    const avgPerHour = Math.round(totalSessoes / 24);
+    const activeHours = hourlyData.filter(h => h.sessoes > 0).length;
+
+    return { peakHour, totalSessoes, avgPerHour, activeHours };
+  }, [hourlyData]);
 
   const getPeriodLabel = (period) => {
     const labels = {
@@ -274,6 +309,140 @@ const AnalisesView = () => {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+          )}
+
+          {/* Tab: Por Hora do Dia */}
+          {activeTab === 'hourly' && (
+            <div className="space-y-6">
+              {/* KPIs por hora */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-primary-50 rounded-xl p-4 border border-primary-100">
+                  <p className="text-xs font-medium text-primary-600 mb-1">Hora de Pico</p>
+                  <p className="text-2xl font-bold text-primary-700">{hourlyStats.peakHour.hora}</p>
+                  <p className="text-xs text-primary-500 mt-1">{hourlyStats.peakHour.sessoes} sessões</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                  <p className="text-xs font-medium text-emerald-600 mb-1">Total Sessões</p>
+                  <p className="text-2xl font-bold text-emerald-700">{hourlyStats.totalSessoes}</p>
+                  <p className="text-xs text-emerald-500 mt-1">últimas 24h</p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                  <p className="text-xs font-medium text-amber-600 mb-1">Média por Hora</p>
+                  <p className="text-2xl font-bold text-amber-700">{hourlyStats.avgPerHour}</p>
+                  <p className="text-xs text-amber-500 mt-1">sessões/hora</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <p className="text-xs font-medium text-slate-600 mb-1">Horas Ativas</p>
+                  <p className="text-2xl font-bold text-slate-700">{hourlyStats.activeHours}</p>
+                  <p className="text-xs text-slate-500 mt-1">de 24 horas</p>
+                </div>
+              </div>
+
+              {/* Gráfico de atividade por hora */}
+              <Card>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribuição de Sessões por Hora do Dia</h3>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={hourlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis
+                      dataKey="hora"
+                      stroke="#94a3b8"
+                      fontSize={10}
+                      interval={1}
+                      angle={-45}
+                      textAnchor="end"
+                      height={50}
+                    />
+                    <YAxis stroke="#94a3b8" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                      formatter={(value, name) => [value, name === 'sessoes' ? 'Sessões' : name]}
+                    />
+                    <Bar dataKey="sessoes" fill="#005EB8" name="sessoes" radius={[4, 4, 0, 0]}>
+                      {hourlyData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.sessoes >= 8 ? '#005EB8' : entry.sessoes >= 4 ? '#38bdf8' : '#cbd5e1'}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* Gráfico de linha - horas de trabalho por hora */}
+              <Card>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Horas de Trabalho e Consumo por Hora</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={hourlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis
+                      dataKey="hora"
+                      stroke="#94a3b8"
+                      fontSize={10}
+                      interval={2}
+                    />
+                    <YAxis yAxisId="left" stroke="#005EB8" fontSize={12} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    />
+                    <Legend />
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="horas"
+                      fill="#005EB8"
+                      fillOpacity={0.2}
+                      stroke="#005EB8"
+                      strokeWidth={2}
+                      name="Horas Trabalho"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="combustivel"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Combustível (L)"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* Heatmap simplificado - períodos do dia */}
+              <Card>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Períodos de Maior Atividade</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  {[
+                    { label: 'Madrugada', period: '00h-06h', hours: hourlyData.slice(0, 6) },
+                    { label: 'Manhã', period: '06h-12h', hours: hourlyData.slice(6, 12) },
+                    { label: 'Tarde', period: '12h-18h', hours: hourlyData.slice(12, 18) },
+                    { label: 'Noite', period: '18h-24h', hours: hourlyData.slice(18, 24) },
+                  ].map((period, idx) => {
+                    const totalSessoes = period.hours.reduce((sum, h) => sum + h.sessoes, 0);
+                    const intensity = totalSessoes / 60; // 0 to 1
+                    const bgColor = intensity > 0.6 ? 'bg-primary-500' :
+                                   intensity > 0.3 ? 'bg-primary-300' :
+                                   intensity > 0.1 ? 'bg-primary-100' : 'bg-slate-100';
+                    const textColor = intensity > 0.3 ? 'text-white' : 'text-slate-700';
+
+                    return (
+                      <div
+                        key={period.label}
+                        className={`rounded-xl p-4 ${bgColor} ${textColor} text-center transition-all`}
+                      >
+                        <p className="text-sm font-semibold">{period.label}</p>
+                        <p className="text-xs opacity-80">{period.period}</p>
+                        <p className="text-2xl font-bold mt-2">{totalSessoes}</p>
+                        <p className="text-xs opacity-80">sessões</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
             </div>
           )}
 

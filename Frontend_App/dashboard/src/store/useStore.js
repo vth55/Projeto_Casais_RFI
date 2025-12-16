@@ -4,6 +4,12 @@ import { db, projectId } from '../config/firebase';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
+// Constantes para alertas de sessão
+const SESSION_THRESHOLDS = {
+  FATIGUE_HOURS: 5,    // Alerta de fadiga após 5h
+  AUTO_CLOSE_HOURS: 14, // Auto-fechar após 14h
+};
+
 // Store principal da aplicação
 const useStore = create((set, get) => ({
   // Estado
@@ -399,6 +405,230 @@ const useStore = create((set, get) => ({
       return { success: false, error: error.message };
     }
   },
+
+  // ========================================
+  // GESTÃO DE SESSÕES COM ALERTAS
+  // ========================================
+
+  // Fechar sessão e verificar se precisa de alerta
+  closeSession: async (sessionId, endTime = null) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+
+    try {
+      const { sessions, machines, operators, obras } = get();
+      const session = sessions.find(s => s.id === sessionId);
+
+      if (!session) return { success: false, error: 'Sessão não encontrada' };
+      if (session.status !== 'OPEN') return { success: false, error: 'Sessão já fechada' };
+
+      const now = endTime ? new Date(endTime) : new Date();
+      const startDate = session.startTime?.toDate
+        ? session.startTime.toDate()
+        : new Date(session.startTime);
+      const durationHours = (now - startDate) / (1000 * 60 * 60);
+
+      // Verificar se precisa de alerta
+      let alertType = null;
+      let isAutoClose = false;
+
+      if (durationHours >= SESSION_THRESHOLDS.AUTO_CLOSE_HOURS) {
+        alertType = 'AUTO_CLOSE';
+        isAutoClose = true;
+      } else if (durationHours >= SESSION_THRESHOLDS.FATIGUE_HOURS) {
+        alertType = 'FATIGUE';
+      }
+
+      // Fechar a sessão
+      await updateDoc(doc(db, `${basePath}/sessions`, sessionId), {
+        status: 'CLOSED',
+        endTime: Timestamp.fromDate(now),
+        durationHours: durationHours,
+        closedBy: isAutoClose ? 'SYSTEM_AUTO_CLOSE' : 'MANUAL',
+        closedAt: Timestamp.now(),
+      });
+
+      // Criar alerta se necessário
+      if (alertType) {
+        const machine = machines.find(m => m.id === session.machineId);
+        const operator = operators.find(o => o.cardId === session.operatorId);
+        const obra = obras.find(o => o.id === machine?.location?.workId);
+
+        await get().createSessionAlert({
+          type: alertType,
+          sessionId: session.id,
+          machineId: session.machineId,
+          machineName: machine?.name || session.machineId,
+          operatorId: session.operatorId,
+          operatorName: operator?.name || 'Operador Desconhecido',
+          operatorEmail: operator?.email || null,
+          obraId: obra?.id || null,
+          obraName: obra?.name || 'Sem obra',
+          startTime: session.startTime,
+          endTime: Timestamp.fromDate(now),
+          durationHours: durationHours,
+        });
+      }
+
+      return { success: true, alertType, durationHours };
+    } catch (error) {
+      console.error('Erro ao fechar sessão:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Criar alerta de sessão
+  createSessionAlert: async (alertData) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+
+    try {
+      // Gerar token único para URL de validação
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let validationToken = '';
+      for (let i = 0; i < 32; i++) {
+        validationToken += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      const id = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const alert = {
+        id,
+        validationToken,
+        type: alertData.type,
+        status: 'PENDING',
+
+        // Dados da sessão
+        sessionId: alertData.sessionId,
+        machineId: alertData.machineId,
+        machineName: alertData.machineName,
+        operatorId: alertData.operatorId,
+        operatorName: alertData.operatorName,
+        operatorEmail: alertData.operatorEmail,
+        obraId: alertData.obraId,
+        obraName: alertData.obraName,
+
+        // Horários originais
+        originalStartTime: alertData.startTime,
+        originalEndTime: alertData.endTime,
+        originalDurationHours: alertData.durationHours,
+
+        // Horários corrigidos (preenchidos após validação)
+        correctedStartTime: null,
+        correctedEndTime: null,
+        correctedDurationHours: null,
+
+        // Metadados
+        createdAt: Timestamp.now(),
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+        validatedAt: null,
+        validatedBy: null,
+
+        // Notas
+        operatorNotes: '',
+
+        // Auditoria
+        auditLog: [
+          {
+            action: 'CREATED',
+            timestamp: Timestamp.now(),
+            details: `Alerta criado: ${alertData.type}`,
+          },
+        ],
+      };
+
+      await setDoc(doc(db, `${basePath}/alerts`, id), alert);
+
+      // TODO: Enviar email para o operador (implementar com Cloud Function)
+      console.log(`📧 Alerta criado: ${alertData.type} para ${alertData.operatorEmail}`);
+      console.log(`   URL: ${window.location.origin}/validar/${validationToken}`);
+
+      return { success: true, id, validationToken };
+    } catch (error) {
+      console.error('Erro ao criar alerta:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Verificar e processar sessões que precisam de auto-close
+  checkAndAutoCloseSessions: async () => {
+    const { sessions } = get();
+    const now = new Date();
+    const results = [];
+
+    // Encontrar sessões abertas há mais de 14 horas
+    const sessionsToClose = sessions.filter(session => {
+      if (session.status !== 'OPEN') return false;
+
+      const startDate = session.startTime?.toDate
+        ? session.startTime.toDate()
+        : new Date(session.startTime);
+      const hoursOpen = (now - startDate) / (1000 * 60 * 60);
+
+      return hoursOpen >= SESSION_THRESHOLDS.AUTO_CLOSE_HOURS;
+    });
+
+    // Fechar cada sessão automaticamente
+    for (const session of sessionsToClose) {
+      const result = await get().closeSession(session.id);
+      results.push({ sessionId: session.id, ...result });
+    }
+
+    return {
+      success: true,
+      closed: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results
+    };
+  },
+
+  // Verificar sessões abertas que precisam de alerta de fadiga (mas não auto-close)
+  checkFatigueSessions: () => {
+    const { sessions } = get();
+    const now = new Date();
+
+    return sessions.filter(session => {
+      if (session.status !== 'OPEN') return false;
+
+      const startDate = session.startTime?.toDate
+        ? session.startTime.toDate()
+        : new Date(session.startTime);
+      const hoursOpen = (now - startDate) / (1000 * 60 * 60);
+
+      return hoursOpen >= SESSION_THRESHOLDS.FATIGUE_HOURS &&
+             hoursOpen < SESSION_THRESHOLDS.AUTO_CLOSE_HOURS;
+    });
+  },
+
+  // Obter sessões abertas com estatísticas de duração
+  getOpenSessionsWithDuration: () => {
+    const { sessions, machines, operators } = get();
+    const now = new Date();
+
+    return sessions
+      .filter(s => s.status === 'OPEN')
+      .map(session => {
+        const startDate = session.startTime?.toDate
+          ? session.startTime.toDate()
+          : new Date(session.startTime);
+        const hoursOpen = (now - startDate) / (1000 * 60 * 60);
+
+        const machine = machines.find(m => m.id === session.machineId);
+        const operator = operators.find(o => o.cardId === session.operatorId);
+
+        return {
+          ...session,
+          hoursOpen,
+          machineName: machine?.name || session.machineId,
+          operatorName: operator?.name || 'Desconhecido',
+          isFatigue: hoursOpen >= SESSION_THRESHOLDS.FATIGUE_HOURS,
+          isAutoCloseWarning: hoursOpen >= SESSION_THRESHOLDS.AUTO_CLOSE_HOURS - 1, // 1h antes
+          needsAutoClose: hoursOpen >= SESSION_THRESHOLDS.AUTO_CLOSE_HOURS,
+        };
+      })
+      .sort((a, b) => b.hoursOpen - a.hoursOpen); // Mais longas primeiro
+  },
 }));
 
 export default useStore;
+
+// Exportar constantes para uso em outros componentes
+export { SESSION_THRESHOLDS };

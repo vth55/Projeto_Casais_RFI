@@ -14,6 +14,11 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  Activity,
+  Eye,
+  ArrowLeft,
+  BarChart3,
+  X,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
@@ -27,16 +32,17 @@ const OBRA_STATUS = {
 };
 
 // Card de Obra
-const ObraCard = ({ obra, machines, onEdit, onOpenMap }) => {
+const ObraCard = ({ obra, machines, operators, onViewDetails, onEdit, onOpenMap }) => {
   const machinesInObra = machines.filter(m =>
     (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
   );
+  const operatorsInObra = operators.filter(op => op.assignedObraId === obra.id);
 
   const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
   const StatusIcon = status.icon;
 
   return (
-    <Card hover onClick={() => onEdit(obra)} className="relative">
+    <Card hover onClick={() => onViewDetails(obra)} className="relative">
       <div className="absolute top-3 right-3">
         <Badge variant={status.color} size="sm">
           <StatusIcon className="w-3 h-3 mr-1" />
@@ -73,27 +79,45 @@ const ObraCard = ({ obra, machines, onEdit, onOpenMap }) => {
           </div>
           <div>
             <p className="text-xs text-slate-500">Operadores</p>
-            <p className="text-sm font-semibold text-slate-900">{obra.operatorCount || 0}</p>
+            <p className="text-sm font-semibold text-slate-900">{operatorsInObra.length}</p>
           </div>
         </div>
       </div>
 
-      {obra.gps?.latitude && obra.gps?.longitude && (
-        <div className="mt-4 pt-4 border-t border-slate-100">
+      <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          icon={Eye}
+          className="flex-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails(obra);
+          }}
+        >
+          Ver Detalhes
+        </Button>
+        {obra.gps?.latitude && obra.gps?.longitude && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             icon={Map}
-            className="w-full"
             onClick={(e) => {
               e.stopPropagation();
               onOpenMap(obra);
             }}
-          >
-            Ver no Mapa
-          </Button>
-        </div>
-      )}
+          />
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={Edit2}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(obra);
+          }}
+        />
+      </div>
     </Card>
   );
 };
@@ -250,6 +274,226 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
   );
 };
 
+// Vista detalhada da Obra
+const ObraDetailView = ({ obra, machines, operators, sessions, onBack, onEdit, onOpenMap }) => {
+  // Máquinas nesta obra
+  const machinesInObra = useMemo(() => {
+    return machines.filter(m =>
+      (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
+    );
+  }, [machines, obra.id]);
+
+  // Operadores atribuídos a esta obra
+  const operatorsInObra = useMemo(() => {
+    return operators.filter(op => op.assignedObraId === obra.id);
+  }, [operators, obra.id]);
+
+  // Sessões desta obra (baseado nas máquinas na obra)
+  const machineIds = machinesInObra.map(m => m.id);
+  const sessionsInObra = useMemo(() => {
+    return sessions.filter(s => machineIds.includes(s.machineId));
+  }, [sessions, machineIds]);
+
+  // Estatísticas
+  const stats = useMemo(() => {
+    const activeSessions = sessionsInObra.filter(s => s.status === 'OPEN').length;
+    const totalHours = sessionsInObra
+      .filter(s => s.status === 'CLOSED')
+      .reduce((sum, s) => sum + (s.durationHours || 0), 0);
+    const activeMachines = machinesInObra.filter(m =>
+      sessions.some(s => s.machineId === m.id && s.status === 'OPEN')
+    ).length;
+
+    return {
+      totalMachines: machinesInObra.length,
+      activeMachines,
+      totalOperators: operatorsInObra.length,
+      activeSessions,
+      totalHours: Math.round(totalHours),
+    };
+  }, [machinesInObra, operatorsInObra, sessionsInObra, sessions]);
+
+  const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
+  const StatusIcon = status.icon;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" icon={ArrowLeft} onClick={onBack}>
+            Voltar
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-slate-900">{obra.name}</h2>
+              <Badge variant={status.color}>
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {status.label}
+              </Badge>
+            </div>
+            {obra.address && (
+              <p className="text-slate-500 flex items-center gap-1 mt-1">
+                <MapPin className="w-4 h-4" />
+                {obra.address}{obra.city && `, ${obra.city}`}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {obra.gps?.latitude && obra.gps?.longitude && (
+            <Button variant="outline" icon={Map} onClick={() => onOpenMap(obra)}>
+              Ver Mapa
+            </Button>
+          )}
+          <Button icon={Edit2} onClick={() => onEdit(obra)}>
+            Editar
+          </Button>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <StatCard icon={Truck} title="Equipamentos" value={stats.totalMachines} color="primary" />
+        <StatCard icon={Activity} title="Ativos Agora" value={stats.activeMachines} color="emerald" />
+        <StatCard icon={Users} title="Operadores" value={stats.totalOperators} color="blue" />
+        <StatCard icon={Clock} title="Sessões Ativas" value={stats.activeSessions} color="amber" />
+        <StatCard icon={BarChart3} title="Horas Total" value={stats.totalHours} unit="h" color="slate" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Lista de Máquinas */}
+        <Card>
+          <Card.Header>
+            <div className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-primary-500" />
+              <Card.Title>Equipamentos na Obra</Card.Title>
+            </div>
+          </Card.Header>
+          {machinesInObra.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Truck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+              <p className="text-sm">Nenhum equipamento nesta obra</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {machinesInObra.map(machine => {
+                const isActive = sessions.some(s => s.machineId === machine.id && s.status === 'OPEN');
+                const category = typeof machine.category === 'object' ? machine.category?.name : machine.category;
+                return (
+                  <div
+                    key={machine.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{machine.name}</p>
+                        <p className="text-xs text-slate-500">{category || 'Sem categoria'}</p>
+                      </div>
+                    </div>
+                    <Badge variant={isActive ? 'success' : 'default'} size="sm">
+                      {isActive ? 'Ativo' : 'Parado'}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        {/* Lista de Operadores */}
+        <Card>
+          <Card.Header>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-500" />
+              <Card.Title>Operadores Atribuídos</Card.Title>
+            </div>
+          </Card.Header>
+          {operatorsInObra.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Users className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+              <p className="text-sm">Nenhum operador atribuído</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {operatorsInObra.map(operator => {
+                const isActive = sessions.some(s => s.cardId === operator.id && s.status === 'OPEN');
+                const opSessions = sessions.filter(s => s.cardId === operator.id && s.status === 'CLOSED');
+                const totalHours = opSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+                return (
+                  <div
+                    key={operator.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                        isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {operator.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{operator.name}</p>
+                        <p className="text-xs text-slate-500">{Math.round(totalHours)}h trabalhadas</p>
+                      </div>
+                    </div>
+                    <Badge variant={isActive ? 'success' : 'default'} size="sm">
+                      {isActive ? 'Ativo' : 'Disponível'}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Informações adicionais */}
+      <Card>
+        <Card.Header>
+          <Card.Title>Informações da Obra</Card.Title>
+        </Card.Header>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {obra.code && (
+            <div>
+              <p className="text-xs text-slate-500">Código</p>
+              <p className="text-sm font-medium text-slate-900">{obra.code}</p>
+            </div>
+          )}
+          {obra.startDate && (
+            <div>
+              <p className="text-xs text-slate-500">Data Início</p>
+              <p className="text-sm font-medium text-slate-900">
+                {new Date(obra.startDate).toLocaleDateString('pt-PT')}
+              </p>
+            </div>
+          )}
+          {obra.endDate && (
+            <div>
+              <p className="text-xs text-slate-500">Data Fim (Prevista)</p>
+              <p className="text-sm font-medium text-slate-900">
+                {new Date(obra.endDate).toLocaleDateString('pt-PT')}
+              </p>
+            </div>
+          )}
+          {obra.manager && (
+            <div>
+              <p className="text-xs text-slate-500">Responsável</p>
+              <p className="text-sm font-medium text-slate-900">{obra.manager}</p>
+            </div>
+          )}
+        </div>
+        {obra.description && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-500 mb-1">Descrição</p>
+            <p className="text-sm text-slate-700">{obra.description}</p>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
 // Modal de Mapa
 const MapModal = ({ obra, isOpen, onClose }) => {
   if (!obra?.gps?.latitude || !obra?.gps?.longitude) return null;
@@ -293,11 +537,12 @@ const MapModal = ({ obra, isOpen, onClose }) => {
 };
 
 const ObrasView = () => {
-  const { obras, machines, operators, loading, addObra, updateObra, deleteObra } = useStore();
+  const { obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [editingObra, setEditingObra] = useState(null);
   const [selectedObra, setSelectedObra] = useState(null);
+  const [viewingObra, setViewingObra] = useState(null); // Para vista de detalhes
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -347,6 +592,28 @@ const ObrasView = () => {
     setSelectedObra(obra);
     setShowMapModal(true);
   };
+
+  const handleViewDetails = (obra) => {
+    setViewingObra(obra);
+  };
+
+  // Se está a ver detalhes de uma obra, mostrar essa vista
+  if (viewingObra) {
+    return (
+      <ObraDetailView
+        obra={viewingObra}
+        machines={machines}
+        operators={operators}
+        sessions={sessions}
+        onBack={() => setViewingObra(null)}
+        onEdit={(obra) => {
+          setEditingObra(obra);
+          setShowModal(true);
+        }}
+        onOpenMap={handleOpenMap}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -433,6 +700,7 @@ const ObrasView = () => {
               obra={obra}
               machines={machines}
               operators={operators}
+              onViewDetails={handleViewDetails}
               onEdit={handleEdit}
               onOpenMap={handleOpenMap}
             />

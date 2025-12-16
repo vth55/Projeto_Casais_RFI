@@ -4,8 +4,12 @@ import { getDocs, collection } from 'firebase/firestore';
 import { auth, db, projectId } from './config/firebase';
 import { createAllMockData } from './utils/mockData';
 import useStore from './store/useStore';
+import useThemeStore from './store/useThemeStore';
 import { Layout } from './components/layout';
 import ErrorBoundary from './components/ErrorBoundary';
+
+// DevTools - REMOVER ANTES DE ENTREGAR PARA PRODUÇÃO
+import DevTools from './components/DevTools';
 
 // Views
 import DashboardView from './views/DashboardView';
@@ -19,9 +23,16 @@ import QualidadeView from './views/QualidadeView';
 import AnalisesView from './views/AnalisesView';
 import RelatoriosView from './views/RelatoriosView';
 import ConfiguracoesView from './views/ConfiguracoesView';
+import SessoesCorrigidasView from './views/SessoesCorrigidasView';
 
 export default function App() {
   const { activeView, loading, setLoading, initializeListeners } = useStore();
+  const { initTheme } = useThemeStore();
+
+  // Inicializar tema ao carregar
+  useEffect(() => {
+    initTheme();
+  }, [initTheme]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -71,6 +82,9 @@ export default function App() {
     if (activeView.startsWith('obras')) return <ObrasView />;
     if (activeView.startsWith('maquinas')) return <MaquinasView />;
     if (activeView === 'operadores') return <OperadoresView />;
+    // Sessões - verificar submenus específicos primeiro
+    if (activeView === 'sessoes-corrigidas') return <SessoesCorrigidasView />;
+    if (activeView === 'sessoes-validacoes') return <SessoesCorrigidasView />; // Validações usa mesmo componente
     if (activeView.startsWith('sessoes')) return <SessoesView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
     if (activeView.startsWith('financeiro')) return <FinanceiroView />;
@@ -97,6 +111,8 @@ export default function App() {
       <Layout>
         {renderView()}
       </Layout>
+      {/* DevTools - REMOVER ANTES DE ENTREGAR PARA PRODUÇÃO */}
+      <DevTools />
     </ErrorBoundary>
   );
 }

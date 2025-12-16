@@ -16,8 +16,8 @@ const Card = ({
   };
 
   const baseStyles = `
-    bg-white rounded-xl border border-slate-200/60
-    ${hover ? 'hover:shadow-lg hover:border-slate-300/60 transition-all duration-300 cursor-pointer' : 'shadow-sm'}
+    bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60
+    ${hover ? 'hover:shadow-lg hover:border-slate-300/60 dark:hover:border-slate-600 transition-all duration-300 cursor-pointer' : 'shadow-sm'}
   `;
 
   return (
@@ -41,14 +41,14 @@ Card.Header = ({ children, className = '', action }) => (
 
 // Card Title
 Card.Title = ({ children, className = '' }) => (
-  <h3 className={`text-lg font-semibold text-slate-900 ${className}`}>
+  <h3 className={`text-lg font-semibold text-slate-900 dark:text-white ${className}`}>
     {children}
   </h3>
 );
 
 // Card Description
 Card.Description = ({ children, className = '' }) => (
-  <p className={`text-sm text-slate-500 mt-1 ${className}`}>
+  <p className={`text-sm text-slate-500 dark:text-slate-400 mt-1 ${className}`}>
     {children}
   </p>
 );
@@ -60,7 +60,7 @@ Card.Content = ({ children, className = '' }) => (
 
 // Card Footer
 Card.Footer = ({ children, className = '' }) => (
-  <div className={`mt-6 pt-4 border-t border-slate-100 ${className}`}>
+  <div className={`mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 ${className}`}>
     {children}
   </div>
 );

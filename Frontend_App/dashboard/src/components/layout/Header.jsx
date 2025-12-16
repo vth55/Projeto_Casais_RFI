@@ -38,19 +38,19 @@ const Header = ({ onMenuClick }) => {
   const viewInfo = viewTitles[activeView] || { title: 'Dashboard', description: '' };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6">
+    <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 transition-colors">
       {/* Left side */}
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}
-          className="md:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          className="md:hidden p-2 -ml-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
         >
           <Menu className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">{viewInfo.title}</h1>
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{viewInfo.title}</h1>
           {viewInfo.description && (
-            <p className="text-sm text-slate-500 hidden sm:block">{viewInfo.description}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 hidden sm:block">{viewInfo.description}</p>
           )}
         </div>
       </div>
@@ -58,18 +58,18 @@ const Header = ({ onMenuClick }) => {
       {/* Right side */}
       <div className="flex items-center gap-2">
         {/* Connection status */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-full">
           <Wifi className="w-3.5 h-3.5 text-emerald-500" />
-          <span className="text-xs font-medium text-emerald-700">Online</span>
+          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Online</span>
         </div>
 
         {/* Search */}
-        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+        <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
           <Search className="w-5 h-5" />
         </button>
 
         {/* Notifications */}
-        <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+        <button className="relative p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
