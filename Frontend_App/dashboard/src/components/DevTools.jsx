@@ -13,7 +13,7 @@
  * - Navegação rápida
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Wrench,
   X,
@@ -41,12 +41,14 @@ import {
   FastForward,
   Gauge,
   Zap,
+  MapPin,
+  Truck,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { db, projectId } from '../config/firebase';
 import { doc, setDoc, collection, Timestamp, deleteDoc, getDocs, query, where } from 'firebase/firestore';
 import useStore from '../store/useStore';
-import useAlertsStore, { ALERT_TYPES, ALERT_STATUS } from '../store/useAlertsStore';
+import { ALERT_STATUS } from '../store/useAlertsStore';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
@@ -102,14 +104,16 @@ const QRCodeTab = () => {
     { id: 'admin', label: 'Administrador', desc: 'Acesso total (demo)' },
   ];
 
-  // Gerar URL de acesso com token de role
+  // Gerar URL de acesso com token de role (usando useMemo para estabilidade)
   const baseUrl = window.location.origin;
-  const accessToken = btoa(JSON.stringify({
-    role: selectedRole,
-    type: 'demo_access',
-    exp: Date.now() + 24 * 60 * 60 * 1000, // 24h
-  }));
-  const accessUrl = `${baseUrl}?access=${accessToken}`;
+  const accessUrl = useMemo(() => {
+    const accessToken = btoa(JSON.stringify({
+      role: selectedRole,
+      type: 'demo_access',
+      exp: Date.now() + 24 * 60 * 60 * 1000, // 24h
+    }));
+    return `${baseUrl}?access=${accessToken}`;
+  }, [selectedRole, baseUrl]);
 
   const copyUrl = () => {
     navigator.clipboard.writeText(accessUrl);
@@ -240,6 +244,196 @@ const QRCodeTab = () => {
           <li>2. Baixe o QR Code como PNG</li>
           <li>3. Insira no slide da apresentação</li>
           <li>4. O júri pode escanear para aceder ao sistema</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+// Componente Location Card Tab - Gestão de Cartões RFID de Localização
+const LocationCardTab = ({ showMessage }) => {
+  const { obras, machines, locationCards, addLocationCard, deleteLocationCard } = useStore();
+  const [selectedObra, setSelectedObra] = useState('');
+  const [selectedMachine, setSelectedMachine] = useState('');
+  const [cardDescription, setCardDescription] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [simulating, setSimulating] = useState(false);
+
+  const activeObras = obras.filter(o => o.status === 'ACTIVE' || o.status === 'active');
+
+  // Criar novo cartão de localização
+  const handleCreateCard = async () => {
+    if (!selectedObra) {
+      showMessage('Selecione uma obra', 'error');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const obra = obras.find(o => o.id === selectedObra);
+      const result = await addLocationCard({
+        obraId: obra.id,
+        obraName: obra.name,
+        gps: obra.gps || null,
+        description: cardDescription || `Cartão de localização - ${obra.name}`,
+      });
+
+      if (result.success) {
+        showMessage(`Cartão ${result.id} criado!`);
+        setCardDescription('');
+      } else {
+        showMessage(`Erro: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      showMessage(`Erro: ${error.message}`, 'error');
+    }
+    setCreating(false);
+  };
+
+  // Simular scan de cartão de localização
+  const simulateLocationScan = async (cardId) => {
+    if (!selectedMachine) {
+      showMessage('Selecione uma máquina primeiro', 'error');
+      return;
+    }
+
+    setSimulating(true);
+    try {
+      const response = await fetch(
+        'https://us-central1-casais-rfid.cloudfunctions.net/handleSessionTrigger',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cardId: cardId,
+            machineId: selectedMachine,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.status === 'LOCATION_CHANGED') {
+        showMessage(`Máquina movida para ${result.newLocation}!`);
+      } else if (result.status === 'LOCATION_NOT_FOUND') {
+        showMessage('Cartão de localização não registado', 'error');
+      } else {
+        showMessage(`Resposta: ${result.message || result.status}`, 'error');
+      }
+    } catch (error) {
+      showMessage(`Erro: ${error.message}`, 'error');
+    }
+    setSimulating(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-slate-500">
+        Cartões RFID de localização mudam a obra de uma máquina
+      </p>
+
+      {/* Criar novo cartão */}
+      <div className="p-3 bg-slate-50 rounded-lg space-y-3">
+        <p className="text-xs font-medium text-slate-700 flex items-center gap-1">
+          <Plus className="w-3.5 h-3.5" />
+          Criar Cartão de Localização
+        </p>
+
+        <select
+          value={selectedObra}
+          onChange={(e) => setSelectedObra(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
+        >
+          <option value="">Selecionar obra...</option>
+          {activeObras.map(obra => (
+            <option key={obra.id} value={obra.id}>{obra.name}</option>
+          ))}
+        </select>
+
+        <input
+          type="text"
+          placeholder="Descrição (opcional)"
+          value={cardDescription}
+          onChange={(e) => setCardDescription(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
+        />
+
+        <button
+          onClick={handleCreateCard}
+          disabled={creating || !selectedObra}
+          className="w-full flex items-center justify-center gap-2 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-slate-300"
+        >
+          {creating ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4" />
+          )}
+          Criar Cartão LOC_
+        </button>
+      </div>
+
+      {/* Cartões existentes */}
+      {locationCards.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate-700">
+            Cartões Existentes ({locationCards.length})
+          </p>
+
+          {/* Seleção de máquina para simular */}
+          <select
+            value={selectedMachine}
+            onChange={(e) => setSelectedMachine(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
+          >
+            <option value="">Máquina para simular scan...</option>
+            {machines.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {locationCards.map(card => (
+              <div
+                key={card.id}
+                className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <p className="text-xs font-medium text-slate-900">{card.id}</p>
+                    <p className="text-[10px] text-slate-500">{card.obraName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => simulateLocationScan(card.id)}
+                    disabled={simulating || !selectedMachine}
+                    className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50"
+                    title="Simular scan nesta máquina"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => deleteLocationCard(card.id)}
+                    className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                    title="Eliminar cartão"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Info */}
+      <div className="p-2 bg-blue-50 border border-blue-100 rounded-lg text-[10px] text-blue-700">
+        <p className="font-medium">Como funciona:</p>
+        <ul className="list-disc list-inside space-y-0.5 mt-1">
+          <li>Cartões com prefixo <strong>LOC_</strong> são de localização</li>
+          <li>Quando escaneado numa máquina, muda a localização</li>
+          <li>Útil para mudar máquinas de obra rapidamente</li>
         </ul>
       </div>
     </div>
@@ -1117,6 +1311,7 @@ const DevTools = () => {
             { id: 'sendEmail', label: 'Email', icon: Send },
             { id: 'demo', label: 'Demo', icon: FastForward },
             { id: 'rfid', label: 'RFID', icon: CreditCard },
+            { id: 'loc', label: 'LOC', icon: MapPin },
             { id: 'qr', label: 'QR', icon: QrCode },
             { id: 'nav', label: 'Nav', icon: Navigation },
           ].map(tab => (
@@ -1273,6 +1468,11 @@ const DevTools = () => {
           {/* QR Code Tab */}
           {activeTab === 'qr' && (
             <QRCodeTab />
+          )}
+
+          {/* Location Cards Tab */}
+          {activeTab === 'loc' && (
+            <LocationCardTab showMessage={showMessage} />
           )}
 
           {/* Send Email Tab */}

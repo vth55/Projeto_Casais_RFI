@@ -4,12 +4,39 @@ import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import './index.css';
 import App from './App.jsx';
 import ValidationPage from './pages/ValidationPage.jsx';
+import { registerSW } from 'virtual:pwa-register';
 
 // Wrapper para ValidationPage com parâmetro da URL
 const ValidationPageWrapper = () => {
   const { token } = useParams();
   return <ValidationPage token={token} />;
 };
+
+// Registar Service Worker para PWA
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Mostrar notificação de atualização disponível
+    if (confirm('Nova versão disponível! Recarregar para atualizar?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('App pronta para uso offline!');
+    // Opcional: mostrar toast de confirmação
+  },
+  onRegistered(registration) {
+    console.log('Service Worker registado:', registration);
+    // Verificar atualizações a cada hora
+    if (registration) {
+      setInterval(() => {
+        registration.update();
+      }, 60 * 60 * 1000);
+    }
+  },
+  onRegisterError(error) {
+    console.error('Erro ao registar Service Worker:', error);
+  },
+});
 
 // Verificar se o root existe
 const rootElement = document.getElementById('root');

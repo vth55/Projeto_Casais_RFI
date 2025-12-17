@@ -19,6 +19,8 @@ import {
   ArrowLeft,
   BarChart3,
   X,
+  CreditCard,
+  Wifi,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
@@ -275,13 +277,39 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 };
 
 // Vista detalhada da Obra
-const ObraDetailView = ({ obra, machines, operators, sessions, onBack, onEdit, onOpenMap }) => {
+const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, onBack, onEdit, onOpenMap, onAddLocationCard, onDeleteLocationCard }) => {
+  const [newCardId, setNewCardId] = useState('');
+  const [creatingCard, setCreatingCard] = useState(false);
+
+  // Cartões de localização desta obra
+  const obraLocationCards = useMemo(() => {
+    return locationCards.filter(card => card.obraId === obra.id);
+  }, [locationCards, obra.id]);
+
   // Máquinas nesta obra
   const machinesInObra = useMemo(() => {
     return machines.filter(m =>
       (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
     );
   }, [machines, obra.id]);
+
+  // Criar novo cartão de localização
+  const handleCreateCard = async () => {
+    if (!newCardId.trim()) return;
+
+    setCreatingCard(true);
+    const result = await onAddLocationCard({
+      cardId: newCardId.trim(),
+      obraId: obra.id,
+      obraName: obra.name,
+      gps: obra.gps || null,
+    });
+
+    if (result.success) {
+      setNewCardId('');
+    }
+    setCreatingCard(false);
+  };
 
   // Operadores atribuídos a esta obra
   const operatorsInObra = useMemo(() => {
@@ -490,6 +518,96 @@ const ObraDetailView = ({ obra, machines, operators, sessions, onBack, onEdit, o
           </div>
         )}
       </Card>
+
+      {/* Cartões de Localização RFID */}
+      <Card>
+        <Card.Header>
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-blue-500" />
+            <Card.Title>Cartões RFID de Localização</Card.Title>
+          </div>
+          <Card.Description>
+            Cartões que movem equipamentos automaticamente para esta obra
+          </Card.Description>
+        </Card.Header>
+
+        {/* Criar novo cartão */}
+        <div className="flex gap-2 mb-4">
+          <div className="flex-1 relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-mono">LOC_</span>
+            <input
+              type="text"
+              value={newCardId}
+              onChange={(e) => setNewCardId(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
+              placeholder="ID_DO_CARTAO"
+              className="w-full pl-12 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono uppercase"
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateCard()}
+            />
+          </div>
+          <Button
+            onClick={handleCreateCard}
+            disabled={creatingCard || !newCardId.trim()}
+            icon={Plus}
+          >
+            Criar
+          </Button>
+        </div>
+
+        {/* Lista de cartões */}
+        {obraLocationCards.length === 0 ? (
+          <div className="text-center py-6 text-slate-500">
+            <CreditCard className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+            <p className="text-sm">Nenhum cartão de localização</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Crie um cartão para mover equipamentos facilmente para esta obra
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {obraLocationCards.map(card => (
+              <div
+                key={card.id}
+                className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Wifi className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-mono text-sm font-semibold text-blue-900">{card.id}</p>
+                    <p className="text-xs text-blue-600">
+                      Criado em {card.createdAt?.toDate?.()?.toLocaleDateString('pt-PT') || '-'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="primary" size="sm">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Ativo
+                  </Badge>
+                  <button
+                    onClick={() => onDeleteLocationCard(card.id)}
+                    className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                    title="Eliminar cartão"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Instruções */}
+        <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+          <p className="text-xs font-medium text-slate-700 mb-1">Como usar:</p>
+          <ul className="text-xs text-slate-500 space-y-0.5">
+            <li>• Escreva o ID no cartão RFID físico (ex: LOC_PORTO_01)</li>
+            <li>• Quando o cartão for lido numa máquina, ela move para esta obra</li>
+            <li>• Ideal para entrada/saída de equipamentos no estaleiro</li>
+          </ul>
+        </div>
+      </Card>
     </div>
   );
 };
@@ -537,7 +655,7 @@ const MapModal = ({ obra, isOpen, onClose }) => {
 };
 
 const ObrasView = () => {
-  const { obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra } = useStore();
+  const { obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [editingObra, setEditingObra] = useState(null);
@@ -605,12 +723,15 @@ const ObrasView = () => {
         machines={machines}
         operators={operators}
         sessions={sessions}
+        locationCards={locationCards || []}
         onBack={() => setViewingObra(null)}
         onEdit={(obra) => {
           setEditingObra(obra);
           setShowModal(true);
         }}
         onOpenMap={handleOpenMap}
+        onAddLocationCard={addLocationCard}
+        onDeleteLocationCard={deleteLocationCard}
       />
     );
   }

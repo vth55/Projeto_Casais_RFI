@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db, projectId } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage, projectId } from '../config/firebase';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
@@ -19,6 +20,7 @@ const useStore = create((set, get) => ({
   obras: [],
   tariffs: [],
   maintenanceRecords: [],
+  locationCards: [], // Cartões RFID de localização
   loading: true,
   error: null,
   activeView: 'dashboard',
@@ -111,7 +113,135 @@ const useStore = create((set, get) => ({
       )
     );
 
+    // Location Cards listener (cartões RFID de localização)
+    unsubscribers.push(
+      onSnapshot(collection(db, `${basePath}/location_cards`),
+        (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          set({ locationCards: data });
+        },
+        (error) => console.error('Erro location_cards:', error)
+      )
+    );
+
     return () => unsubscribers.forEach(unsub => unsub());
+  },
+
+  // ============================================
+  // GESTÃO DE CARTÕES DE LOCALIZAÇÃO (RFID)
+  // ============================================
+
+  // Criar cartão de localização
+  addLocationCard: async (cardData) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+
+    try {
+      const cardId = cardData.cardId || `LOC_${Date.now()}`;
+      const normalizedId = cardId.toUpperCase().startsWith('LOC_')
+        ? cardId.toUpperCase()
+        : `LOC_${cardId.toUpperCase()}`;
+
+      const card = {
+        id: normalizedId,
+        obraId: cardData.obraId,
+        obraName: cardData.obraName,
+        gps: cardData.gps || null,
+        description: cardData.description || '',
+        createdAt: Timestamp.now(),
+        active: true,
+      };
+
+      await setDoc(doc(db, `${basePath}/location_cards`, normalizedId), card);
+      return { success: true, id: normalizedId };
+    } catch (error) {
+      console.error('Erro ao criar cartão de localização:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Atualizar cartão de localização
+  updateLocationCard: async (cardId, updates) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+
+    try {
+      await updateDoc(doc(db, `${basePath}/location_cards`, cardId), {
+        ...updates,
+        updatedAt: Timestamp.now(),
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao atualizar cartão:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Eliminar cartão de localização
+  deleteLocationCard: async (cardId) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+
+    try {
+      await deleteDoc(doc(db, `${basePath}/location_cards`, cardId));
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao eliminar cartão:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Obter cartões de uma obra específica
+  getLocationCardsByObra: (obraId) => {
+    const { locationCards } = get();
+    return locationCards.filter(card => card.obraId === obraId);
+  },
+
+  // ============================================
+  // GESTÃO DE FOTOS (Firebase Storage)
+  // ============================================
+
+  // Upload de foto para manutenção
+  uploadMaintenancePhoto: async (file, maintenanceId) => {
+    if (!storage) return { success: false, error: 'Storage não inicializado' };
+
+    try {
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storagePath = `maintenance/${maintenanceId}/${fileName}`;
+      const storageRef = ref(storage, storagePath);
+
+      // Upload do arquivo
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      return {
+        success: true,
+        photo: {
+          id: `photo_${timestamp}`,
+          name: file.name,
+          url: downloadURL,
+          path: storagePath,
+          size: file.size,
+          type: file.type,
+          uploadedAt: Timestamp.now(),
+        },
+      };
+    } catch (error) {
+      console.error('Erro ao fazer upload da foto:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Eliminar foto de manutenção
+  deleteMaintenancePhoto: async (photoPath) => {
+    if (!storage) return { success: false, error: 'Storage não inicializado' };
+
+    try {
+      const photoRef = ref(storage, photoPath);
+      await deleteObject(photoRef);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao eliminar foto:', error);
+      return { success: false, error: error.message };
+    }
   },
 
   // Sessões filtradas por período
@@ -327,6 +457,7 @@ const useStore = create((set, get) => ({
       await setDoc(doc(db, `${basePath}/maintenance`, id), {
         ...record,
         id,
+        photos: record.photos || [],
         createdAt: Timestamp.now(),
       });
 
@@ -339,6 +470,50 @@ const useStore = create((set, get) => ({
       }
 
       return { success: true, id };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Adicionar foto a um registo de manutenção existente
+  addPhotoToMaintenance: async (maintenanceId, photo) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      const { maintenanceRecords } = get();
+      const record = maintenanceRecords.find(r => r.id === maintenanceId);
+      const currentPhotos = record?.photos || [];
+
+      await updateDoc(doc(db, `${basePath}/maintenance`, maintenanceId), {
+        photos: [...currentPhotos, photo],
+        updatedAt: Timestamp.now(),
+      });
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Remover foto de um registo de manutenção
+  removePhotoFromMaintenance: async (maintenanceId, photoId, photoPath) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      // Eliminar do Storage
+      if (photoPath) {
+        await get().deleteMaintenancePhoto(photoPath);
+      }
+
+      // Atualizar Firestore
+      const { maintenanceRecords } = get();
+      const record = maintenanceRecords.find(r => r.id === maintenanceId);
+      const updatedPhotos = (record?.photos || []).filter(p => p.id !== photoId);
+
+      await updateDoc(doc(db, `${basePath}/maintenance`, maintenanceId), {
+        photos: updatedPhotos,
+        updatedAt: Timestamp.now(),
+      });
+
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }

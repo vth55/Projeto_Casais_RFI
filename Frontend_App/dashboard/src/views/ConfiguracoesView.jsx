@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   Settings, Database, Trash2, RefreshCw, Bell, Shield, Palette,
   Users, Plus, Edit2, Check, X, ChevronRight, Lock, Unlock,
-  Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon
+  Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon,
+  Truck, Building2, Wallet, Leaf
 } from 'lucide-react';
 import { createAllMockData } from '../utils/mockData';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -422,6 +423,7 @@ const ConfiguracoesView = () => {
   const tabs = [
     { id: 'general', label: 'Geral', icon: Settings },
     { id: 'roles', label: 'Perfis de Acesso', icon: Shield },
+    { id: 'demo', label: 'Modo Demo', icon: Users },
     { id: 'notifications', label: 'Notificações', icon: Bell },
     { id: 'appearance', label: 'Aparência', icon: Palette },
     { id: 'database', label: 'Base de Dados', icon: Database },
@@ -559,6 +561,236 @@ const ConfiguracoesView = () => {
               </div>
             )}
           </div>
+        );
+
+      case 'demo':
+        return (
+          <ConfigSection
+            icon={Users}
+            title="Modo Demonstração"
+            description="Alternar entre perfis de utilizador para testar permissões"
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600 mb-4">
+                Selecione um perfil para testar as permissões e visualizações correspondentes.
+                Esta funcionalidade é apenas para demonstração e testes.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Admin */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_admin',
+                      name: 'Vitor Hugo (Admin)',
+                      email: 'admin@casais.pt',
+                      systemRole: 'admin',
+                      assignedObraId: null,
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Administrador' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'admin'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-slate-200 hover:border-red-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Administrador</p>
+                    <p className="text-xs text-slate-500">Acesso total ao sistema</p>
+                  </div>
+                  {currentUser?.systemRole === 'admin' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Gestor Frota */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_gestor_frota',
+                      name: 'João Silva (Gestor)',
+                      email: 'gestor.frota@casais.pt',
+                      systemRole: 'gestor_frota',
+                      assignedObraId: null,
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Gestor de Frota' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'gestor_frota'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                    <Truck className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Gestor de Frota</p>
+                    <p className="text-xs text-slate-500">Gestão de equipamentos e obras</p>
+                  </div>
+                  {currentUser?.systemRole === 'gestor_frota' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Gestor Financeiro */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_gestor_financeiro',
+                      name: 'Maria Santos (Financeiro)',
+                      email: 'financeiro@casais.pt',
+                      systemRole: 'gestor_financeiro',
+                      assignedObraId: null,
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Gestor Financeiro' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'gestor_financeiro'
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-slate-200 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Gestor Financeiro</p>
+                    <p className="text-xs text-slate-500">Custos, tarifários e relatórios</p>
+                  </div>
+                  {currentUser?.systemRole === 'gestor_financeiro' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Encarregado de Obra */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_encarregado',
+                      name: 'António Costa (Encarregado)',
+                      email: 'encarregado@casais.pt',
+                      systemRole: 'encarregado_obra',
+                      assignedObraId: 'obra_porto_2025',
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Encarregado de Obra' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'encarregado_obra'
+                      ? 'border-amber-500 bg-amber-50'
+                      : 'border-slate-200 hover:border-amber-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Encarregado de Obra</p>
+                    <p className="text-xs text-slate-500">Restrito à sua obra</p>
+                  </div>
+                  {currentUser?.systemRole === 'encarregado_obra' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Visualizador */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_visualizador',
+                      name: 'Pedro Ferreira (Visualizador)',
+                      email: 'visualizador@casais.pt',
+                      systemRole: 'visualizador',
+                      assignedObraId: 'obra_porto_2025',
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Visualizador' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'visualizador'
+                      ? 'border-slate-500 bg-slate-50'
+                      : 'border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-slate-500 flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Visualizador</p>
+                    <p className="text-xs text-slate-500">Apenas leitura</p>
+                  </div>
+                  {currentUser?.systemRole === 'visualizador' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Gestor Sustentabilidade */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_gestor_sustentabilidade',
+                      name: 'Ana Pereira (ESG)',
+                      email: 'esg@casais.pt',
+                      systemRole: 'gestor_sustentabilidade',
+                      assignedObraId: null,
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Gestor de Sustentabilidade' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'gestor_sustentabilidade'
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-slate-200 hover:border-green-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                    <Leaf className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Gestor Sustentabilidade</p>
+                    <p className="text-xs text-slate-500">Emissões e relatórios ESG</p>
+                  </div>
+                  {currentUser?.systemRole === 'gestor_sustentabilidade' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+              </div>
+
+              {/* Info sobre perfil atual */}
+              <div className="mt-6 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  <Shield className="w-5 h-5 text-primary-600" />
+                  <h4 className="font-semibold text-primary-900">Perfil Atual</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-primary-600">Nome:</span>
+                    <span className="ml-2 text-primary-900 font-medium">{currentUser?.name || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-primary-600">Perfil:</span>
+                    <span className="ml-2 text-primary-900 font-medium">{allRoles[currentUser?.systemRole]?.name || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-primary-600">Nível:</span>
+                    <span className="ml-2 text-primary-900 font-medium">{getLevelLabel(userLevel)}</span>
+                  </div>
+                  <div>
+                    <span className="text-primary-600">Obra:</span>
+                    <span className="ml-2 text-primary-900 font-medium">{currentUser?.assignedObraId || 'Todas'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ConfigSection>
         );
 
       case 'notifications':

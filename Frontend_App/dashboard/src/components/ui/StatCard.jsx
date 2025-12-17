@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo, useRef } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 const colorSchemes = {
@@ -61,29 +61,50 @@ const StatCard = ({
   const [displayValue, setDisplayValue] = useState(0);
   const scheme = colorSchemes[color] || colorSchemes.primary;
   const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+  const animationRef = useRef(null);
+  const startTimeRef = useRef(null);
 
-  // Animação de contagem
+  // Animação de contagem otimizada com requestAnimationFrame
   useEffect(() => {
     if (loading) return;
 
-    const duration = 800;
-    const steps = 20;
-    const increment = numericValue / steps;
-    let current = 0;
-    let step = 0;
+    // Se o valor for 0 ou o mesmo, não animar
+    if (numericValue === 0 || numericValue === displayValue) {
+      setDisplayValue(numericValue);
+      return;
+    }
 
-    const timer = setInterval(() => {
-      step++;
-      current += increment;
-      if (step >= steps) {
-        setDisplayValue(numericValue);
-        clearInterval(timer);
+    const duration = 600; // Reduzido para ser mais rápido
+    const startValue = displayValue;
+    const diff = numericValue - startValue;
+
+    const animate = (timestamp) => {
+      if (!startTimeRef.current) startTimeRef.current = timestamp;
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Easing function para animação mais suave
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const currentValue = startValue + diff * easeOut;
+
+      setDisplayValue(currentValue);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
       } else {
-        setDisplayValue(current);
+        setDisplayValue(numericValue);
+        startTimeRef.current = null;
       }
-    }, duration / steps);
+    };
 
-    return () => clearInterval(timer);
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      startTimeRef.current = null;
+    };
   }, [numericValue, loading]);
 
   const formatValue = (val) => {
@@ -240,4 +261,5 @@ const StatCard = ({
   );
 };
 
-export default StatCard;
+// Memoizar componente para evitar re-renders desnecessários
+export default memo(StatCard);

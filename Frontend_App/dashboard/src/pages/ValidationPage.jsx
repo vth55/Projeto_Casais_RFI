@@ -120,7 +120,7 @@ const ValidationPage = ({ token }) => {
     return (end - start) / (1000 * 60 * 60);
   }, [formData]);
 
-  // Validar formulário
+  // Validar formulário com mensagens detalhadas
   const validateForm = () => {
     if (!formData.correctedStartTime || !formData.correctedEndTime) {
       return 'Por favor preencha ambos os horários.';
@@ -129,8 +129,29 @@ const ValidationPage = ({ token }) => {
     const start = new Date(formData.correctedStartTime);
     const end = new Date(formData.correctedEndTime);
 
+    // Validar que fim é depois do início
     if (end <= start) {
-      return 'A hora de fim deve ser posterior à hora de início.';
+      const startStr = start.toLocaleString('pt-PT', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+      const endStr = end.toLocaleString('pt-PT', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+      return `Erro: A hora de fim (${endStr}) não pode ser igual ou anterior à hora de início (${startStr}). Por favor corrija os horários.`;
+    }
+
+    // Validar duração mínima (pelo menos 1 minuto)
+    const durationMinutes = (end - start) / (1000 * 60);
+    if (durationMinutes < 1) {
+      return 'Erro: A sessão deve ter pelo menos 1 minuto de duração.';
+    }
+
+    // Validar duração máxima razoável (24 horas)
+    const durationHours = durationMinutes / 60;
+    if (durationHours > 24) {
+      return `Aviso: A duração de ${durationHours.toFixed(1)} horas parece excessiva. Confirme se os horários estão corretos.`;
+    }
+
+    // Validar que início não é no futuro
+    const now = new Date();
+    if (start > now) {
+      return 'Erro: A hora de início não pode ser no futuro.';
     }
 
     if (isAutoClose && !hasChanges) {
@@ -139,6 +160,20 @@ const ValidationPage = ({ token }) => {
 
     return null;
   };
+
+  // Erro de validação em tempo real (para mostrar enquanto o utilizador edita)
+  const realtimeError = useMemo(() => {
+    if (!formData.correctedStartTime || !formData.correctedEndTime) return null;
+
+    const start = new Date(formData.correctedStartTime);
+    const end = new Date(formData.correctedEndTime);
+
+    if (end <= start) {
+      return 'A hora de fim deve ser posterior à hora de início';
+    }
+
+    return null;
+  }, [formData.correctedStartTime, formData.correctedEndTime]);
 
   // Submeter validação
   const handleSubmit = async () => {
@@ -393,7 +428,16 @@ const ValidationPage = ({ token }) => {
               />
             </div>
 
-            {newDuration && (
+            {/* Aviso de erro em tempo real */}
+            {realtimeError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-700 font-medium">{realtimeError}</p>
+              </div>
+            )}
+
+            {/* Duração calculada (só mostra se não há erro) */}
+            {newDuration && !realtimeError && newDuration > 0 && (
               <div
                 className={`p-3 rounded-lg text-center ${
                   hasChanges ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
@@ -402,6 +446,18 @@ const ValidationPage = ({ token }) => {
                 <p className="text-sm">
                   Nova duração: <strong>{formatDuration(newDuration)}</strong>
                   {hasChanges && ' (alterado)'}
+                </p>
+              </div>
+            )}
+
+            {/* Aviso de duração negativa */}
+            {newDuration && newDuration < 0 && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-center">
+                <p className="text-sm text-red-700 font-medium">
+                  ⚠️ Duração inválida: {formatDuration(Math.abs(newDuration))} negativas
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  A hora de fim está antes da hora de início
                 </p>
               </div>
             )}
@@ -432,9 +488,9 @@ const ValidationPage = ({ token }) => {
         {/* Submit Button */}
         <button
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || realtimeError}
           className={`w-full py-4 rounded-xl font-semibold text-white text-lg transition-all flex items-center justify-center gap-2 ${
-            submitting
+            submitting || realtimeError
               ? 'bg-slate-400 cursor-not-allowed'
               : hasChanges
               ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700'
@@ -445,6 +501,11 @@ const ValidationPage = ({ token }) => {
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               A processar...
+            </>
+          ) : realtimeError ? (
+            <>
+              <XCircle className="w-5 h-5" />
+              Corrija os horários
             </>
           ) : hasChanges ? (
             <>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense, useCallback } from 'react';
 import { signInAnonymously } from 'firebase/auth';
 import { getDocs, collection } from 'firebase/firestore';
 import { auth, db, projectId } from './config/firebase';
@@ -7,26 +7,37 @@ import useStore from './store/useStore';
 import useThemeStore from './store/useThemeStore';
 import { Layout } from './components/layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import PWAPrompt from './components/PWAPrompt';
 
-// DevTools - REMOVER ANTES DE ENTREGAR PARA PRODUÇÃO
-import DevTools from './components/DevTools';
+// Loading fallback para lazy components
+const ViewLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-slate-500">A carregar...</p>
+    </div>
+  </div>
+);
 
-// Página de Validação (acesso via link do email)
-import ValidationPage from './pages/ValidationPage';
+// DevTools - REMOVER ANTES DE ENTREGAR PARA PRODUÇÃO (lazy loaded)
+const DevTools = lazy(() => import('./components/DevTools'));
 
-// Views
-import DashboardView from './views/DashboardView';
-import ObrasView from './views/ObrasView';
-import MaquinasView from './views/MaquinasView';
-import OperadoresView from './views/OperadoresView';
-import SessoesView from './views/SessoesView';
-import ManutencaoView from './views/ManutencaoView';
-import FinanceiroView from './views/FinanceiroView';
-import QualidadeView from './views/QualidadeView';
-import AnalisesView from './views/AnalisesView';
-import RelatoriosView from './views/RelatoriosView';
-import ConfiguracoesView from './views/ConfiguracoesView';
-import SessoesCorrigidasView from './views/SessoesCorrigidasView';
+// Página de Validação (lazy loaded - acesso via link do email)
+const ValidationPage = lazy(() => import('./pages/ValidationPage'));
+
+// Views com lazy loading (code splitting)
+const DashboardView = lazy(() => import('./views/DashboardView'));
+const ObrasView = lazy(() => import('./views/ObrasView'));
+const MaquinasView = lazy(() => import('./views/MaquinasView'));
+const OperadoresView = lazy(() => import('./views/OperadoresView'));
+const SessoesView = lazy(() => import('./views/SessoesView'));
+const ManutencaoView = lazy(() => import('./views/ManutencaoView'));
+const FinanceiroView = lazy(() => import('./views/FinanceiroView'));
+const QualidadeView = lazy(() => import('./views/QualidadeView'));
+const AnalisesView = lazy(() => import('./views/AnalisesView'));
+const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
+const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
+const SessoesCorrigidasView = lazy(() => import('./views/SessoesCorrigidasView'));
 
 export default function App() {
   const { activeView, loading, setLoading, initializeListeners } = useStore();
@@ -92,14 +103,15 @@ export default function App() {
     return () => cleanup?.();
   }, [initializeListeners, setLoading]);
 
-  const renderView = () => {
+  // Memoizar renderView para evitar re-renders desnecessários
+  const renderView = useCallback(() => {
     // Mapear view para componente
     if (activeView.startsWith('obras')) return <ObrasView />;
     if (activeView.startsWith('maquinas')) return <MaquinasView />;
     if (activeView === 'operadores') return <OperadoresView />;
     // Sessões - verificar submenus específicos primeiro
     if (activeView === 'sessoes-corrigidas') return <SessoesCorrigidasView />;
-    if (activeView === 'sessoes-validacoes') return <SessoesCorrigidasView />; // Validações usa mesmo componente
+    if (activeView === 'sessoes-validacoes') return <SessoesCorrigidasView />;
     if (activeView.startsWith('sessoes')) return <SessoesView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
     if (activeView.startsWith('financeiro')) return <FinanceiroView />;
@@ -108,7 +120,7 @@ export default function App() {
     if (activeView === 'relatorios') return <RelatoriosView />;
     if (activeView === 'configuracoes') return <ConfiguracoesView />;
     return <DashboardView />;
-  };
+  }, [activeView]);
 
   if (loading) {
     return (
@@ -125,7 +137,9 @@ export default function App() {
   if (validationToken) {
     return (
       <ErrorBoundary>
-        <ValidationPage token={validationToken} />
+        <Suspense fallback={<ViewLoader />}>
+          <ValidationPage token={validationToken} />
+        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -133,10 +147,16 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Layout>
-        {renderView()}
+        <Suspense fallback={<ViewLoader />}>
+          {renderView()}
+        </Suspense>
       </Layout>
       {/* DevTools - REMOVER ANTES DE ENTREGAR PARA PRODUÇÃO */}
-      <DevTools />
+      <Suspense fallback={null}>
+        <DevTools />
+      </Suspense>
+      {/* PWA - Notificações de instalação e offline */}
+      <PWAPrompt />
     </ErrorBoundary>
   );
 }

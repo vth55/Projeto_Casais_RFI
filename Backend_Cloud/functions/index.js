@@ -11,7 +11,6 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
@@ -29,30 +28,45 @@ const UNREGISTERED_SCANS_PATH = `artifacts/${APP_ID}/public/data/unregistered_sc
 const SCAN_BUFFER_PATH = `artifacts/${APP_ID}/public/data/scan_buffer`;
 const ALERTS_PATH = `artifacts/${APP_ID}/public/data/alerts`;
 const SETTINGS_PATH = `artifacts/${APP_ID}/public/data/settings`;
+const LOCATION_CARDS_PATH = `artifacts/${APP_ID}/public/data/location_cards`;
+const OBRAS_PATH = `artifacts/${APP_ID}/public/data/obras`;
 
 // ============================================
 // CONFIGURAÇÃO DE EMAIL
 // ============================================
 
-// Criar transporter de email
-// NOTA: Configurar variáveis de ambiente no Firebase:
-// firebase functions:config:set email.host="smtp.casais.pt" email.port="587" email.user="..." email.pass="..."
-const getEmailTransporter = () => {
-    const config = functions.config().email || {};
+// Criar transporter de email usando variáveis de ambiente
+// Para configurar: firebase functions:secrets:set EMAIL_HOST EMAIL_PORT EMAIL_USER EMAIL_PASS
+// Ou definir no .env.local para desenvolvimento
+const getEmailTransporter = (smtpConfig = null) => {
+    // Se fornecido smtpConfig diretamente (para testes), usar esse
+    if (smtpConfig && smtpConfig.user && smtpConfig.pass) {
+        return nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: smtpConfig.user,
+                pass: smtpConfig.pass,
+            },
+        });
+    }
 
-    // Se não houver configuração, usar console log (dev mode)
-    if (!config.host) {
-        console.log('⚠️ Email não configurado - usando modo de desenvolvimento');
+    // Tentar usar variáveis de ambiente
+    const emailHost = process.env.EMAIL_HOST;
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailHost || !emailUser) {
+        console.log('⚠️ Email não configurado via env - usando modo de desenvolvimento');
         return null;
     }
 
     return nodemailer.createTransport({
-        host: config.host,
-        port: parseInt(config.port) || 587,
-        secure: config.secure === 'true',
+        host: emailHost,
+        port: parseInt(process.env.EMAIL_PORT) || 587,
+        secure: process.env.EMAIL_SECURE === 'true',
         auth: {
-            user: config.user,
-            pass: config.pass,
+            user: emailUser,
+            pass: emailPass,
         },
     });
 };
@@ -155,12 +169,12 @@ const generateValidationEmailHtml = (alert, validationUrl) => {
 };
 
 // Enviar email de validação
-const sendValidationEmail = async (alert, isResend = false) => {
-    const transporter = getEmailTransporter();
+const sendValidationEmail = async (alert, smtpConfig = null, baseUrl = null, isResend = false) => {
+    const transporter = getEmailTransporter(smtpConfig);
 
     // Construir URL de validação
-    const baseUrl = functions.config().app?.url || 'https://casais-fleet.web.app';
-    const validationUrl = `${baseUrl}/validar/${alert.validationToken}`;
+    const appBaseUrl = baseUrl || process.env.APP_URL || 'https://casais-fleet.web.app';
+    const validationUrl = `${appBaseUrl}/validar/${alert.validationToken}`;
 
     if (!transporter) {
         // Modo desenvolvimento - apenas log
@@ -168,12 +182,13 @@ const sendValidationEmail = async (alert, isResend = false) => {
         console.log(`   Para: ${alert.operatorEmail}`);
         console.log(`   Assunto: ${isResend ? '[Lembrete] ' : ''}Validação de Sessão - ${alert.machineName}`);
         console.log(`   URL: ${validationUrl}`);
-        return { success: true, mode: 'dev' };
+        return { success: true, mode: 'dev', validationUrl };
     }
 
     try {
+        const fromEmail = smtpConfig?.user || process.env.EMAIL_FROM || 'noreply@casais.pt';
         const mailOptions = {
-            from: functions.config().email?.from || 'noreply@casais.pt',
+            from: `"CASAIS Fleet" <${fromEmail}>`,
             to: alert.operatorEmail,
             subject: `${isResend ? '[Lembrete] ' : ''}Validação de Sessão - ${alert.machineName || alert.machineId}`,
             html: generateValidationEmailHtml(alert, validationUrl),
@@ -181,7 +196,7 @@ const sendValidationEmail = async (alert, isResend = false) => {
 
         await transporter.sendMail(mailOptions);
         console.log(`✅ Email enviado para ${alert.operatorEmail}`);
-        return { success: true };
+        return { success: true, validationUrl };
     } catch (error) {
         console.error('❌ Erro ao enviar email:', error);
         return { success: false, error: error.message };
@@ -189,7 +204,7 @@ const sendValidationEmail = async (alert, isResend = false) => {
 };
 
 exports.handleSessionTrigger = onRequest(async (req, res) => {
-    
+
     if (req.method !== 'POST') {
         return res.status(405).send({ error: 'Apenas POST permitido.' });
     }
@@ -210,6 +225,68 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
             timestamp: timestamp
         }, { merge: true });
 
+        // ============================================
+        // VERIFICAR SE É CARTÃO DE LOCALIZAÇÃO
+        // Cartões com prefixo "LOC_" mudam localização da máquina
+        // ============================================
+        if (normalizedCard.startsWith('LOC_')) {
+            console.log(`📍 Cartão de localização detectado: ${normalizedCard}`);
+
+            // Buscar cartão de localização
+            const locationCardSnap = await db.doc(`${LOCATION_CARDS_PATH}/${normalizedCard}`).get();
+
+            if (!locationCardSnap.exists) {
+                console.log(`❌ Cartão de localização não registado: ${normalizedCard}`);
+                return res.status(404).send({
+                    status: 'LOCATION_NOT_FOUND',
+                    message: 'Cartão de localização não registado no sistema.'
+                });
+            }
+
+            const locationCard = locationCardSnap.data();
+            const machineRef = db.doc(`${MACHINES_PATH}/${normalizedMachine}`);
+            const machineSnap = await machineRef.get();
+
+            if (!machineSnap.exists) {
+                return res.status(404).send({
+                    status: 'MACHINE_NOT_FOUND',
+                    message: 'Máquina não encontrada.'
+                });
+            }
+
+            const previousLocation = machineSnap.data().location;
+
+            // Atualizar localização da máquina
+            await machineRef.update({
+                location: {
+                    workId: locationCard.obraId,
+                    workName: locationCard.obraName,
+                    gps: locationCard.gps || null,
+                    updatedAt: timestamp,
+                    updatedBy: normalizedCard,
+                },
+                locationHistory: admin.firestore.FieldValue.arrayUnion({
+                    from: previousLocation?.workName || 'Sem localização',
+                    to: locationCard.obraName,
+                    timestamp: timestamp,
+                    cardId: normalizedCard,
+                }),
+            });
+
+            console.log(`✅ Máquina ${normalizedMachine} movida para ${locationCard.obraName}`);
+
+            return res.json({
+                status: 'LOCATION_CHANGED',
+                machine: normalizedMachine,
+                newLocation: locationCard.obraName,
+                obraId: locationCard.obraId,
+                message: `Localização alterada para: ${locationCard.obraName}`
+            });
+        }
+
+        // ============================================
+        // LÓGICA NORMAL DE SESSÃO (cartão de operador)
+        // ============================================
         const activeSessionQuery = await db.collection(SESSIONS_PATH)
             .where('machineId', '==', normalizedMachine)
             .where('endTime', '==', null)
@@ -228,15 +305,15 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                     type: 'access_attempt',
                     resolved: false
                 }, { merge: true });
-                
+
                 console.log(`Acesso bloqueado: ${normalizedCard}`);
-                return res.status(403).send({ 
-                    status: 'DENIED', 
-                    message: 'Acesso negado. Cartão não registado.' 
+                return res.status(403).send({
+                    status: 'DENIED',
+                    message: 'Acesso negado. Cartão não registado.'
                 });
             }
         }
-        
+
         const machineRef = db.doc(`${MACHINES_PATH}/${normalizedMachine}`);
 
         if (!activeSessionQuery.empty) {
@@ -661,32 +738,23 @@ exports.createTestAlertAndSendEmail = onRequest(async (req, res) => {
         await db.doc(`${ALERTS_PATH}/${alertId}`).set(alertData);
         console.log(`✅ Alerta de teste criado: ${alertId}`);
 
-        // Criar transporter de email (se fornecido smtpConfig, usar; senão usar getEmailTransporter)
-        let transporter;
-        if (smtpConfig && smtpConfig.user && smtpConfig.pass) {
-            transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: smtpConfig.user,
-                    pass: smtpConfig.pass,
-                },
-            });
-        } else {
-            transporter = getEmailTransporter();
-        }
+        // Obter URL base
+        const baseUrl = req.body.baseUrl || process.env.APP_URL || 'http://localhost:5173';
 
-        if (!transporter) {
-            // Se não houver transporter, ainda assim criar o alerta (pode ser testado depois)
+        // Verificar se temos configuração de email
+        if (!smtpConfig || !smtpConfig.user || !smtpConfig.pass) {
+            const validationUrl = `${baseUrl}/validar/${validationToken}`;
             return res.json({
                 success: true,
                 alertId,
                 validationToken,
+                validationUrl,
                 message: 'Alerta criado, mas email não configurado. Forneça smtpConfig para enviar email.',
             });
         }
 
-        // USAR A MESMA FUNÇÃO QUE OS ALERTAS REAIS
-        const result = await sendValidationEmail(alertData);
+        // Enviar email usando a função centralizada
+        const result = await sendValidationEmail(alertData, smtpConfig, baseUrl);
 
         if (result.success) {
             // Atualizar alerta com timestamp de envio
@@ -701,15 +769,11 @@ exports.createTestAlertAndSendEmail = onRequest(async (req, res) => {
                 }),
             });
 
-            // Construir URL de validação
-            const baseUrl = req.body.baseUrl || functions.config().app?.url || 'http://localhost:5173';
-            const validationUrl = `${baseUrl}/validar/${validationToken}`;
-
             return res.json({
                 success: true,
                 alertId,
                 validationToken,
-                validationUrl,
+                validationUrl: result.validationUrl,
                 message: 'Alerta de teste criado e email enviado com sucesso!',
             });
         } else {
@@ -776,36 +840,23 @@ exports.sendTestEmail = onRequest(async (req, res) => {
 
         const alert = alertSnap.data();
 
-        // Criar transporter com configuração fornecida ou padrão
-        let transporter;
-
-        if (smtpConfig && smtpConfig.user && smtpConfig.pass) {
-            // Usar credenciais fornecidas (Gmail)
-            transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: smtpConfig.user,
-                    pass: smtpConfig.pass,
-                },
-            });
-        } else {
-            // Tentar usar configuração do Firebase
-            transporter = getEmailTransporter();
-        }
-
-        if (!transporter) {
+        // Verificar se temos configuração de email
+        if (!smtpConfig || !smtpConfig.user || !smtpConfig.pass) {
             return res.status(400).json({
                 error: 'Email não configurado. Forneça smtpConfig com user e pass.'
             });
         }
 
-        // Construir URL de validação
-        const baseUrl = req.body.baseUrl || functions.config().app?.url || 'http://localhost:5173';
+        // Construir URL base
+        const baseUrl = req.body.baseUrl || process.env.APP_URL || 'http://localhost:5173';
         const validationUrl = `${baseUrl}/validar/${alert.validationToken}`;
+
+        // Criar transporter com configuração fornecida
+        const transporter = getEmailTransporter(smtpConfig);
 
         // Enviar email
         const mailOptions = {
-            from: smtpConfig?.user ? `"CASAIS Fleet" <${smtpConfig.user}>` : '"CASAIS Fleet" <noreply@casais.pt>',
+            from: `"CASAIS Fleet" <${smtpConfig.user}>`,
             to: destinationEmail,
             subject: `[TESTE] Validação de Sessão - ${alert.machineName || alert.machineId}`,
             html: generateValidationEmailHtml(alert, validationUrl),

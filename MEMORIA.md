@@ -243,19 +243,86 @@ Hardware:     arduino_rfid_simple/, Hardware_ESP32/
 8. **Uniformização de Linguagem** ✅
    - "Auto-Close" → "Auto-Fecho" em todo o sistema
 
-## TAREFAS PENDENTES
+## TAREFAS PENDENTES (Atualizado 17/12/2025)
 
-### ALTA PRIORIDADE
-1. **Deploy Cloud Functions** ⚠️
-   - Executar `DEPLOY_FUNCTIONS.bat` no Windows
-   - Requer `firebase login` interativo
+### BAIXA PRIORIDADE
+1. **Notificações Push** ❌
+   - Alertas de manutenção
+   - Sessões longas
 
-2. **RFID de Localização**
-   - Cartões especiais para mudar localização de máquinas
-   - Scan = muda máquina para essa obra
+### CONCLUÍDO NESTA SESSÃO (17/12/2025 - Sessão 2) ✅
 
-### MENUS QUE PRECISAM DIFERENCIAÇÃO
-- Manutenção > Alertas vs Histórico (mostram mesmo conteúdo)
+**PWA Completo** ✅ IMPLEMENTADO
+- `vite-plugin-pwa` configurado com Workbox
+- Service Worker com cache offline
+- Manifest.json gerado automaticamente
+- Componente `PWAPrompt.jsx` para instalação
+- Runtime caching para imagens, fontes e Firebase API
+- Página `offline.html` para quando não há internet
+- Animações CSS para notificações
+- Detecção online/offline em tempo real
+
+**Perfis de Acesso** ✅ IMPLEMENTADO
+- 6 perfis de sistema:
+  - **Admin**: Acesso total
+  - **Gestor de Frota**: Gestão de equipamentos e obras
+  - **Gestor Financeiro**: Custos e relatórios financeiros
+  - **Gestor de Sustentabilidade**: Emissões e ESG
+  - **Encarregado de Obra**: Restrito à sua obra
+  - **Visualizador**: Apenas leitura
+- Sistema de permissões granular (`config/permissions.js`)
+- Hierarquia de níveis (Admin > Gestão > Supervisão > Visualização)
+- Sidebar filtra menus por permissões
+- **Modo Demo** em Configurações → Trocar perfil para testar
+- Perfis customizados podem ser criados
+- Persistência de sessão com Zustand persist
+
+**RFID de Localização** ✅ IMPLEMENTADO
+- Cartões com prefixo `LOC_` mudam localização de máquinas
+- Cloud Function `handleSessionTrigger` atualizada
+- Store `useStore.js` com CRUD de locationCards
+- **UI em Obras → Detalhes → Cartões RFID de Localização** (permanente)
+- DevTools tab "LOC" para testes (será removida)
+- Firestore: `location_cards/{cardId}` com obraId, obraName, gps
+
+**Como usar RFID de Localização (produção):**
+1. Menu Obras → Clicar numa obra
+2. Secção "Cartões RFID de Localização"
+3. Escrever ID do cartão (ex: PORTO_01) → Criar
+4. O sistema adiciona automaticamente prefixo LOC_
+5. Quando o cartão for lido, a máquina move para essa obra
+
+### VERIFICADO E COMPLETO ✅
+- Módulo Financeiro (tarifários, custos/hora) ✅
+- Duplo Contador (partialHours + totalHours) ✅
+- Manutenção Alertas vs Histórico (são tabs diferentes, OK) ✅
+- RFID de Localização ✅
+- PWA Completo (offline, Service Worker, instalação) ✅
+- Perfis de Acesso (6 perfis, permissões granulares, modo demo) ✅
+
+## SISTEMA DE EMAIL E VALIDAÇÃO (FUNCIONANDO ✅)
+
+### Cloud Functions Deployed
+- `createTestAlertAndSendEmail` - Cria alerta + envia email num só passo
+- `sendTestEmail` - Enviar email para alerta existente
+- URL: `https://us-central1-casais-rfid.cloudfunctions.net/`
+
+### Fluxo Completo
+1. DevTools → Tab "Email" → Criar Alerta + Enviar Email
+2. Email recebido com link `/validar/{token}`
+3. Operador abre link → ValidationPage
+4. Corrige horários → Dados salvos no Firestore
+5. Sessão original também é atualizada
+
+### Como Testar
+1. Abrir DevTools (botão roxo canto inferior direito)
+2. Tab "Email"
+3. Configurar SMTP Gmail:
+   - Email: `a33137.ipca@gmail.com`
+   - App Password: (configurar no Google)
+4. Clicar "Criar Alerta + Enviar Email"
+5. Verificar email recebido
+6. Clicar no link para testar validação
 
 ---
 
@@ -322,4 +389,61 @@ src/components/
 
 ---
 
-*Última atualização: 17 Dezembro 2025 - Sessão DevTools + Alertas*
+## VALIDAÇÕES DA PÁGINA DE CORREÇÃO
+
+### Validações Implementadas (ValidationPage.jsx)
+1. **Hora de fim > Hora de início** - Não permite guardar se fim é antes/igual ao início
+2. **Duração mínima** - Pelo menos 1 minuto
+3. **Duração máxima** - Aviso se > 24 horas
+4. **Hora de início no passado** - Não permite datas futuras
+5. **Validação em tempo real** - Mostra erro imediatamente ao editar
+6. **Botão desabilitado** - Não deixa clicar se há erro nos horários
+
+### Mensagens de Erro
+- "A hora de fim deve ser posterior à hora de início"
+- "A sessão deve ter pelo menos 1 minuto de duração"
+- "A hora de início não pode ser no futuro"
+
+---
+
+## OTIMIZAÇÕES DE PERFORMANCE (17/12/2025)
+
+### Bundle Size - ANTES vs DEPOIS
+| Métrica | Antes | Depois | Redução |
+|---------|-------|--------|---------|
+| JS Principal (gzip) | 364 KB | 91 KB | **-75%** |
+| Carregamento inicial | 1.2 MB | 291 KB | **-77%** |
+
+### Otimizações Implementadas
+
+1. **Lazy Loading (Code Splitting)**
+   - Todas as views carregam sob demanda
+   - DevTools carrega só quando necessário
+   - ValidationPage carrega apenas quando acedida via link
+
+2. **Chunking Otimizado (vite.config.js)**
+   - `vendor-react`: React core (11 KB)
+   - `vendor-firebase`: Firebase (336 KB)
+   - `vendor-charts`: Recharts (387 KB)
+   - `vendor-utils`: Zustand + QRCode (17 KB)
+
+3. **Memoização de Componentes**
+   - `StatCard` com `React.memo`
+   - `Card` com `React.memo`
+   - Animação otimizada com `requestAnimationFrame`
+
+4. **Selectors Zustand (`src/store/selectors.js`)**
+   - Evita re-renders desnecessários
+   - Selectors básicos e derivados
+   - Hooks customizados para filtros
+
+### Ficheiros Modificados
+- `App.jsx` - Lazy loading
+- `vite.config.js` - Chunking manual
+- `components/ui/StatCard.jsx` - Memo + animação
+- `components/ui/Card.jsx` - Memo
+- `store/selectors.js` - NOVO
+
+---
+
+*Última atualização: 17 Dezembro 2025 (Sessão 2) - PWA Completo + Perfis de Acesso + Modo Demo*

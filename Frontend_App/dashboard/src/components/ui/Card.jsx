@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const Card = ({
+const Card = memo(({
   children,
   className = '',
   padding = 'md',
@@ -29,7 +29,7 @@ const Card = ({
       {children}
     </div>
   );
-};
+});
 
 // Card Header
 Card.Header = ({ children, className = '', action }) => (
