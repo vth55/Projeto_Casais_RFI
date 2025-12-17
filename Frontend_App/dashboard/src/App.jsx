@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { signInAnonymously } from 'firebase/auth';
 import { getDocs, collection } from 'firebase/firestore';
 import { auth, db, projectId } from './config/firebase';
@@ -10,6 +10,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // DevTools - REMOVER ANTES DE ENTREGAR PARA PRODUÇÃO
 import DevTools from './components/DevTools';
+
+// Página de Validação (acesso via link do email)
+import ValidationPage from './pages/ValidationPage';
 
 // Views
 import DashboardView from './views/DashboardView';
@@ -28,6 +31,18 @@ import SessoesCorrigidasView from './views/SessoesCorrigidasView';
 export default function App() {
   const { activeView, loading, setLoading, initializeListeners } = useStore();
   const { initTheme } = useThemeStore();
+
+  // Verificar se é página de validação (link do email)
+  const [validationToken, setValidationToken] = useState(null);
+
+  useEffect(() => {
+    // Verificar URL para rota de validação
+    const path = window.location.pathname;
+    const match = path.match(/^\/validar\/(.+)$/);
+    if (match) {
+      setValidationToken(match[1]);
+    }
+  }, []);
 
   // Inicializar tema ao carregar
   useEffect(() => {
@@ -103,6 +118,15 @@ export default function App() {
           <p className="text-slate-600 font-medium">A carregar...</p>
         </div>
       </div>
+    );
+  }
+
+  // Se é página de validação, mostrar apenas essa página (sem layout/menus)
+  if (validationToken) {
+    return (
+      <ErrorBoundary>
+        <ValidationPage token={validationToken} />
+      </ErrorBoundary>
     );
   }
 

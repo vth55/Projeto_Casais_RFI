@@ -13,7 +13,7 @@
  * - Navegação rápida
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Wrench,
   X,
@@ -36,6 +36,11 @@ import {
   QrCode,
   Download,
   Share2,
+  Send,
+  Settings,
+  FastForward,
+  Gauge,
+  Zap,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { db, projectId } from '../config/firebase';
@@ -56,6 +61,19 @@ const generateToken = () => {
     token += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return token;
+};
+
+// Configuração de email para testes (guardada no localStorage)
+const EMAIL_CONFIG_KEY = 'casais-dev-email-config';
+const getEmailConfig = () => {
+  try {
+    return JSON.parse(localStorage.getItem(EMAIL_CONFIG_KEY)) || {};
+  } catch {
+    return {};
+  }
+};
+const saveEmailConfig = (config) => {
+  localStorage.setItem(EMAIL_CONFIG_KEY, JSON.stringify(config));
 };
 
 // Dados de teste
@@ -223,6 +241,435 @@ const QRCodeTab = () => {
           <li>3. Insira no slide da apresentação</li>
           <li>4. O júri pode escanear para aceder ao sistema</li>
         </ul>
+      </div>
+    </div>
+  );
+};
+
+// Componente Email Real Tab - Usa a Cloud Function createTestAlertAndSendEmail
+const EmailSendTab = ({ showMessage, onAlertCreated }) => {
+  const [emailConfig, setEmailConfig] = useState(getEmailConfig);
+  const [destinationEmail, setDestinationEmail] = useState(emailConfig.lastDestination || 'a33137.ipca@gmail.com');
+  const [sending, setSending] = useState(false);
+  const [showConfig, setShowConfig] = useState(!emailConfig.smtpUser);
+  const [lastResult, setLastResult] = useState(null);
+
+  const handleSaveConfig = () => {
+    saveEmailConfig({
+      smtpUser: emailConfig.smtpUser,
+      smtpPass: emailConfig.smtpPass,
+      lastDestination: destinationEmail,
+    });
+    showMessage('Configuração guardada!');
+    setShowConfig(false);
+  };
+
+  // Criar alerta E enviar email num só passo
+  const createAlertAndSendEmail = async () => {
+    if (!destinationEmail) {
+      showMessage('Introduz o email de destino', 'error');
+      return;
+    }
+
+    if (!emailConfig.smtpUser || !emailConfig.smtpPass) {
+      showMessage('Configura as credenciais SMTP primeiro', 'error');
+      setShowConfig(true);
+      return;
+    }
+
+    setSending(true);
+    setLastResult(null);
+
+    try {
+      // Chamar a Cloud Function que faz tudo num só passo
+      const response = await fetch(
+        'https://us-central1-casais-rfid.cloudfunctions.net/createTestAlertAndSendEmail',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            destinationEmail,
+            baseUrl: window.location.origin,
+            smtpConfig: {
+              user: emailConfig.smtpUser,
+              pass: emailConfig.smtpPass,
+            },
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        saveEmailConfig({ ...emailConfig, lastDestination: destinationEmail });
+        setLastResult(result);
+        showMessage(`Email enviado para ${destinationEmail}!`);
+        console.log('📧 Alerta criado e email enviado:', result);
+
+        // Notificar que foi criado um alerta (para outras tabs)
+        if (onAlertCreated) {
+          onAlertCreated({
+            id: result.alertId,
+            token: result.validationToken,
+            validationUrl: result.validationUrl,
+          });
+        }
+      } else {
+        throw new Error(result.error || result.message || 'Erro desconhecido');
+      }
+    } catch (error) {
+      console.error('Erro ao criar alerta/enviar email:', error);
+
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        showMessage('Cloud Functions não disponíveis. Faz deploy primeiro.', 'error');
+      } else {
+        showMessage(`Erro: ${error.message}`, 'error');
+      }
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        Criar alerta de teste e enviar email real
+      </p>
+
+      {/* Configuração SMTP */}
+      {showConfig ? (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-700">Configuração Gmail</p>
+            <button
+              onClick={() => setShowConfig(false)}
+              className="text-xs text-slate-500 hover:text-slate-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Email Gmail</label>
+            <input
+              type="email"
+              value={emailConfig.smtpUser || ''}
+              onChange={(e) => setEmailConfig({ ...emailConfig, smtpUser: e.target.value })}
+              placeholder="teu.email@gmail.com"
+              className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">App Password</label>
+            <input
+              type="password"
+              value={emailConfig.smtpPass || ''}
+              onChange={(e) => setEmailConfig({ ...emailConfig, smtpPass: e.target.value })}
+              placeholder="xxxx xxxx xxxx xxxx"
+              className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+            <a
+              href="https://myaccount.google.com/apppasswords"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-blue-600 hover:underline"
+            >
+              Criar App Password no Google
+            </a>
+          </div>
+
+          <button
+            onClick={handleSaveConfig}
+            className="w-full py-1.5 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700"
+          >
+            Guardar Configuração
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowConfig(true)}
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs hover:bg-slate-100"
+        >
+          <span className="text-slate-600">
+            <Settings className="w-3.5 h-3.5 inline mr-1" />
+            {emailConfig.smtpUser ? `Configurado: ${emailConfig.smtpUser}` : 'Configurar SMTP'}
+          </span>
+          <span className="text-slate-400">▸</span>
+        </button>
+      )}
+
+      {/* Email de destino */}
+      <div>
+        <label className="block text-xs font-medium text-slate-700 mb-1">Email de Destino</label>
+        <input
+          type="email"
+          value={destinationEmail}
+          onChange={(e) => setDestinationEmail(e.target.value)}
+          placeholder="destinatario@email.com"
+          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+        />
+      </div>
+
+      {/* Botão principal - Criar + Enviar */}
+      <button
+        onClick={createAlertAndSendEmail}
+        disabled={sending}
+        className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${
+          sending
+            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        }`}
+      >
+        {sending ? (
+          <>
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            A criar alerta e enviar...
+          </>
+        ) : (
+          <>
+            <Send className="w-4 h-4" />
+            Criar Alerta + Enviar Email
+          </>
+        )}
+      </button>
+
+      {/* Resultado do último envio */}
+      {lastResult && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+          <p className="text-xs font-medium text-green-700 flex items-center gap-1">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Email enviado com sucesso!
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(lastResult.validationUrl);
+                showMessage('Link copiado!');
+              }}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-green-300 rounded text-xs text-green-700 hover:bg-green-100"
+            >
+              <Copy className="w-3 h-3" />
+              Copiar Link
+            </button>
+            <button
+              onClick={() => window.open(lastResult.validationUrl, '_blank')}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 rounded text-xs text-white hover:bg-green-700"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Abrir Validação
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Info */}
+      <div className="p-2 bg-blue-50 border border-blue-100 rounded-lg text-[10px] text-blue-700">
+        <p className="font-medium">Esta função faz tudo num passo:</p>
+        <ol className="list-decimal list-inside space-y-0.5 mt-1">
+          <li>Cria um alerta de teste no Firestore</li>
+          <li>Envia o email de validação</li>
+          <li>O link do email funciona normalmente!</li>
+        </ol>
+      </div>
+    </div>
+  );
+};
+
+// Componente Demo Time Tab - Controle de tempo para demonstrações
+const DemoTimeTab = ({ showMessage }) => {
+  const { machines, sessions } = useStore();
+  const [selectedMachine, setSelectedMachine] = useState('');
+  const [hoursToAdd, setHoursToAdd] = useState(3);
+  const [creating, setCreating] = useState(false);
+
+  // Criar sessão com tempo específico (para demo)
+  const createDemoSession = async (durationHours) => {
+    setCreating(true);
+    try {
+      const machine = machines.find(m => m.id === selectedMachine) || TEST_DATA.machines[0];
+      const operator = TEST_DATA.operators[0];
+      const obra = TEST_DATA.obras[0];
+
+      const sessionId = generateId('session');
+      const endTime = new Date();
+      const startTime = new Date(endTime.getTime() - (durationHours * 60 * 60 * 1000));
+
+      await setDoc(doc(db, `${basePath}/sessions`, sessionId), {
+        id: sessionId,
+        cardId: operator.id,
+        machineId: machine.id,
+        machineName: machine.name,
+        operatorName: operator.name,
+        obraId: obra.id,
+        obraName: obra.name,
+        startTime: Timestamp.fromDate(startTime),
+        endTime: Timestamp.fromDate(endTime),
+        durationHours: durationHours,
+        status: 'CLOSED',
+        isTestData: true,
+        createdAt: Timestamp.now(),
+      });
+
+      showMessage(`Sessão de ${durationHours}h criada!`);
+    } catch (error) {
+      console.error('Erro ao criar sessão:', error);
+      showMessage(`Erro: ${error.message}`, 'error');
+    }
+    setCreating(false);
+  };
+
+  // Criar sessão ABERTA com tempo passado (para simular máquina ligada há X horas)
+  const createOpenDemoSession = async (hoursAgo) => {
+    setCreating(true);
+    try {
+      const machine = machines.find(m => m.id === selectedMachine) || TEST_DATA.machines[0];
+      const operator = TEST_DATA.operators[0];
+      const obra = TEST_DATA.obras[0];
+
+      const sessionId = generateId('session');
+      const startTime = new Date(Date.now() - (hoursAgo * 60 * 60 * 1000));
+
+      await setDoc(doc(db, `${basePath}/sessions`, sessionId), {
+        id: sessionId,
+        cardId: operator.id,
+        machineId: machine.id,
+        machineName: machine.name,
+        operatorName: operator.name,
+        obraId: obra.id,
+        obraName: obra.name,
+        startTime: Timestamp.fromDate(startTime),
+        endTime: null,
+        durationHours: 0,
+        status: 'OPEN',
+        isTestData: true,
+        createdAt: Timestamp.now(),
+      });
+
+      // Atualizar status da máquina
+      await setDoc(doc(db, `${basePath}/machines`, machine.id), {
+        status: 'ACTIVE',
+        lastOperator: operator.id,
+      }, { merge: true });
+
+      showMessage(`Máquina a operar há ${hoursAgo}h!`);
+    } catch (error) {
+      console.error('Erro ao criar sessão:', error);
+      showMessage(`Erro: ${error.message}`, 'error');
+    }
+    setCreating(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        Controles de tempo para demonstrações
+      </p>
+
+      {/* Seleção de máquina */}
+      <div>
+        <label className="block text-xs font-medium text-slate-700 mb-1">Máquina</label>
+        <select
+          value={selectedMachine}
+          onChange={(e) => setSelectedMachine(e.target.value)}
+          className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+        >
+          <option value="">Máquina de Teste (Demo)</option>
+          {machines.map(m => (
+            <option key={m.id} value={m.id}>
+              {typeof m.name === 'object' ? m.name?.name : m.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Sessão aberta - Máquina a operar */}
+      <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
+        <p className="text-xs font-medium text-orange-800 flex items-center gap-1">
+          <Gauge className="w-3.5 h-3.5" />
+          Simular Máquina em Operação
+        </p>
+        <p className="text-[10px] text-orange-600">
+          Cria sessão ABERTA (máquina ligada há X horas)
+        </p>
+        <div className="grid grid-cols-4 gap-1">
+          {[2, 4, 6, 8].map(hours => (
+            <button
+              key={hours}
+              onClick={() => createOpenDemoSession(hours)}
+              disabled={creating}
+              className="py-2 bg-orange-100 hover:bg-orange-200 border border-orange-300 rounded text-xs font-medium text-orange-800"
+            >
+              {hours}h
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sessões concluídas - Histórico */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+        <p className="text-xs font-medium text-blue-800 flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5" />
+          Criar Sessão Concluída
+        </p>
+        <p className="text-[10px] text-blue-600">
+          Adiciona sessão fechada ao histórico
+        </p>
+        <div className="grid grid-cols-4 gap-1">
+          {[1, 2, 4, 8].map(hours => (
+            <button
+              key={hours}
+              onClick={() => createDemoSession(hours)}
+              disabled={creating}
+              className="py-2 bg-blue-100 hover:bg-blue-200 border border-blue-300 rounded text-xs font-medium text-blue-800"
+            >
+              {hours}h
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Input personalizado */}
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+        <p className="text-xs font-medium text-slate-700 flex items-center gap-1">
+          <FastForward className="w-3.5 h-3.5" />
+          Duração Personalizada
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="0.5"
+            max="24"
+            step="0.5"
+            value={hoursToAdd}
+            onChange={(e) => setHoursToAdd(parseFloat(e.target.value))}
+            className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+          />
+          <span className="px-2 py-1.5 text-sm text-slate-500">horas</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => createOpenDemoSession(hoursToAdd)}
+            disabled={creating}
+            className="py-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1"
+          >
+            <Zap className="w-3 h-3" />
+            Aberta
+          </button>
+          <button
+            onClick={() => createDemoSession(hoursToAdd)}
+            disabled={creating}
+            className="py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1"
+          >
+            <CheckCircle className="w-3 h-3" />
+            Fechada
+          </button>
+        </div>
+      </div>
+
+      {/* Resumo de sessões */}
+      <div className="p-2 bg-slate-100 rounded text-[10px] text-slate-600">
+        <p>Sessões abertas: {sessions?.filter(s => s.status === 'OPEN').length || 0}</p>
+        <p>Sessões de teste: {sessions?.filter(s => s.isTestData).length || 0}</p>
       </div>
     </div>
   );
@@ -664,13 +1111,14 @@ const DevTools = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200">
+        <div className="flex border-b border-slate-200 overflow-x-auto">
           {[
             { id: 'alerts', label: 'Alertas', icon: AlertTriangle },
+            { id: 'sendEmail', label: 'Email', icon: Send },
+            { id: 'demo', label: 'Demo', icon: FastForward },
             { id: 'rfid', label: 'RFID', icon: CreditCard },
-            { id: 'qr', label: 'QR Code', icon: QrCode },
-            { id: 'email', label: 'Email', icon: Mail },
-            { id: 'nav', label: 'Navegar', icon: Navigation },
+            { id: 'qr', label: 'QR', icon: QrCode },
+            { id: 'nav', label: 'Nav', icon: Navigation },
           ].map(tab => (
             <button
               key={tab.id}
@@ -827,59 +1275,17 @@ const DevTools = () => {
             <QRCodeTab />
           )}
 
-          {/* Email Tab */}
-          {activeTab === 'email' && (
-            <div className="space-y-3">
-              <p className="text-xs text-slate-500 mb-2">
-                Preview e teste de emails
-              </p>
+          {/* Send Email Tab */}
+          {activeTab === 'sendEmail' && (
+            <EmailSendTab
+              showMessage={showMessage}
+              onAlertCreated={(alert) => setLastCreatedAlert(alert)}
+            />
+          )}
 
-              <button
-                onClick={() => {
-                  const mockAlert = {
-                    token: 'DEMO_TOKEN_12345',
-                    type: 'LONG_SESSION',
-                    machineName: 'Escavadora Demo EC220',
-                    operatorName: 'João Silva',
-                    operatorEmail: 'joao.teste@casais.pt',
-                    obraName: 'Obra Demo - Ponte Norte',
-                    startTime: new Date(Date.now() - 7 * 60 * 60 * 1000),
-                    endTime: new Date(Date.now() - 30 * 60 * 1000),
-                    durationHours: 6.5,
-                  };
-                  setEmailPreview(mockAlert);
-                }}
-                className="w-full flex items-center gap-3 p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-left"
-              >
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Eye className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900">Ver Preview do Email</p>
-                  <p className="text-xs text-slate-500">Mostra como o operador vê o email</p>
-                </div>
-              </button>
-
-              {lastCreatedAlert && (
-                <button
-                  onClick={() => setEmailPreview(lastCreatedAlert)}
-                  className="w-full flex items-center gap-3 p-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-left"
-                >
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900">Email do Último Alerta</p>
-                    <p className="text-xs text-slate-500">{lastCreatedAlert.machineName}</p>
-                  </div>
-                </button>
-              )}
-
-              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                <p className="font-medium mb-1">Nota:</p>
-                <p>Em modo DEV, os emails não são enviados. Apenas são registados no console (F12).</p>
-              </div>
-            </div>
+          {/* Demo Time Tab */}
+          {activeTab === 'demo' && (
+            <DemoTimeTab showMessage={showMessage} />
           )}
 
           {/* Nav Tab */}

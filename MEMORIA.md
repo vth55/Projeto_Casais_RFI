@@ -12,7 +12,7 @@
 | Cliente | Grupo Casais (empresa real) |
 | Prazo | Junho 2025 |
 | Stack | React 19 + Vite + Firebase + Tailwind |
-| Cor Casais | #005EB8 (azul) |
+| 
 
 ---
 
@@ -192,10 +192,65 @@ Hardware:     arduino_rfid_simple/, Hardware_ESP32/
    - Card de sugestões com aceitar/dispensar
    - Threshold de 5h mínimas para sugestão
 
+## TAREFAS CONCLUÍDAS (Sessão 17/12)
+
+1. **Sistema de Alertas e Validação** ✅
+   - `useAlertsStore.js` - Store para alertas com estados PENDING/VALIDATED/CORRECTED
+   - `ValidationPage.jsx` - Página de validação via link do email (sem login)
+   - URL pattern: `/validar/:token`
+   - Routing simples em `App.jsx` (sem React Router)
+   - Flag `alertsLoaded` para evitar loading infinito
+
+2. **Dark Mode** ✅
+   - `useThemeStore.js` - Store com persist para tema
+   - Toggle em ConfiguracoesView (Aparência)
+   - Classes dark mode em Layout, Header, Card
+   - `tailwind.config.js` com `darkMode: 'class'`
+
+3. **Sidebar Melhorado** ✅
+   - Comportamento accordion (só 1 menu aberto)
+   - Submenu "Validações" em Sessões
+   - `SessoesCorrigidasView.jsx` para gestão de validações
+
+4. **Operadores - Licenças de Máquinas** ✅
+   - Removido campo "Departamento"
+   - Adicionado LICENSE_TYPES (Escavadoras, Gruas, Empilhadores, etc.)
+   - UI de seleção de licenças no formulário
+
+5. **Gráficos Por Hora** ✅
+   - Nova tab "Por Hora" em AnalisesView
+   - Distribuição horária (0h-23h)
+   - Cards de período (Madrugada, Manhã, Tarde, Noite)
+   - Estatísticas (hora de pico, total sessões, média)
+
+6. **DevTools Completo** ✅
+   - Tab **Alertas**: Criar alertas de teste com diferentes urgências
+   - Tab **Email**: Criar alerta + enviar email real (Cloud Function)
+   - Tab **Demo**: Controle de tempo para demonstrações
+     - Simular máquina em operação há X horas
+     - Criar sessões fechadas com duração específica
+   - Tab **QR Code**: Gerar QR para acesso do júri
+   - Tab **RFID**: Simular scans
+   - Tab **Nav**: Navegação rápida
+
+7. **Cloud Functions v2** ✅
+   - Migração para Firebase Functions v2
+   - `createTestAlertAndSendEmail` - Cria alerta + envia email num só passo
+   - `sendTestEmail` - Enviar email para alerta existente
+   - `onAlertCreated` - Trigger automático de email
+   - Configuração SMTP via smtpConfig no body
+
+8. **Uniformização de Linguagem** ✅
+   - "Auto-Close" → "Auto-Fecho" em todo o sistema
+
 ## TAREFAS PENDENTES
 
 ### ALTA PRIORIDADE
-1. **RFID de Localização**
+1. **Deploy Cloud Functions** ⚠️
+   - Executar `DEPLOY_FUNCTIONS.bat` no Windows
+   - Requer `firebase login` interativo
+
+2. **RFID de Localização**
    - Cartões especiais para mudar localização de máquinas
    - Scan = muda máquina para essa obra
 
@@ -267,4 +322,4 @@ src/components/
 
 ---
 
-*Última atualização: 08 Dezembro 2025 - Sessão 3*
+*Última atualização: 17 Dezembro 2025 - Sessão DevTools + Alertas*

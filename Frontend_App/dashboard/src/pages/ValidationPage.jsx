@@ -57,7 +57,7 @@ const formatDuration = (hours) => {
 };
 
 const ValidationPage = ({ token }) => {
-  const { alerts, getAlertByToken, validateAlert, initializeAlertsListener } = useAlertsStore();
+  const { alerts, alertsLoaded, getAlertByToken, validateAlert, initializeAlertsListener } = useAlertsStore();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -91,12 +91,12 @@ const ValidationPage = ({ token }) => {
         notes: '',
       });
       setLoading(false);
-    } else if (alerts.length > 0) {
-      // Alertas carregados mas token não encontrado
+    } else if (alertsLoaded) {
+      // Firestore respondeu mas token não encontrado
       setError('Link de validação inválido ou expirado.');
       setLoading(false);
     }
-  }, [alert, alerts]);
+  }, [alert, alertsLoaded]);
 
   // Verificar se é alerta de auto-close (obrigatório alterar)
   const isAutoClose = alert?.type === ALERT_TYPES.AUTO_CLOSE;

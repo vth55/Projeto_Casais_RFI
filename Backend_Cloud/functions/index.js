@@ -8,6 +8,9 @@
  * - autoCloseStuckSessions: Cron job para fechar sessões abandonadas
  */
 
+const { onRequest } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -185,7 +188,7 @@ const sendValidationEmail = async (alert, isResend = false) => {
     }
 };
 
-exports.handleSessionTrigger = functions.https.onRequest(async (req, res) => {
+exports.handleSessionTrigger = onRequest(async (req, res) => {
     
     if (req.method !== 'POST') {
         return res.status(405).send({ error: 'Apenas POST permitido.' });
@@ -302,11 +305,14 @@ exports.handleSessionTrigger = functions.https.onRequest(async (req, res) => {
 /**
  * Trigger Firestore: Enviar email quando um novo alerta é criado
  */
-exports.onAlertCreated = functions.firestore
-    .document(`${ALERTS_PATH}/{alertId}`)
-    .onCreate(async (snapshot, context) => {
+exports.onAlertCreated = onDocumentCreated(
+    {
+        document: `${ALERTS_PATH}/{alertId}`,
+    },
+    async (event) => {
+        const snapshot = event.data;
+        const alertId = event.params.alertId;
         const alert = snapshot.data();
-        const alertId = context.params.alertId;
 
         console.log(`📢 Novo alerta criado: ${alertId} (${alert.type})`);
 
@@ -345,7 +351,7 @@ exports.onAlertCreated = functions.firestore
  * POST /resendAlertEmail
  * Body: { alertId: string }
  */
-exports.resendAlertEmail = functions.https.onRequest(async (req, res) => {
+exports.resendAlertEmail = onRequest(async (req, res) => {
     // CORS
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -415,10 +421,12 @@ exports.resendAlertEmail = functions.https.onRequest(async (req, res) => {
  * Fecha automaticamente sessões ABANDONADAS (fallback de segurança)
  * NOTA: O fecho normal acontece em tempo real quando operador faz scan de saída
  */
-exports.autoCloseStuckSessions = functions.pubsub
-    .schedule('every 5 minutes')
-    .timeZone('Europe/Lisbon')
-    .onRun(async (context) => {
+exports.autoCloseStuckSessions = onSchedule(
+    {
+        schedule: 'every 5 minutes',
+        timeZone: 'Europe/Lisbon',
+    },
+    async (event) => {
         console.log('🔄 Iniciando auto-close de sessões abandonadas...');
 
         try {
@@ -569,6 +577,273 @@ const generateToken = () => {
 };
 
 // ============================================
+// CLOUD FUNCTION: CRIAR ALERTA DE TESTE E ENVIAR EMAIL
+// ============================================
+
+/**
+ * HTTP Function: Criar um alerta de teste no Firestore e enviar email
+ * POST /createTestAlertAndSendEmail
+ * Body: { destinationEmail: string, smtpConfig?: { user: string, pass: string } }
+ * 
+ * Esta função usa o MESMO sistema que os alertas reais:
+ * - Cria o alerta no Firestore com a mesma estrutura
+ * - Usa a mesma função sendValidationEmail
+ * - O link de validação funciona normalmente
+ */
+exports.createTestAlertAndSendEmail = onRequest(async (req, res) => {
+    // CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).send('');
+    }
+
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Apenas POST permitido' });
+    }
+
+    const { destinationEmail, smtpConfig } = req.body;
+
+    if (!destinationEmail) {
+        return res.status(400).json({ error: 'destinationEmail é obrigatório' });
+    }
+
+    try {
+        // Criar alerta de teste no Firestore (mesma estrutura dos alertas reais)
+        const alertId = `alert_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const validationToken = generateToken();
+        const now = admin.firestore.Timestamp.now();
+        const startTime = admin.firestore.Timestamp.fromDate(new Date(Date.now() - 7 * 60 * 60 * 1000)); // 7h atrás
+        const endTime = now;
+
+        const alertData = {
+            id: alertId,
+            validationToken,
+            type: 'LONG_SESSION',
+            status: 'PENDING',
+
+            machineId: 'ESC-TEST-001',
+            machineName: 'Escavadora Volvo EC220 [TESTE]',
+            operatorId: 'OP-TEST-001',
+            operatorName: 'Operador Teste',
+            operatorEmail: destinationEmail,
+            obraId: 'obra-test-001',
+            obraName: 'Obra Demo - Porto [TESTE]',
+
+            originalStartTime: startTime,
+            originalEndTime: endTime,
+            originalDurationHours: 7.0,
+
+            correctedStartTime: null,
+            correctedEndTime: null,
+            correctedDurationHours: null,
+
+            createdAt: now,
+            validatedAt: null,
+            validatedBy: null,
+
+            emailSentAt: null,
+            emailResendCount: 0,
+
+            operatorNotes: '',
+            isTestData: true, // Marcar como teste
+
+            auditLog: [{
+                action: 'CREATED',
+                timestamp: now,
+                details: 'Alerta de teste criado via createTestAlertAndSendEmail',
+            }],
+        };
+
+        // Salvar no Firestore
+        await db.doc(`${ALERTS_PATH}/${alertId}`).set(alertData);
+        console.log(`✅ Alerta de teste criado: ${alertId}`);
+
+        // Criar transporter de email (se fornecido smtpConfig, usar; senão usar getEmailTransporter)
+        let transporter;
+        if (smtpConfig && smtpConfig.user && smtpConfig.pass) {
+            transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: smtpConfig.user,
+                    pass: smtpConfig.pass,
+                },
+            });
+        } else {
+            transporter = getEmailTransporter();
+        }
+
+        if (!transporter) {
+            // Se não houver transporter, ainda assim criar o alerta (pode ser testado depois)
+            return res.json({
+                success: true,
+                alertId,
+                validationToken,
+                message: 'Alerta criado, mas email não configurado. Forneça smtpConfig para enviar email.',
+            });
+        }
+
+        // USAR A MESMA FUNÇÃO QUE OS ALERTAS REAIS
+        const result = await sendValidationEmail(alertData);
+
+        if (result.success) {
+            // Atualizar alerta com timestamp de envio
+            await db.doc(`${ALERTS_PATH}/${alertId}`).update({
+                emailSentAt: admin.firestore.Timestamp.now(),
+                emailStatus: 'SENT',
+                testEmailSentTo: destinationEmail,
+                auditLog: admin.firestore.FieldValue.arrayUnion({
+                    action: 'TEST_EMAIL_SENT',
+                    timestamp: admin.firestore.Timestamp.now(),
+                    details: `Email de teste enviado para ${destinationEmail}`,
+                }),
+            });
+
+            // Construir URL de validação
+            const baseUrl = req.body.baseUrl || functions.config().app?.url || 'http://localhost:5173';
+            const validationUrl = `${baseUrl}/validar/${validationToken}`;
+
+            return res.json({
+                success: true,
+                alertId,
+                validationToken,
+                validationUrl,
+                message: 'Alerta de teste criado e email enviado com sucesso!',
+            });
+        } else {
+            // Alerta criado mas email falhou
+            await db.doc(`${ALERTS_PATH}/${alertId}`).update({
+                emailStatus: 'FAILED',
+                emailError: result.error,
+            });
+
+            return res.status(500).json({
+                success: false,
+                alertId,
+                validationToken,
+                error: result.error,
+                message: 'Alerta criado mas falha ao enviar email',
+            });
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao criar alerta de teste:', error);
+        return res.status(500).json({
+            error: error.message,
+        });
+    }
+});
+
+// ============================================
+// CLOUD FUNCTION: ENVIAR EMAIL DE TESTE (DEV)
+// ============================================
+
+/**
+ * HTTP Function: Enviar email de teste para demonstração
+ * POST /sendTestEmail
+ * Body: { alertId: string, destinationEmail: string }
+ */
+exports.sendTestEmail = onRequest(async (req, res) => {
+    // CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).send('');
+    }
+
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Apenas POST permitido' });
+    }
+
+    const { alertId, destinationEmail, smtpConfig } = req.body;
+
+    if (!alertId || !destinationEmail) {
+        return res.status(400).json({ error: 'alertId e destinationEmail são obrigatórios' });
+    }
+
+    try {
+        // Buscar alerta
+        const alertRef = db.doc(`${ALERTS_PATH}/${alertId}`);
+        const alertSnap = await alertRef.get();
+
+        if (!alertSnap.exists) {
+            return res.status(404).json({ error: 'Alerta não encontrado' });
+        }
+
+        const alert = alertSnap.data();
+
+        // Criar transporter com configuração fornecida ou padrão
+        let transporter;
+
+        if (smtpConfig && smtpConfig.user && smtpConfig.pass) {
+            // Usar credenciais fornecidas (Gmail)
+            transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: smtpConfig.user,
+                    pass: smtpConfig.pass,
+                },
+            });
+        } else {
+            // Tentar usar configuração do Firebase
+            transporter = getEmailTransporter();
+        }
+
+        if (!transporter) {
+            return res.status(400).json({
+                error: 'Email não configurado. Forneça smtpConfig com user e pass.'
+            });
+        }
+
+        // Construir URL de validação
+        const baseUrl = req.body.baseUrl || functions.config().app?.url || 'http://localhost:5173';
+        const validationUrl = `${baseUrl}/validar/${alert.validationToken}`;
+
+        // Enviar email
+        const mailOptions = {
+            from: smtpConfig?.user ? `"CASAIS Fleet" <${smtpConfig.user}>` : '"CASAIS Fleet" <noreply@casais.pt>',
+            to: destinationEmail,
+            subject: `[TESTE] Validação de Sessão - ${alert.machineName || alert.machineId}`,
+            html: generateValidationEmailHtml(alert, validationUrl),
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+
+        console.log(`✅ Email de teste enviado para ${destinationEmail}`);
+
+        // Atualizar alerta
+        await alertRef.update({
+            emailSentAt: admin.firestore.Timestamp.now(),
+            emailStatus: 'SENT',
+            testEmailSentTo: destinationEmail,
+            auditLog: admin.firestore.FieldValue.arrayUnion({
+                action: 'TEST_EMAIL_SENT',
+                timestamp: admin.firestore.Timestamp.now(),
+                details: `Email de teste enviado para ${destinationEmail}`,
+            }),
+        });
+
+        return res.json({
+            success: true,
+            messageId: info.messageId,
+            validationUrl,
+        });
+    } catch (error) {
+        console.error('❌ Erro ao enviar email de teste:', error);
+        return res.status(500).json({
+            error: error.message,
+            hint: error.message.includes('Invalid login')
+                ? 'Credenciais inválidas. Para Gmail, use uma App Password.'
+                : null
+        });
+    }
+});
+
+// ============================================
 // CLOUD FUNCTION: VERIFICAR SESSÕES LONGAS
 // ============================================
 
@@ -576,10 +851,12 @@ const generateToken = () => {
  * Scheduled Function: Executar a cada 10 minutos
  * Cria alertas de SESSÃO LONGA para sessões que excedem o threshold
  */
-exports.checkLongSessions = functions.pubsub
-    .schedule('every 10 minutes')
-    .timeZone('Europe/Lisbon')
-    .onRun(async (context) => {
+exports.checkLongSessions = onSchedule(
+    {
+        schedule: 'every 10 minutes',
+        timeZone: 'Europe/Lisbon',
+    },
+    async (event) => {
         console.log('🔄 Verificando sessões longas...');
 
         try {

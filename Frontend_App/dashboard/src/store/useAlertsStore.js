@@ -63,13 +63,14 @@ const useAlertsStore = create(
     (set, get) => ({
       // Estado
       alerts: [],
+      alertsLoaded: false, // Flag para indicar que o Firestore respondeu
       loading: false,
       error: null,
 
       // Inicializar listener de alertas
       initializeAlertsListener: () => {
         if (!db) {
-          set({ error: 'Firestore não inicializado' });
+          set({ error: 'Firestore não inicializado', alertsLoaded: true });
           return () => {};
         }
 
@@ -85,11 +86,11 @@ const useAlertsStore = create(
               id: doc.id,
               ...doc.data(),
             }));
-            set({ alerts: data, loading: false });
+            set({ alerts: data, loading: false, alertsLoaded: true });
           },
           (error) => {
             console.error('Erro alerts:', error);
-            set({ error: error.message });
+            set({ error: error.message, alertsLoaded: true });
           }
         );
       },
