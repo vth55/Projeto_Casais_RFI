@@ -4,6 +4,36 @@
 
 ---
 
+## 🚀 PRÓXIMA SESSÃO - INSTRUÇÕES
+
+**Data da última sessão:** 17/12/2025 (Sessão 2)
+**Último commit:** `b5ac8e2` - PWA completo + Perfis de acesso + Otimizações
+
+### ESTADO ATUAL
+✅ **Tudo implementado e funcional:**
+- PWA com Service Worker e offline
+- Perfis de Acesso com Modo Demo
+- RFID de Localização (cartões LOC_)
+- Fotos na Manutenção
+- Sistema de Email e Validação
+- DevTools completo
+
+### O QUE FALTA (Baixa Prioridade)
+1. **Notificações Push** - Alertas de manutenção e sessões longas
+2. **Remover DevTools** antes de entregar ao cliente (está marcado no código)
+
+### PARA TESTAR
+```bash
+cd Frontend_App/dashboard && npm run dev
+```
+
+### PARA FAZER PUSH
+```bash
+cmd.exe /c "cd /d C:\Users\vitor\OneDrive\Área de Trabalho\Projeto_Casais_RFI && git push origin main"
+```
+
+---
+
 ## RESUMO RÁPIDO
 
 | Item | Valor |
