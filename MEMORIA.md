@@ -6,8 +6,8 @@
 
 ## 🚀 PRÓXIMA SESSÃO - INSTRUÇÕES
 
-**Data da última sessão:** 17/12/2025 (Sessão 2)
-**Último commit:** `b5ac8e2` - PWA completo + Perfis de acesso + Otimizações
+**Data da última sessão:** 18/12/2025 (Sessão 3)
+**Último commit:** `9f9da25` - docs: instruções para próxima sessão
 
 ### ESTADO ATUAL
 ✅ **Tudo implementado e funcional:**
@@ -17,10 +17,19 @@
 - Fotos na Manutenção
 - Sistema de Email e Validação
 - DevTools completo
+- **Todos os botões agora têm funcionalidades reais** ✅
 
 ### O QUE FALTA (Baixa Prioridade)
 1. **Notificações Push** - Alertas de manutenção e sessões longas
 2. **Remover DevTools** antes de entregar ao cliente (está marcado no código)
+
+### CORRIGIDO NESTA SESSÃO (18/12/2025)
+**Auditoria de Botões - Botões que eram apenas visuais agora funcionam:**
+1. DashboardView - "Ver Todos" → navega para manutenção
+2. SessoesView - "Exportar CSV" → exporta sessões para CSV
+3. SessoesView - "Validar" → abre modal de validação com correção de horários
+4. FinanceiroView - "Exportar" → exporta relatório financeiro para CSV
+5. FinanceiroView - Edit/Delete tarifários → edita/elimina tarifários no Firestore
 
 ### PARA TESTAR
 ```bash
@@ -476,4 +485,48 @@ src/components/
 
 ---
 
-*Última atualização: 17 Dezembro 2025 (Sessão 2) - PWA Completo + Perfis de Acesso + Modo Demo*
+---
+
+## TAREFAS CONCLUÍDAS (Sessão 18/12/2025)
+
+### Auditoria e Correção de Botões ✅
+Verificação sistemática de todas as views para garantir que botões têm funcionalidades reais:
+
+1. **DashboardView** ✅
+   - Botão "Ver Todos" no banner de manutenção → navega para view de manutenção
+
+2. **SessoesView** ✅
+   - Botão "Exportar CSV" → exporta sessões para ficheiro CSV com separador `;`
+   - Botão "Validar" → abre `ValidationModal` com:
+     - Correção de horários (datetime-local inputs)
+     - Notas opcionais
+     - Opções: Confirmar Original / Guardar Correção
+     - Atualiza `validationStatus` no Firestore
+
+3. **FinanceiroView** ✅
+   - Botão "Exportar" → exporta relatório financeiro para CSV
+   - Botões Edit/Delete nos tarifários → CRUD completo:
+     - `handleEditTariff` → abre modal com dados pré-preenchidos
+     - `handleDeleteTariff` → confirma e elimina do Firestore
+   - Novas funções no store: `updateTariff`, `deleteTariff`
+
+4. **MaquinasView** ✅ (já funcionava - usa safeRender)
+5. **ManutencaoView** ✅ (já funcionava)
+6. **OperadoresView** ✅ (já funcionava)
+7. **ObrasView** ✅ (já funcionava)
+8. **ConfiguracoesView** ✅ (já funcionava)
+9. **AnalisesView** ✅ (já funcionava)
+
+### Ficheiros Modificados
+- `views/DashboardView.jsx` - onClick no botão Ver Todos
+- `views/SessoesView.jsx` - Export CSV + ValidationModal
+- `views/FinanceiroView.jsx` - Export + Edit/Delete tarifários
+- `store/useStore.js` - updateTariff + deleteTariff
+
+### Build Verificado ✅
+```
+npm run build - 75 segundos, sem erros
+Bundle: ~400KB gzip (otimizado)
+```
+
+*Última atualização: 18 Dezembro 2025 (Sessão 3) - Auditoria de Botões + Funcionalidades Reais*

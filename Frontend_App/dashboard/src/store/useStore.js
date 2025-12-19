@@ -449,6 +449,29 @@ const useStore = create((set, get) => ({
     }
   },
 
+  updateTariff: async (tariffId, updates) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      await updateDoc(doc(db, `${basePath}/tariffs`, tariffId), {
+        ...updates,
+        updatedAt: Timestamp.now(),
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  deleteTariff: async (tariffId) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      await deleteDoc(doc(db, `${basePath}/tariffs`, tariffId));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
   // Registar manutenção
   addMaintenanceRecord: async (record) => {
     if (!db) return { success: false, error: 'DB não inicializado' };

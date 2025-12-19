@@ -288,7 +288,12 @@ const DashboardView = () => {
                 )}
               </div>
             </div>
-            <Button className="bg-white text-amber-600 hover:bg-amber-50" icon={ArrowRight} iconPosition="right">
+            <Button
+              className="bg-white text-amber-600 hover:bg-amber-50"
+              icon={ArrowRight}
+              iconPosition="right"
+              onClick={() => useStore.getState().setActiveView('manutencao')}
+            >
               Ver Todos
             </Button>
           </div>

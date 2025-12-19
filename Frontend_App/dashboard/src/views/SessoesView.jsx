@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Play, Search, Download, Truck, User, Timer, Activity, CheckCircle, Calendar } from 'lucide-react';
 import useStore from '../store/useStore';
-import { Card, StatCard, Button, Badge, StatusBadge, Table, EmptyState, Skeleton } from '../components/ui';
+import { Card, StatCard, Button, Badge, StatusBadge, Table, EmptyState, Skeleton, Modal } from '../components/ui';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
   <div className="flex border-b border-slate-200">
@@ -49,10 +49,102 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
   );
 };
 
+// Modal de validação
+const ValidationModal = ({ session, machine, operator, onClose, onValidate }) => {
+  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+  const endTime = session.endTime?.toDate?.() || new Date(session.endTime);
+  const [correctedStart, setCorrectedStart] = useState(startTime.toISOString().slice(0, 16));
+  const [correctedEnd, setCorrectedEnd] = useState(endTime.toISOString().slice(0, 16));
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleValidate = async (action) => {
+    setLoading(true);
+    await onValidate(session.id, {
+      action,
+      correctedStart: action === 'correct' ? new Date(correctedStart) : null,
+      correctedEnd: action === 'correct' ? new Date(correctedEnd) : null,
+      notes,
+    });
+    setLoading(false);
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Validar Sessão" size="md">
+      <div className="space-y-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <Timer className="w-5 h-5 text-amber-600" />
+            <h4 className="font-semibold text-amber-900">Sessão com duração longa</h4>
+          </div>
+          <p className="text-sm text-amber-700">
+            Esta sessão teve uma duração de <strong>{session.durationHours?.toFixed(1)}h</strong>,
+            superior ao limite de 5 horas. Valide ou corrija os horários.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Equipamento</label>
+            <p className="text-sm text-slate-900">{machine?.name || session.machineId}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Operador</label>
+            <p className="text-sm text-slate-900">{operator?.name || session.cardId}</p>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <h4 className="text-sm font-semibold text-slate-700 mb-3">Horários Registados</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Início</label>
+              <input
+                type="datetime-local"
+                value={correctedStart}
+                onChange={(e) => setCorrectedStart(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Fim</label>
+              <input
+                type="datetime-local"
+                value={correctedEnd}
+                onChange={(e) => setCorrectedEnd(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Notas (opcional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            placeholder="Motivo da correção ou observações..."
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={() => handleValidate('confirm')} disabled={loading}>Confirmar Original</Button>
+          <Button onClick={() => handleValidate('correct')} disabled={loading} icon={CheckCircle}>Guardar Correção</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 const SessoesView = () => {
-  const { activeView, sessions, machines, operators, getFilteredSessions, loading } = useStore();
+  const { activeView, sessions, machines, operators, getFilteredSessions, updateSession, loading } = useStore();
   const [activeTab, setActiveTab] = useState(activeView === 'sessoes-historico' ? 'history' : activeView === 'sessoes-validacoes' ? 'validations' : 'active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [validatingSession, setValidatingSession] = useState(null);
 
   const filteredSessions = getFilteredSessions();
   const activeSessions = useMemo(() => sessions.filter(s => s.status === 'OPEN'), [sessions]);
@@ -83,6 +175,58 @@ const SessoesView = () => {
     return list;
   };
 
+  // Exportar para CSV
+  const handleExportCSV = () => {
+    const sessionsToExport = activeTab === 'active' ? activeSessions :
+                            activeTab === 'history' ? closedSessions : pendingValidations;
+    if (sessionsToExport.length === 0) {
+      alert('Não há sessões para exportar');
+      return;
+    }
+    const headers = ['ID', 'Equipamento', 'Operador', 'Data', 'Início', 'Fim', 'Duração (h)', 'Estado'];
+    const rows = sessionsToExport.map(s => {
+      const machine = machines.find(m => m.id === s.machineId);
+      const operator = operators.find(o => o.id === s.cardId);
+      const startTime = s.startTime?.toDate?.() || new Date(s.startTime);
+      const endTime = s.endTime?.toDate?.() || (s.status === 'OPEN' ? new Date() : null);
+      return [
+        s.id,
+        machine?.name || s.machineId,
+        operator?.name || s.cardId,
+        startTime.toLocaleDateString('pt-PT'),
+        startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+        endTime ? endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '-',
+        s.durationHours?.toFixed(1) || '-',
+        s.status,
+      ];
+    });
+    const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `sessoes_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  // Validar sessão
+  const handleValidate = async (sessionId, validationData) => {
+    const updates = {
+      validationStatus: 'VALIDATED',
+      validatedAt: new Date(),
+      validationNotes: validationData.notes,
+    };
+    if (validationData.action === 'correct' && validationData.correctedStart && validationData.correctedEnd) {
+      const start = validationData.correctedStart;
+      const end = validationData.correctedEnd;
+      const durationHours = (end - start) / (1000 * 60 * 60);
+      updates.correctedStartTime = start;
+      updates.correctedEndTime = end;
+      updates.correctedDurationHours = durationHours;
+    }
+    await updateSession(sessionId, updates);
+  };
+
   const displayedSessions = getDisplayedSessions();
   const tabs = [{ id: 'active', label: 'Ativas', count: stats.active }, { id: 'history', label: 'Histórico', count: stats.closed }, { id: 'validations', label: 'Validações', count: stats.pendingValidations }];
 
@@ -92,7 +236,7 @@ const SessoesView = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div><h2 className="text-2xl font-bold text-slate-900">Sessões</h2><p className="text-slate-500 mt-1">Histórico de utilização</p></div>
-        <Button variant="outline" icon={Download}>Exportar CSV</Button>
+        <Button variant="outline" icon={Download} onClick={handleExportCSV}>Exportar CSV</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -148,13 +292,24 @@ const SessoesView = () => {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right"><p className="text-lg font-bold text-amber-600">{s.durationHours?.toFixed(1)}h</p><Badge variant="warning" size="sm">Validar</Badge></div>
-                  <Button variant="outline" size="sm">Validar</Button>
+                  <Button variant="outline" size="sm" onClick={() => setValidatingSession(s)}>Validar</Button>
                 </div>
               </div>
             );
           })}</div>)}
         </div>
       </Card>
+
+      {/* Modal de Validação */}
+      {validatingSession && (
+        <ValidationModal
+          session={validatingSession}
+          machine={machines.find(m => m.id === validatingSession.machineId)}
+          operator={operators.find(o => o.id === validatingSession.cardId)}
+          onClose={() => setValidatingSession(null)}
+          onValidate={handleValidate}
+        />
+      )}
     </div>
   );
 };

@@ -206,12 +206,13 @@ const TariffForm = ({ tariff, onSave, onCancel }) => {
 };
 
 const FinanceiroView = () => {
-  const { activeView, machines, getFilteredSessions, tariffs, addTariff } = useStore();
+  const { activeView, machines, getFilteredSessions, tariffs, addTariff, updateTariff, deleteTariff } = useStore();
   const [activeTab, setActiveTab] = useState(
     activeView === 'financeiro-custos' ? 'costs' :
     activeView === 'financeiro-rentabilidade' ? 'profitability' : 'tariffs'
   );
   const [showTariffModal, setShowTariffModal] = useState(false);
+  const [editingTariff, setEditingTariff] = useState(null);
 
   const filteredSessions = getFilteredSessions();
 
@@ -277,8 +278,49 @@ const FinanceiroView = () => {
   ];
 
   const handleSaveTariff = async (tariffData) => {
-    await addTariff(tariffData);
+    if (editingTariff) {
+      await updateTariff(editingTariff.id, tariffData);
+    } else {
+      await addTariff(tariffData);
+    }
     setShowTariffModal(false);
+    setEditingTariff(null);
+  };
+
+  const handleEditTariff = (tariff) => {
+    setEditingTariff(tariff);
+    setShowTariffModal(true);
+  };
+
+  const handleDeleteTariff = async (tariffId) => {
+    if (confirm('Eliminar este tarifário?')) {
+      await deleteTariff(tariffId);
+    }
+  };
+
+  // Exportar relatório financeiro
+  const handleExportFinanceiro = () => {
+    const headers = ['Métrica', 'Valor'];
+    const rows = [
+      ['Receita Total', `€${financialData.totalRevenue.toLocaleString('pt-PT')}`],
+      ['Custos Totais', `€${financialData.totalCosts.toLocaleString('pt-PT')}`],
+      ['Lucro', `€${financialData.profit.toLocaleString('pt-PT')}`],
+      ['Margem', `${financialData.margin}%`],
+      ['Horas Totais', `${financialData.totalHours}h`],
+      ['---', '---'],
+      ['Custos Combustível', `€${financialData.fuelCosts.toLocaleString('pt-PT')}`],
+      ['Custos Operadores', `€${financialData.operatorCosts.toLocaleString('pt-PT')}`],
+      ['Custos Manutenção', `€${financialData.maintenanceCosts.toLocaleString('pt-PT')}`],
+      ['Custos Depreciação', `€${financialData.depreciationCosts.toLocaleString('pt-PT')}`],
+      ['Custos Overhead', `€${financialData.overheadCosts.toLocaleString('pt-PT')}`],
+    ];
+    const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `relatorio_financeiro_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const tabs = [
@@ -296,7 +338,7 @@ const FinanceiroView = () => {
           <p className="text-slate-500 mt-1">Tarifários, custos e rentabilidade</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" icon={Download}>
+          <Button variant="outline" icon={Download} onClick={handleExportFinanceiro}>
             Exportar
           </Button>
           <Button icon={Plus} onClick={() => setShowTariffModal(true)}>
@@ -394,8 +436,8 @@ const FinanceiroView = () => {
                         </Table.Cell>
                         <Table.Cell align="right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="xs" icon={Edit2} />
-                            <Button variant="ghost" size="xs" icon={Trash2} />
+                            <Button variant="ghost" size="xs" icon={Edit2} onClick={() => handleEditTariff(tariff)} />
+                            <Button variant="ghost" size="xs" icon={Trash2} onClick={() => handleDeleteTariff(tariff.id)} />
                           </div>
                         </Table.Cell>
                       </Table.Row>
@@ -589,14 +631,15 @@ const FinanceiroView = () => {
       {/* Modal de Tarifário */}
       <Modal
         isOpen={showTariffModal}
-        onClose={() => setShowTariffModal(false)}
-        title="Novo Tarifário"
+        onClose={() => { setShowTariffModal(false); setEditingTariff(null); }}
+        title={editingTariff ? 'Editar Tarifário' : 'Novo Tarifário'}
         description="Configure os custos e preços para o cálculo automático"
         size="lg"
       >
         <TariffForm
+          tariff={editingTariff}
           onSave={handleSaveTariff}
-          onCancel={() => setShowTariffModal(false)}
+          onCancel={() => { setShowTariffModal(false); setEditingTariff(null); }}
         />
       </Modal>
     </div>
