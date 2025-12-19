@@ -19,7 +19,7 @@ const ViewLoader = () => (
   </div>
 );
 
-// DevTools - Só carrega em desenvolvimento (import.meta.env.DEV)
+// DevTools
 const DevTools = lazy(() => import('./components/DevTools'));
 
 // Página de Validação (lazy loaded - acesso via link do email)
@@ -151,12 +151,10 @@ export default function App() {
           {renderView()}
         </Suspense>
       </Layout>
-      {/* DevTools - Só aparece em desenvolvimento (npm run dev) */}
-      {import.meta.env.DEV && (
-        <Suspense fallback={null}>
-          <DevTools />
-        </Suspense>
-      )}
+      {/* DevTools */}
+      <Suspense fallback={null}>
+        <DevTools />
+      </Suspense>
       {/* PWA - Notificações de instalação e offline */}
       <PWAPrompt />
     </ErrorBoundary>
