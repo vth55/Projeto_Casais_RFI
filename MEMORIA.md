@@ -6,8 +6,35 @@
 
 ## 🚀 PRÓXIMA SESSÃO - INSTRUÇÕES
 
-**Data da última sessão:** 18/12/2025 (Sessão 3)
-**Último commit:** `9f9da25` - docs: instruções para próxima sessão
+**Data da última sessão:** 19/12/2025
+**Último commit:** `9d919e3` - revert: manter DevTools visível para testes
+
+---
+
+## 🧪 PRÓXIMA SESSÃO - FASE DE TESTES
+
+### Plano de Testes (a fazer):
+
+**1. Testes Web (cada view):**
+- [ ] Dashboard - KPIs, gráficos, botão "Ver Todos"
+- [ ] Máquinas - CRUD, filtros, mudança bulk localização
+- [ ] Operadores - CRUD, licenças, cargos
+- [ ] Sessões - Ativas, histórico, validações, exportar CSV
+- [ ] Obras - CRUD, mapa Google, cartões RFID localização
+- [ ] Manutenção - Alertas, histórico, fotos
+- [ ] Financeiro - Tarifários (criar/editar/eliminar), exportar
+- [ ] Análises - Comparações, gráficos por hora
+- [ ] Configurações - Perfis de acesso, modo demo
+
+**2. Testes RFID + Hardware:**
+- [ ] Leitura de cartões RFID
+- [ ] Transmissão de dados para Firebase
+- [ ] Abertura/fecho de sessões
+- [ ] Cartões de localização (LOC_)
+
+**Método:** Testar cada botão e comportamento individualmente
+
+---
 
 ### ESTADO ATUAL
 ✅ **Tudo implementado e funcional:**
