@@ -18,7 +18,6 @@ const useStore = create((set, get) => ({
   machines: [],
   operators: [],
   obras: [],
-  tariffs: [],
   maintenanceRecords: [],
   locationCards: [], // Cartões RFID de localização
   loading: true,
@@ -77,17 +76,6 @@ const useStore = create((set, get) => ({
           set({ operators: data });
         },
         (error) => console.error('Erro operators:', error)
-      )
-    );
-
-    // Tariffs listener
-    unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/tariffs`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ tariffs: data });
-        },
-        (error) => console.error('Erro tariffs:', error)
       )
     );
 
@@ -432,42 +420,53 @@ const useStore = create((set, get) => ({
     }
   },
 
-  // Actions para tarifários
-  addTariff: async (tariffData) => {
+  // Definir novo tarifário versionado numa máquina
+  // Arquiva automaticamente o tarifário anterior e cria o novo como currentTariff
+  setMachineTariff: async (machineId, tariffData) => {
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
-      const id = `tariff_${Date.now()}`;
-      await setDoc(doc(db, `${basePath}/tariffs`, id), {
-        ...tariffData,
-        id,
-        createdAt: Timestamp.now(),
-        active: true,
-      });
-      return { success: true, id };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  },
+      const { machines } = get();
+      const machine = machines.find(m => m.id === machineId);
+      if (!machine) return { success: false, error: 'Máquina não encontrada' };
 
-  updateTariff: async (tariffId, updates) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      await updateDoc(doc(db, `${basePath}/tariffs`, tariffId), {
-        ...updates,
-        updatedAt: Timestamp.now(),
-      });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  },
+      const now = Timestamp.now();
+      const newTariffId = `tariff_${machineId}_${Date.now()}`;
+      const opCost = tariffData.type === 'MACHINE_AND_OPERATOR' ? (parseFloat(tariffData.operatorCostPerHour) || 0) : 0;
 
-  deleteTariff: async (tariffId) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      await deleteDoc(doc(db, `${basePath}/tariffs`, tariffId));
-      return { success: true };
+      const newTariff = {
+        id: newTariffId,
+        type: tariffData.type,
+        machineCostPerHour: parseFloat(tariffData.machineCostPerHour) || 0,
+        operatorCostPerHour: opCost,
+        totalCostPerHour: (parseFloat(tariffData.machineCostPerHour) || 0) + opCost,
+        validFrom: now,
+        validUntil: null,
+        createdBy: tariffData.createdBy || 'admin',
+        createdAt: now,
+      };
+
+      // Arquivar tarifário anterior: fechar validUntil no dia de hoje
+      const oldTariff = machine.currentTariff;
+      let history = machine.tariffHistory ? [...machine.tariffHistory] : [];
+
+      if (oldTariff) {
+        const closedOld = { ...oldTariff, validUntil: now };
+        const idx = history.findIndex(t => t.id === oldTariff.id);
+        if (idx >= 0) history[idx] = closedOld;
+        else history.push(closedOld);
+      }
+
+      history.push(newTariff);
+
+      await updateDoc(doc(db, `${basePath}/machines`, machineId), {
+        currentTariff: newTariff,
+        tariffHistory: history,
+        updatedAt: now,
+      });
+
+      return { success: true, tariff: newTariff };
     } catch (error) {
+      console.error('Erro ao definir tarifário:', error);
       return { success: false, error: error.message };
     }
   },

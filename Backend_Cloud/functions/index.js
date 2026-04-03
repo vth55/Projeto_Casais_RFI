@@ -203,6 +203,52 @@ const sendValidationEmail = async (alert, smtpConfig = null, baseUrl = null, isR
     }
 };
 
+// ============================================
+// TARIFÁRIOS — Helpers de cálculo de custo
+// ============================================
+
+function getTariffForDate(date, tariffHistory) {
+    if (!tariffHistory || tariffHistory.length === 0) return null;
+    const sorted = [...tariffHistory].sort((a, b) => {
+        const aMs = a.validFrom?.toMillis ? a.validFrom.toMillis() : new Date(a.validFrom).getTime();
+        const bMs = b.validFrom?.toMillis ? b.validFrom.toMillis() : new Date(b.validFrom).getTime();
+        return bMs - aMs;
+    });
+    for (const tariff of sorted) {
+        const from = tariff.validFrom?.toDate ? tariff.validFrom.toDate() : new Date(tariff.validFrom);
+        const until = tariff.validUntil?.toDate
+            ? tariff.validUntil.toDate()
+            : tariff.validUntil ? new Date(tariff.validUntil) : new Date('2099-12-31');
+        if (date >= from && date <= until) return tariff;
+    }
+    return sorted[sorted.length - 1];
+}
+
+function calculateSessionCost(durationHours, tariff) {
+    if (!tariff) return null;
+    const h = Math.round(durationHours * 100) / 100;
+    const opCost = tariff.type === 'MACHINE_AND_OPERATOR' ? (tariff.operatorCostPerHour || 0) : 0;
+    return {
+        costs: {
+            hours: h,
+            costPerHour: tariff.totalCostPerHour,
+            totalCost: Math.round(h * tariff.totalCostPerHour * 100) / 100,
+            breakdown: {
+                machineCost: Math.round(h * tariff.machineCostPerHour * 100) / 100,
+                operatorCost: Math.round(h * opCost * 100) / 100,
+            },
+        },
+        tariffSnapshot: {
+            id: tariff.id,
+            type: tariff.type,
+            machineCostPerHour: tariff.machineCostPerHour,
+            operatorCostPerHour: opCost,
+            totalCostPerHour: tariff.totalCostPerHour,
+            snapshot: { validFrom: tariff.validFrom, validUntil: tariff.validUntil || null },
+        },
+    };
+}
+
 exports.handleSessionTrigger = onRequest(async (req, res) => {
 
     if (req.method !== 'POST') {
@@ -316,31 +362,47 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
         const machineRef = db.doc(`${MACHINES_PATH}/${normalizedMachine}`);
 
-        if (!activeSessionQuery.empty) {
-            const sessionDoc = activeSessionQuery.docs[0];
-            const startTime = sessionDoc.data().startTime.toDate();
-            const endTime = new Date();
-            
-            if (sessionDoc.data().cardId !== normalizedCard) {
-                 return res.status(403).send({ 
-                    status: 'DENIED', 
-                    message: 'Sessão iniciada por outro cartão. Sessão não encerrada.' 
+            if (!activeSessionQuery.empty) {
+                const sessionDoc = activeSessionQuery.docs[0];
+                const startTime = sessionDoc.data().startTime.toDate();
+                const endTime = new Date();
+                
+                if (sessionDoc.data().cardId !== normalizedCard) {
+                     return res.status(403).send({ 
+                        status: 'DENIED', 
+                        message: 'Sessão iniciada por outro cartão. Sessão não encerrada.' 
+                    });
+                }
+
+                const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+
+                // Calcular custo com base no tarifário vigente da máquina
+                const machineSnap = await machineRef.get();
+                const machineData = machineSnap.exists ? machineSnap.data() : {};
+                const tariffHistory = machineData.tariffHistory
+                    || (machineData.currentTariff ? [machineData.currentTariff] : []);
+                const activeTariff = getTariffForDate(startTime, tariffHistory);
+                const costResult = calculateSessionCost(durationHours, activeTariff);
+
+                console.log(`🔒 Sessão encerrada: ${normalizedMachine} | ${durationHours.toFixed(2)}h`);
+                if (costResult) {
+                    console.log(`💰 Custo: €${costResult.costs.totalCost} (tarifário: ${activeTariff.id})`);
+                } else {
+                    console.log(`⚠️  Máquina ${normalizedMachine} sem tarifário definido — custo não calculado`);
+                }
+
+                await sessionDoc.ref.update({
+                    endTime: admin.firestore.Timestamp.fromDate(endTime),
+                    durationHours: durationHours,
+                    status: 'CLOSED',
+                    ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
                 });
-            }
 
-            const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-
-            await sessionDoc.ref.update({
-                endTime: admin.firestore.Timestamp.fromDate(endTime),
-                durationHours: durationHours,
-                status: 'CLOSED'
-            });
-
-            await db.runTransaction(async (t) => {
-                const mDoc = await t.get(machineRef);
-                if (!mDoc.exists) return;
+                await db.runTransaction(async (t) => {
+                    const mDoc = await t.get(machineRef);
+                    if (!mDoc.exists) return;
                 const newTotal = (mDoc.data().totalHours || 0) + durationHours;
-                t.update(machineRef, { 
+                t.update(machineRef, {
                     totalHours: newTotal,
                     status: 'IDLE',
                     lastOperator: normalizedCard
