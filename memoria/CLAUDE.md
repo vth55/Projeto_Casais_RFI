@@ -391,8 +391,7 @@ O projeto está configurado para usar **Claude Code** com **Gemini API** integra
 sudo apt install lazygit
 ```
 
-### Workflow Recomendado
-1. Usar `/gemini` para planeamento e discussão (grátis)
-2. Usar Claude para implementação de código
-3. Usar `/review` para code reviews antes de commit
-
+### Workflow Recomendado (Nova Matriz)
+1. Usar o Gemini integrado no VS Code / Cursor localmente para 100% da leitura, planeamento de projeto e atualizações de documentação no MEMORIA.md (Custo 0 de API).
+2. O Gemini é também o Agente Autorizado Oficial a realizar comandos de `git commit` e `git push`.
+3. Usar o Claude de forma estritamente cirúrgica: Só abre para implementar os ficheiros apontados no bloco OPEN instruicionado pelo Gemini. Fechar chat imediatamente após testes passarem para limpeza do buffer.

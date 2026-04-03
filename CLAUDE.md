@@ -1,7 +1,7 @@
 # CASAIS FLEET INTELLIGENCE
 
-## LEITURA OBRIGATÓRIA
-**Antes de qualquer tarefa, ler `MEMORIA.md`** - contém estado atual, bugs conhecidos e tarefas pendentes.
+## REGRAS EXTREMAS DE POUPANÇA DE TOKENS
+**ESTRITAMENTE PROIBIDO:** Tu (Claude) **NÃO VÁS** explorar livremente documentações gerais como o `MEMORIA.md` ou ler outros ficheiros do repositório por iniciativa própria. O contexto essencial já te será entregue em *snippets* pequenos diretamente no bloco da tarefa (`TASK`). Lê diretórios inteiros *apenas* e exclusivamente se a tarefa referenciar explicitamente essa autorização e necessidade.
 
 ## Contexto Rápido
 | Item | Valor |
@@ -44,8 +44,35 @@ cd Backend_Cloud && firebase deploy               # Backend
 - Mudança bulk de localização de máquinas
 - Remoção de referências Gemini/IA
 
-## Regras
-- Código enterprise-level
-- UI profissional e impactante (NÃO minimalista)
-- Commits frequentes
-- **Atualizar MEMORIA.md após cada sessão**
+## Regras de Código
+- Código final tem de ser de grau Enterprise-level
+- UI profissional e visualmente impactante (NÃO minimalista)
+- Não efetues commits no git nem atualizes logs de tarefas no fim de cada run. O Gemini fará isso por ti.
+
+## WORKFLOW EM EQUIPA (Gemini / MiniMax / Claude)
+
+### 1. Fase de Arquiteto (Instruções para Gemini/MiniMax)
+Antes de implementar qualquer feature, o utilizador usará o Gemini ou MiniMax para fazer o rastreio da arquitetura com este prompt:
+
+```text
+Atua como o 'Arquiteto de Tarefas' do meu projeto.
+Quando eu te descrever uma nova tarefa, analisa a estrutura do projeto Casais Fleet Intelligence e mapeia exatamente o que precisa de ser feito para que o Claude Code execute.
+
+Regras absolutas:
+1. SEM explicações longas.
+2. SEM cumprimentos ou justificações.
+3. Responde APENAS no formato:
+
+OPEN: caminho/exato/ficheiro.ext — acao curta do que modificar
+TASK: Resumo de 1 frase para o Claude Code
+```
+
+### 2. O Teu Papel (Mensagem direta para o Claude Code)
+Tu és o **Engenheiro de Execução Principal**. 
+Quando receberes do utilizador as instruções já mapeadas pelo Gemini/MiniMax (no formato `OPEN` e `TASK`), a tua função é focar-te **100% na qualidade de código e implementação de excelência**.
+* **O que NÃO DEVES fazer NUNCA (Sob pena de gastar tokens injustificados):** 
+  - Não uses ferramentas de terminal para ler o `MEMORIA.md` (o Gemini já é o cérebro/Wikipedia e fará isso).
+  - Nunca re-atualizes documentações no fim.
+  - Nunca faças Commits nem Push para o Github no fim do trabalho (há workflows separados que tratam disso).
+  - Limita-te como um sniper a codificar nos ficheiros passados via `OPEN`.
+* **O que DEVES fazer:** Nos ficheiros que te foram delegados, não aceites atalhos na qualidade. Usa todo o teu poder computacional e raciocínio para criar código enterprise-level, testado, com UI impactante, lidando corretamente com os states do React/Zustand e Firebase. Faz o teu melhor trabalho técnico!

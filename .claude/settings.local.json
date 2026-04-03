@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:lovable.dev)",
+      "WebSearch",
+      "Bash(timeout 20 npm run dev:*)",
+      "Bash(npm run build)",
+      "WebFetch(domain:dribbble.com)",
+      "Bash(git push origin main)",
+      "Bash(cd:*)",
+      "Bash(npm install:*)",
+      "Bash(node test-email-dev.js:*)",
+      "Bash(curl:*)",
+      "Bash(node test-email-real.js:*)",
+      "Bash(EMAIL_USER=a33137.ipca@gmail.com EMAIL_PASS=\"ihajeqnjvbohganz\" node test-email-real.js)",
+      "Bash(git fetch:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(timeout 120 firebase deploy:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm ls:*)",
+      "Bash(cd /mnt/c/Users/vitor/OneDrive/Área de Trabalho/Projeto_Casais_RFI/Frontend_App/dashboard && timeout 15 npm run dev:*)",
+      "Bash(cmd.exe /c start http://localhost:5173/)",
+      "Bash(explorer.exe \"http://localhost:5173/\")",
+      "Bash(firebase --version:*)",
+      "Bash(echo:*)",
+      "Bash(git config:*)",
+      "Bash(cmd.exe /c \"cd /d C:\\Users\\vitor\\OneDrive\\Área de Trabalho\\Projeto_Casais_RFI && git push origin main\")",
+      "Bash(npm run dev:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

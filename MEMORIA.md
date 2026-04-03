@@ -169,13 +169,11 @@ python Hardware_Bridge_PC/serial_to_cloud_bridge.py
 
 ---
 
-## REGRAS DE TRABALHO
-
+## REGRAS DE TRABALHO GERAIS
 1. Qualidade > Velocidade (6 meses disponíveis)
 2. Código nível enterprise, não protótipo
-3. Commits frequentes com mensagens claras
-4. Atualizar este ficheiro quando relevante
-5. Testes antes de commit
+3. O Gestor de Documentação e GitHub é o Gemini (Não enviar comandos Git)
+4. Testes antes de reportar a conclusão da feature.
 
 ---
 
