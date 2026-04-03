@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard,
   Truck,
@@ -99,7 +99,7 @@ const navigation = [
   },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ className = 'hidden md:flex', onNavigate }) => {
   const { activeView, setActiveView, machines, sessions } = useStore();
   const { currentUser, canAccess, logout, getRole } = useAuthStore();
   const [expandedMenus, setExpandedMenus] = useState(() => {
@@ -110,6 +110,19 @@ const Sidebar = () => {
     }
     return [];
   });
+
+  // Sincroniza accordion com activeView para evitar dessincronização quando
+  // a navegação muda externamente (ex: breadcrumbs, deep links)
+  useEffect(() => {
+    for (const item of navigation) {
+      if (item.submenu?.some(sub => sub.id === activeView)) {
+        setExpandedMenus(prev =>
+          prev.includes(item.id) ? prev : [item.id]
+        );
+        return;
+      }
+    }
+  }, [activeView]);
 
   // Filtrar navegação baseado em permissões do utilizador
   const filteredNavigation = useMemo(() => {
@@ -146,7 +159,7 @@ const Sidebar = () => {
     .toUpperCase() || 'U';
 
   return (
-    <aside className="hidden md:flex w-64 flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">
+    <aside className={`${className} w-64 flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800`}>
       {/* Logo */}
       <div className="h-20 flex items-center px-6 border-b border-slate-700/50">
         <div className="flex items-center gap-3">
@@ -196,6 +209,7 @@ const Sidebar = () => {
                       toggleMenu(item.id);
                     } else {
                       setActiveView(item.id);
+                      onNavigate?.();
                     }
                   }}
                   className={`
@@ -228,7 +242,10 @@ const Sidebar = () => {
                       return (
                         <li key={subItem.id}>
                           <button
-                            onClick={() => setActiveView(subItem.id)}
+                            onClick={() => {
+                              setActiveView(subItem.id);
+                              onNavigate?.();
+                            }}
                             className={`
                               w-full text-left px-3 py-2 rounded-lg text-sm
                               transition-colors duration-200
