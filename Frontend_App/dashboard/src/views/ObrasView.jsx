@@ -13,7 +13,6 @@ import {
   Map,
   CheckCircle,
   Clock,
-  AlertCircle,
   Activity,
   Eye,
   ArrowLeft,
@@ -21,15 +20,17 @@ import {
   X,
   CreditCard,
   Wifi,
+  ShieldAlert,
+  AlertTriangle,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
 
 // Status das obras
 const OBRA_STATUS = {
   ACTIVE: { label: 'Em Curso', color: 'emerald', icon: CheckCircle },
   PLANNED: { label: 'Planeada', color: 'primary', icon: Calendar },
-  PAUSED: { label: 'Pausada', color: 'amber', icon: Clock },
   COMPLETED: { label: 'Concluída', color: 'slate', icon: CheckCircle },
 };
 
@@ -57,22 +58,22 @@ const ObraCard = ({ obra, machines, operators, onViewDetails, onEdit, onOpenMap 
           <Building2 className="w-6 h-6 text-primary-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-slate-900 truncate">{obra.name}</h3>
-          <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
+          <h3 className="font-semibold text-slate-900 dark:text-white truncate">{obra.name}</h3>
+          <div className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 mt-1">
             <MapPin className="w-3.5 h-3.5" />
             <span className="truncate">{obra.address || 'Sem endereço'}</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
+      <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
             <Truck className="w-4 h-4 text-emerald-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500">Equipamentos</p>
-            <p className="text-sm font-semibold text-slate-900">{machinesInObra.length}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Equipamentos</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{machinesInObra.length}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -80,13 +81,13 @@ const ObraCard = ({ obra, machines, operators, onViewDetails, onEdit, onOpenMap 
             <Users className="w-4 h-4 text-primary-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500">Operadores</p>
-            <p className="text-sm font-semibold text-slate-900">{operatorsInObra.length}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Operadores</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{operatorsInObra.length}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
+      <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -202,7 +203,6 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
           options={[
             { value: 'ACTIVE', label: 'Em Curso' },
             { value: 'PLANNED', label: 'Planeada' },
-            { value: 'PAUSED', label: 'Pausada' },
             { value: 'COMPLETED', label: 'Concluída' },
           ]}
         />
@@ -222,7 +222,7 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 
       <div className="border-t border-slate-200 pt-4">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-slate-900">Coordenadas GPS</h4>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Coordenadas GPS</h4>
           <Button type="button" variant="ghost" size="sm" icon={ExternalLink} onClick={getCoordinatesFromAddress}>
             Obter do Maps
           </Button>
@@ -277,7 +277,7 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 };
 
 // Vista detalhada da Obra
-const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, onBack, onEdit, onOpenMap, onAddLocationCard, onDeleteLocationCard }) => {
+const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, onBack, onEdit, onOpenMap, onAddLocationCard, onDeleteLocationCard, onDelete }) => {
   const [newCardId, setNewCardId] = useState('');
   const [creatingCard, setCreatingCard] = useState(false);
 
@@ -354,14 +354,14 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-slate-900">{obra.name}</h2>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{obra.name}</h2>
               <Badge variant={status.color}>
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {status.label}
               </Badge>
             </div>
             {obra.address && (
-              <p className="text-slate-500 flex items-center gap-1 mt-1">
+              <p className="text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                 <MapPin className="w-4 h-4" />
                 {obra.address}{obra.city && `, ${obra.city}`}
               </p>
@@ -377,6 +377,14 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
           <Button icon={Edit2} onClick={() => onEdit(obra)}>
             Editar
           </Button>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              icon={Trash2}
+              onClick={() => onDelete(obra)}
+              className="!text-red-500 hover:!bg-red-50"
+            />
+          )}
         </div>
       </div>
 
@@ -399,7 +407,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
             </div>
           </Card.Header>
           {machinesInObra.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <Truck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
               <p className="text-sm">Nenhum equipamento nesta obra</p>
             </div>
@@ -411,13 +419,13 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
                 return (
                   <div
                     key={machine.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{machine.name}</p>
-                        <p className="text-xs text-slate-500">{category || 'Sem categoria'}</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{machine.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{category || 'Sem categoria'}</p>
                       </div>
                     </div>
                     <Badge variant={isActive ? 'success' : 'default'} size="sm">
@@ -439,7 +447,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
             </div>
           </Card.Header>
           {operatorsInObra.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <Users className="w-10 h-10 mx-auto text-slate-300 mb-2" />
               <p className="text-sm">Nenhum operador atribuído</p>
             </div>
@@ -452,7 +460,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
                 return (
                   <div
                     key={operator.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
@@ -461,8 +469,8 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
                         {operator.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{operator.name}</p>
-                        <p className="text-xs text-slate-500">{Math.round(totalHours)}h trabalhadas</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{operator.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(totalHours)}h trabalhadas</p>
                       </div>
                     </div>
                     <Badge variant={isActive ? 'success' : 'default'} size="sm">
@@ -484,37 +492,37 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {obra.code && (
             <div>
-              <p className="text-xs text-slate-500">Código</p>
-              <p className="text-sm font-medium text-slate-900">{obra.code}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Código</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">{obra.code}</p>
             </div>
           )}
           {obra.startDate && (
             <div>
-              <p className="text-xs text-slate-500">Data Início</p>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Data Início</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
                 {new Date(obra.startDate).toLocaleDateString('pt-PT')}
               </p>
             </div>
           )}
           {obra.endDate && (
             <div>
-              <p className="text-xs text-slate-500">Data Fim (Prevista)</p>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Data Fim (Prevista)</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
                 {new Date(obra.endDate).toLocaleDateString('pt-PT')}
               </p>
             </div>
           )}
           {obra.manager && (
             <div>
-              <p className="text-xs text-slate-500">Responsável</p>
-              <p className="text-sm font-medium text-slate-900">{obra.manager}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Responsável</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">{obra.manager}</p>
             </div>
           )}
         </div>
         {obra.description && (
-          <div className="mt-4 pt-4 border-t border-slate-100">
-            <p className="text-xs text-slate-500 mb-1">Descrição</p>
-            <p className="text-sm text-slate-700">{obra.description}</p>
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Descrição</p>
+            <p className="text-sm text-slate-700 dark:text-slate-200">{obra.description}</p>
           </div>
         )}
       </Card>
@@ -540,7 +548,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
               value={newCardId}
               onChange={(e) => setNewCardId(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
               placeholder="ID_DO_CARTAO"
-              className="w-full pl-12 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono uppercase"
+              className="w-full pl-12 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono uppercase"
               onKeyDown={(e) => e.key === 'Enter' && handleCreateCard()}
             />
           </div>
@@ -555,7 +563,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
 
         {/* Lista de cartões */}
         {obraLocationCards.length === 0 ? (
-          <div className="text-center py-6 text-slate-500">
+          <div className="text-center py-6 text-slate-500 dark:text-slate-400">
             <CreditCard className="w-10 h-10 mx-auto text-slate-300 mb-2" />
             <p className="text-sm">Nenhum cartão de localização</p>
             <p className="text-xs text-slate-400 mt-1">
@@ -599,9 +607,9 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
         )}
 
         {/* Instruções */}
-        <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-          <p className="text-xs font-medium text-slate-700 mb-1">Como usar:</p>
-          <ul className="text-xs text-slate-500 space-y-0.5">
+        <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+          <p className="text-xs font-medium text-slate-700 dark:text-slate-200 mb-1">Como usar:</p>
+          <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
             <li>• Escreva o ID no cartão RFID físico (ex: LOC_PORTO_01)</li>
             <li>• Quando o cartão for lido numa máquina, ela move para esta obra</li>
             <li>• Ideal para entrada/saída de equipamentos no estaleiro</li>
@@ -609,6 +617,128 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
         </div>
       </Card>
     </div>
+  );
+};
+
+// Modal de Eliminação Segura (admin-only, 2 passos)
+const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, machinesCount, activeSessionsCount }) => {
+  const [confirmName, setConfirmName] = useState('');
+  const [step, setStep] = useState(1);
+
+  const hasBlockers = machinesCount > 0 || activeSessionsCount > 0;
+  const nameMatches = confirmName.trim().toLowerCase() === obra?.name?.trim().toLowerCase();
+
+  const handleClose = () => {
+    setConfirmName('');
+    setStep(1);
+    onClose();
+  };
+
+  const handleConfirm = () => {
+    if (nameMatches && !hasBlockers) {
+      onConfirm(obra);
+      handleClose();
+    }
+  };
+
+  if (!obra) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Eliminar Obra" size="md">
+      <div className="space-y-5">
+        {/* Aviso principal */}
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-red-800">Ação irreversível</p>
+            <p className="text-sm text-red-600 mt-1">
+              A obra <strong>"{obra.name}"</strong> será permanentemente eliminada, incluindo todos os dados associados.
+            </p>
+          </div>
+        </div>
+
+        {/* Bloqueadores — se existir máquinas ou sessões ativas */}
+        {hasBlockers ? (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Não é possível eliminar esta obra porque:</p>
+            {machinesCount > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <Truck className="w-5 h-5 text-amber-600" />
+                <span className="text-sm text-amber-800">
+                  <strong>{machinesCount}</strong> equipamento{machinesCount > 1 ? 's' : ''} ainda atribuído{machinesCount > 1 ? 's' : ''} a esta obra
+                </span>
+              </div>
+            )}
+            {activeSessionsCount > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <Activity className="w-5 h-5 text-amber-600" />
+                <span className="text-sm text-amber-800">
+                  <strong>{activeSessionsCount}</strong> sessão{activeSessionsCount > 1 ? 'ões' : ''} ativa{activeSessionsCount > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400">Mova os equipamentos e encerre as sessões antes de eliminar.</p>
+          </div>
+        ) : step === 1 ? (
+          /* Passo 1 — Confirmação inicial */
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Esta obra não tem equipamentos nem sessões ativas. Tem a certeza que pretende eliminar?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
+              <Button
+                variant="outline"
+                className="!border-red-300 !text-red-600 hover:!bg-red-50"
+                onClick={() => setStep(2)}
+              >
+                Sim, quero eliminar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Passo 2 — Escrever nome da obra */
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                Escreva <strong className="text-red-600">"{obra.name}"</strong> para confirmar:
+              </label>
+              <input
+                type="text"
+                value={confirmName}
+                onChange={(e) => setConfirmName(e.target.value)}
+                placeholder={obra.name}
+                className="w-full px-4 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && nameMatches && handleConfirm()}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="ghost" onClick={() => setStep(1)}>Voltar</Button>
+              <button
+                onClick={handleConfirm}
+                disabled={!nameMatches}
+                className={`
+                  px-4 py-2.5 rounded-lg text-sm font-semibold transition-all
+                  ${nameMatches
+                    ? 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/20'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }
+                `}
+              >
+                Eliminar Permanentemente
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Badge admin */}
+        <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <ShieldAlert className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] text-slate-400">Ação restrita a administradores</span>
+        </div>
+      </div>
+    </Modal>
   );
 };
 
@@ -636,7 +766,7 @@ const MapModal = ({ obra, isOpen, onClose }) => {
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-slate-500">{obra.address}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{obra.address}</p>
             <p className="text-xs text-slate-400">
               GPS: {obra.gps.latitude}, {obra.gps.longitude}
             </p>
@@ -654,15 +784,30 @@ const MapModal = ({ obra, isOpen, onClose }) => {
   );
 };
 
+// Mapa de activeView da sidebar → filtro de status
+const VIEW_TO_FILTER = {
+  'obras': 'all',
+  'obras-todas': 'all',
+  'obras-em-curso': 'ACTIVE',
+  'obras-planeadas': 'PLANNED',
+  'obras-concluidas': 'COMPLETED',
+  'obras-mapa': 'all',
+};
+
 const ObrasView = () => {
-  const { obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard } = useStore();
+  const { activeView, setActiveView, obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard } = useStore();
+  const { isAdmin } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingObra, setDeletingObra] = useState(null);
   const [editingObra, setEditingObra] = useState(null);
   const [selectedObra, setSelectedObra] = useState(null);
-  const [viewingObra, setViewingObra] = useState(null); // Para vista de detalhes
+  const [viewingObra, setViewingObra] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+
+  // Derivar filtro do activeView (sidebar) — fonte única de verdade
+  const filterStatus = VIEW_TO_FILTER[activeView] || 'all';
 
   // Garantir que obras existe
   const obrasList = obras || [];
@@ -699,11 +844,30 @@ const ObrasView = () => {
     setShowModal(true);
   };
 
-  // Função de eliminar reservada - será usada no modal de edição
-  const _handleDelete = async (obra) => {
-    if (confirm(`Eliminar a obra "${obra.name}"?`)) {
-      await deleteObra(obra.id);
-    }
+  // Contagem de dependências para validação de eliminação
+  const getObraDependencies = (obra) => {
+    const machinesCount = machines.filter(m =>
+      (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
+    ).length;
+    const activeSessionsCount = sessions.filter(s =>
+      s.status === 'OPEN' && machines.some(m =>
+        m.id === s.machineId &&
+        (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
+      )
+    ).length;
+    return { machinesCount, activeSessionsCount };
+  };
+
+  const handleRequestDelete = (obra) => {
+    setDeletingObra(obra);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async (obra) => {
+    await deleteObra(obra.id);
+    setShowDeleteModal(false);
+    setDeletingObra(null);
+    if (viewingObra?.id === obra.id) setViewingObra(null);
   };
 
   const handleOpenMap = (obra) => {
@@ -732,6 +896,7 @@ const ObrasView = () => {
         onOpenMap={handleOpenMap}
         onAddLocationCard={addLocationCard}
         onDeleteLocationCard={deleteLocationCard}
+        onDelete={isAdmin() ? handleRequestDelete : null}
       />
     );
   }
@@ -758,23 +923,35 @@ const ObrasView = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Obras</h2>
-          <p className="text-slate-500 mt-1">Gestão de obras e localizações</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Obras</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de obras e localizações</p>
         </div>
         <Button icon={Plus} onClick={() => setShowModal(true)}>
           Nova Obra
         </Button>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — clicáveis como filtros */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={Building2} title="Total" value={stats.total} color="primary" />
-        <StatCard icon={CheckCircle} title="Em Curso" value={stats.active} color="emerald" />
-        <StatCard icon={Calendar} title="Planeadas" value={stats.planned} color="primary" />
-        <StatCard icon={Clock} title="Concluídas" value={stats.completed} color="slate" />
+        <div onClick={() => setActiveView('obras-todas')} className="cursor-pointer">
+          <StatCard icon={Building2} title="Total" value={stats.total} color="primary"
+            className={`transition-all ring-2 ${filterStatus === 'all' ? 'ring-primary-500 shadow-lg shadow-primary-500/10' : 'ring-transparent hover:ring-slate-200'}`} />
+        </div>
+        <div onClick={() => setActiveView('obras-em-curso')} className="cursor-pointer">
+          <StatCard icon={CheckCircle} title="Em Curso" value={stats.active} color="emerald"
+            className={`transition-all ring-2 ${filterStatus === 'ACTIVE' ? 'ring-emerald-500 shadow-lg shadow-emerald-500/10' : 'ring-transparent hover:ring-slate-200'}`} />
+        </div>
+        <div onClick={() => setActiveView('obras-planeadas')} className="cursor-pointer">
+          <StatCard icon={Calendar} title="Planeadas" value={stats.planned} color="primary"
+            className={`transition-all ring-2 ${filterStatus === 'PLANNED' ? 'ring-primary-500 shadow-lg shadow-primary-500/10' : 'ring-transparent hover:ring-slate-200'}`} />
+        </div>
+        <div onClick={() => setActiveView('obras-concluidas')} className="cursor-pointer">
+          <StatCard icon={CheckCircle} title="Concluídas" value={stats.completed} color="slate"
+            className={`transition-all ring-2 ${filterStatus === 'COMPLETED' ? 'ring-slate-500 shadow-lg shadow-slate-500/10' : 'ring-transparent hover:ring-slate-200'}`} />
+        </div>
       </div>
 
-      {/* Filtros */}
+      {/* Pesquisa */}
       <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -784,49 +961,105 @@ const ObrasView = () => {
               placeholder="Pesquisar obras..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Select
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              options={[
-                { value: 'all', label: 'Todos os estados' },
-                { value: 'ACTIVE', label: 'Em Curso' },
-                { value: 'PLANNED', label: 'Planeadas' },
-                { value: 'PAUSED', label: 'Pausadas' },
-                { value: 'COMPLETED', label: 'Concluídas' },
-              ]}
-              className="w-40"
-            />
-          </div>
+          {filterStatus !== 'all' && (
+            <button
+              onClick={() => setActiveView('obras-todas')}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+              Limpar filtro
+            </button>
+          )}
         </div>
       </Card>
 
-      {/* Lista de Obras */}
-      {filteredObras.length === 0 ? (
-        <EmptyState
-          icon={Building2}
-          title="Sem obras"
-          description="Adicione a primeira obra para começar a gerir localizações."
-          actionLabel="Adicionar Obra"
-          onAction={() => setShowModal(true)}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredObras.map(obra => (
-            <ObraCard
-              key={obra.id}
-              obra={obra}
-              machines={machines}
-              operators={operators}
-              onViewDetails={handleViewDetails}
-              onEdit={handleEdit}
-              onOpenMap={handleOpenMap}
-            />
-          ))}
+      {/* Conteúdo condicional: Mapa Geral ou Lista */}
+      {activeView === 'obras-mapa' ? (
+        /* Mapa Geral — grelha com embeds de todas as obras com GPS */
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Mapa Geral de Obras</h3>
+          {(() => {
+            const obrasComGPS = filteredObras.filter(o => o.gps?.latitude && o.gps?.longitude);
+            if (obrasComGPS.length === 0) {
+              return (
+                <EmptyState
+                  icon={Map}
+                  title="Sem obras com GPS"
+                  description="Adicione coordenadas GPS às suas obras para as ver no mapa."
+                />
+              );
+            }
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {obrasComGPS.map(obra => (
+                  <Card key={obra.id}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-slate-900 dark:text-white">{obra.name}</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {obra.address || 'Sem endereço'}
+                        </p>
+                      </div>
+                      <Badge variant={OBRA_STATUS[obra.status]?.color || 'slate'} size="sm">
+                        {OBRA_STATUS[obra.status]?.label || obra.status}
+                      </Badge>
+                    </div>
+                    <div className="aspect-video bg-slate-100 rounded-lg overflow-hidden">
+                      <iframe
+                        src={`https://www.google.com/maps?q=${obra.gps.latitude},${obra.gps.longitude}&z=14&output=embed`}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        title={`Mapa ${obra.name}`}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-slate-400">GPS: {obra.gps.latitude}, {obra.gps.longitude}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={ExternalLink}
+                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${obra.gps.latitude},${obra.gps.longitude}`, '_blank')}
+                      >
+                        Direções
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            );
+          })()}
         </div>
+      ) : (
+        filteredObras.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="Sem obras"
+            description="Adicione a primeira obra para começar a gerir localizações."
+            actionLabel="Adicionar Obra"
+            onAction={() => setShowModal(true)}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredObras.map(obra => (
+              <ObraCard
+                key={obra.id}
+                obra={obra}
+                machines={machines}
+                operators={operators}
+                onViewDetails={handleViewDetails}
+                onEdit={handleEdit}
+                onOpenMap={handleOpenMap}
+              />
+            ))}
+          </div>
+        )
       )}
 
       {/* Modal de Formulário */}
@@ -849,6 +1082,17 @@ const ObrasView = () => {
         isOpen={showMapModal}
         onClose={() => setShowMapModal(false)}
       />
+
+      {/* Modal de Eliminação Segura (admin-only) */}
+      {isAdmin() && (
+        <DeleteObraModal
+          obra={deletingObra}
+          isOpen={showDeleteModal}
+          onClose={() => { setShowDeleteModal(false); setDeletingObra(null); }}
+          onConfirm={handleConfirmDelete}
+          {...(deletingObra ? getObraDependencies(deletingObra) : { machinesCount: 0, activeSessionsCount: 0 })}
+        />
+      )}
     </div>
   );
 };

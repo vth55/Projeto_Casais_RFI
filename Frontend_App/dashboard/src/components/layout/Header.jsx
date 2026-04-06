@@ -23,7 +23,7 @@ const viewTitles = {
   'financeiro-rentabilidade': { title: 'Rentabilidade', description: 'Análise de rentabilidade' },
   qualidade: { title: 'Qualidade de Dados', description: 'Validação de dados' },
   'qualidade-validacoes': { title: 'Validações Pendentes', description: 'Sessões para validar' },
-  'qualidade-alertas': { title: 'Alertas de Fadiga', description: 'Sessões longas' },
+  'qualidade-alertas': { title: 'Anomalias de Duração', description: 'Possíveis esquecimentos' },
   'qualidade-historico': { title: 'Histórico de Validações', description: 'Validações anteriores' },
   analises: { title: 'Análises', description: 'Análises e estatísticas' },
   'analises-geral': { title: 'Análise Geral', description: 'Visão geral das operações' },

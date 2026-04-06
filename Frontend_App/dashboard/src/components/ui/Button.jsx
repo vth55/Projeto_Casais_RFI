@@ -2,9 +2,9 @@ import React from 'react';
 
 const variants = {
   primary: 'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 shadow-sm',
-  secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-300',
-  outline: 'border border-slate-300 text-slate-700 hover:bg-slate-50 active:bg-slate-100',
-  ghost: 'text-slate-600 hover:bg-slate-100 active:bg-slate-200',
+  secondary: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300',
+  outline: 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100',
+  ghost: 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 active:bg-slate-200',
   danger: 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
   success: 'bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700',
 };

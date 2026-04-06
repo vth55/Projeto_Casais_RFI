@@ -43,7 +43,7 @@ const RoleBadge = ({ roleId }) => {
     purple: 'bg-purple-100 text-purple-700 border-purple-200',
     emerald: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     blue: 'bg-blue-100 text-blue-700 border-blue-200',
-    slate: 'bg-slate-100 text-slate-700 border-slate-200',
+    slate: 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
   };
 
   return (
@@ -55,15 +55,17 @@ const RoleBadge = ({ roleId }) => {
 };
 
 const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assignableRoles, canAssignRoles }) => {
-  const [formData, setFormData] = useState(operator || {
+  const [formData, setFormData] = useState({
     name: '',
     cardId: lastScannedCard || '',
     phone: '',
     role: 'operador',
-    systemRole: null, // Operadores de máquinas normalmente não têm acesso ao PWA
+    systemRole: null,
     assignedObraId: '',
     email: '',
-    licenses: [], // Tipos de máquinas que pode operar
+    licenses: [],
+    ...(operator || {}),
+    cardId: operator?.cardId ?? lastScannedCard ?? '',
   });
 
   const handleSubmit = (e) => {
@@ -120,7 +122,7 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
             <div className="flex items-center gap-1.5">
               <Briefcase className="w-4 h-4" />
               Cargo de Trabalho
@@ -129,20 +131,20 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
           <select
             value={formData.role}
             onChange={e => handleJobRoleChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800"
           >
             {EMPLOYEE_ROLES.map(role => (
               <option key={role.id} value={role.id}>{role.label}</option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-slate-500">{getRoleInfo(formData.role).description}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{getRoleInfo(formData.role).description}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Obra Atribuída</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Obra Atribuída</label>
           <select
             value={formData.assignedObraId}
             onChange={e => setFormData({ ...formData, assignedObraId: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800"
           >
             <option value="">Sem obra atribuída</option>
             {activeObras.map(obra => (
@@ -154,8 +156,8 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
 
       {/* Perfil de Sistema - só visível se tiver permissão */}
       {canAssignRoles && assignableRoles.length > 0 && (
-        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
             <div className="flex items-center gap-1.5">
               <Shield className="w-4 h-4" />
               Perfil de Acesso ao Sistema
@@ -164,13 +166,13 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
           <select
             value={formData.systemRole}
             onChange={e => setFormData({ ...formData, systemRole: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800"
           >
             {assignableRoles.map(role => (
               <option key={role.id} value={role.id}>{role.name} - {getLevelLabel(role.level)}</option>
             ))}
           </select>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             <Key className="w-3 h-3 inline mr-1" />
             Define o que este utilizador pode ver e fazer na aplicação
           </p>
@@ -179,14 +181,14 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
 
       {/* Licenças/Tipos de Máquinas */}
       {(formData.role === 'operador' || formData.role === 'tecnico_manutencao') && (
-        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
             <div className="flex items-center gap-1.5">
               <Award className="w-4 h-4" />
               Licenças de Operação
             </div>
           </label>
-          <p className="text-xs text-slate-500 mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Selecione os tipos de máquinas que este operador está autorizado a operar
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -205,7 +207,7 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
                   className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
                     isSelected
                       ? 'bg-primary-50 border-primary-300 text-primary-700'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:border-slate-300 dark:border-slate-600'
                   }`}
                 >
                   <span className="text-lg">{license.icon}</span>
@@ -241,7 +243,7 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
           placeholder="Ex: joao.silva@casais.pt"
           required
         />
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Obrigatório - usado para enviar alertas de validação de sessões
         </p>
       </div>
@@ -265,30 +267,30 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
           <Sparkles className="w-5 h-5 text-primary-600" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+          <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             Sugestões de Atribuição Automática
             <Badge variant="primary">{suggestions.length}</Badge>
           </h3>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Baseado no uso de máquinas, estes operadores podem ser atribuídos a novas obras.
           </p>
           <div className="mt-4 space-y-2">
             {suggestions.map(suggestion => (
-              <div key={suggestion.operatorId} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+              <div key={suggestion.operatorId} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center text-xs font-semibold text-slate-600">
                     {suggestion.operatorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{suggestion.operatorName}</p>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{suggestion.operatorName}</p>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <span>{suggestion.currentObraName || 'Sem obra'}</span>
                       <ArrowRight className="w-3 h-3" />
                       <span className="text-primary-600 font-medium">{suggestion.suggestedObraName}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-slate-500">
+                <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                   <span>{suggestion.hoursInSuggestedObra.toFixed(1)}h nesta obra</span>
                   <div className="flex items-center gap-1 ml-2">
                     <Button
@@ -303,7 +305,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
                       size="xs"
                       icon={X}
                       onClick={() => onDismiss(suggestion.operatorId)}
-                      className="text-slate-400 hover:bg-slate-100"
+                      className="text-slate-400 hover:bg-slate-100 dark:bg-slate-700/50"
                     />
                   </div>
                 </div>
@@ -423,10 +425,15 @@ const OperadoresView = () => {
   }, [operatorStats]);
 
   const handleSave = async (data) => {
+    let result;
     if (editingOperator) {
-      await updateOperator(editingOperator.id, data);
+      result = await updateOperator(editingOperator.id, data);
     } else {
-      await addOperator(data);
+      result = await addOperator(data);
+    }
+    if (result?.success === false) {
+      alert(`Erro ao guardar: ${result.error}`);
+      return;
     }
     setShowModal(false);
     setEditingOperator(null);
@@ -473,8 +480,8 @@ const OperadoresView = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Operadores</h2>
-          <p className="text-slate-500 mt-1">Gestão de operadores, cargos e cartões RFID</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Operadores</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de operadores, cargos e cartões RFID</p>
         </div>
         <Button icon={Plus} onClick={() => setShowModal(true)}>Novo Operador</Button>
       </div>
@@ -506,14 +513,14 @@ const OperadoresView = () => {
               placeholder="Pesquisar por nome ou ID..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             />
           </div>
           <div className="flex gap-2">
             <select
               value={roleFilter}
               onChange={e => setRoleFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 bg-white"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 bg-white dark:bg-slate-800"
             >
               <option value="all">Todos os Cargos</option>
               {EMPLOYEE_ROLES.map(role => (
@@ -523,7 +530,7 @@ const OperadoresView = () => {
             <select
               value={obraFilter}
               onChange={e => setObraFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 bg-white"
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 bg-white dark:bg-slate-800"
             >
               <option value="all">Todas as Obras</option>
               <option value="">Sem Obra</option>
@@ -558,12 +565,12 @@ const OperadoresView = () => {
                 <Table.Row key={op.id}>
                   <Table.Cell>
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${op.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${op.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600'}`}>
                         {op.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
                       </div>
                       <div>
                         <span className="font-medium block">{op.name}</span>
-                        {op.email && <span className="text-xs text-slate-500">{op.email}</span>}
+                        {op.email && <span className="text-xs text-slate-500 dark:text-slate-400">{op.email}</span>}
                       </div>
                     </div>
                   </Table.Cell>
@@ -578,7 +585,7 @@ const OperadoresView = () => {
                           ) : null;
                         })}
                         {op.licenses.length > 3 && (
-                          <span className="text-xs text-slate-500 ml-1">+{op.licenses.length - 3}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">+{op.licenses.length - 3}</span>
                         )}
                       </div>
                     ) : (
@@ -617,12 +624,12 @@ const OperadoresView = () => {
 
       {/* Role Legend */}
       <Card>
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Legenda de Cargos</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Legenda de Cargos</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {EMPLOYEE_ROLES.map(role => (
             <div key={role.id} className="flex items-center gap-2">
               <RoleBadge roleId={role.id} />
-              <span className="text-xs text-slate-500">({roleStats[role.id] || 0})</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">({roleStats[role.id] || 0})</span>
             </div>
           ))}
         </div>

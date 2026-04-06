@@ -25,6 +25,12 @@ const DevTools = lazy(() => import('./components/DevTools'));
 // Página de Validação (lazy loaded - acesso via link do email)
 const ValidationPage = lazy(() => import('./pages/ValidationPage'));
 
+// Reporte de Avaria (standalone mobile - acesso via QR Code)
+const ReporteAvariaView = lazy(() => import('./views/ReporteAvariaView'));
+
+// Mobile Hub - Smartphone-as-Machine (standalone fullscreen)
+const MobileHubView = lazy(() => import('./views/MobileHubView'));
+
 // Views com lazy loading (code splitting)
 const DashboardView = lazy(() => import('./views/DashboardView'));
 const ObrasView = lazy(() => import('./views/ObrasView'));
@@ -43,15 +49,29 @@ export default function App() {
   const { activeView, loading, setLoading, initializeListeners } = useStore();
   const { initTheme } = useThemeStore();
 
-  // Verificar se é página de validação (link do email)
+  // Verificar se é página de validação ou reporte avaria (standalone routes)
   const [validationToken, setValidationToken] = useState(null);
+  const [isReporteAvaria, setIsReporteAvaria] = useState(false);
+  const [isMobileHub, setIsMobileHub] = useState(false);
 
   useEffect(() => {
-    // Verificar URL para rota de validação
     const path = window.location.pathname;
-    const match = path.match(/^\/validar\/(.+)$/);
-    if (match) {
-      setValidationToken(match[1]);
+    const hash = window.location.hash;
+
+    // Rota de validação (link do email)
+    const validationMatch = path.match(/^\/validar\/(.+)$/) || hash.match(/^#\/validar\/(.+)$/);
+    if (validationMatch) {
+      setValidationToken(validationMatch[1]);
+    }
+
+    // Rota de reporte de avaria (QR Code mobile)
+    if (window.location.href.includes('/reporte-avaria')) {
+      setIsReporteAvaria(true);
+    }
+
+    // Rota Mobile Hub - Smartphone-as-Machine
+    if (window.location.href.includes('/mobile-hub')) {
+      setIsMobileHub(true);
     }
   }, []);
 
@@ -111,7 +131,6 @@ export default function App() {
     if (activeView === 'operadores') return <OperadoresView />;
     // Sessões - verificar submenus específicos primeiro
     if (activeView === 'sessoes-corrigidas') return <SessoesCorrigidasView />;
-    if (activeView === 'sessoes-validacoes') return <SessoesCorrigidasView />;
     if (activeView.startsWith('sessoes')) return <SessoesView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
     if (activeView.startsWith('financeiro')) return <FinanceiroView />;
@@ -121,6 +140,30 @@ export default function App() {
     if (activeView === 'configuracoes') return <ConfiguracoesView />;
     return <DashboardView />;
   }, [activeView]);
+
+  // Se é Mobile Hub, renderizar standalone (sem sidebar/header)
+  // IMPORTANTE: Verificar ANTES do loading para não bloquear o operador móvel
+  if (isMobileHub) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<ViewLoader />}>
+          <MobileHubView />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Se é reporte de avaria via QR Code, renderizar standalone (sem sidebar/header)
+  // IMPORTANTE: Verificar ANTES do loading para não bloquear o operador móvel
+  if (isReporteAvaria) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<ViewLoader />}>
+          <ReporteAvariaView />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   if (loading) {
     return (

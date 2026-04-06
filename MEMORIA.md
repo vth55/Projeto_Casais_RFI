@@ -192,24 +192,27 @@ Hardware:     arduino_rfid_simple/, Hardware_ESP32/
 
 ## NOTAS DE SESSÃO
 
-**08 Dezembro 2025 (Sessão 3) - ATUAL:**
-- **Bug Fix Crítico**: "Objects are not valid as a React child"
-  - Causa: `machine.category` e `machine.location` são objetos no mockData
-  - Causa adicional: MachineForm copiava objetos para formData ao editar
-  - **Solução definitiva**: Criado `src/utils/safeRender.js` com funções helper:
-    - `getCategoryName(category, fallback)` - Extrai nome da categoria
-    - `getLocationName(location, fallback)` - Extrai nome da localização
-    - `getCategoryId(category)` - Extrai ID para formulários
-    - `safeString(value, fallback)` - Converte qualquer valor para string
-  - Ficheiros atualizados para usar estas funções:
-    - `MaquinasView.jsx`
-    - `ManutencaoView.jsx`
-- **ErrorBoundary** adicionado em App.jsx (previne tela branca)
-- **Sidebar redesenhado** com tema escuro (slate-900)
-- **StatCard** com 3 variantes: default, gradient, outline
-- **DashboardView** redesenhado com gráficos maiores
+**06 Abril 2026 (Industrialização Mobile - Claude Opus):**
+- **Mobile Hub Auto-ID**: Implementada lógica de auto-geração de ID (`M_MOB_...`) persistente.
+- **Auto-Registo no Firestore**: O telemóvel regista-se autonomamente como "Máquina" na primeira utilização, seguindo o schema padrão do sistema.
+- **Dashboard Full-Sync**: As máquinas mobile aparecem na lista de Equipamentos e podem ser editadas pelo gestor (mudar nome, local, etc).
+- **Conectividade `/api/session`**: Migração para endpoints relativos via Firebase Hosting Rewrites (Resiliência de Região).
+- **UX "Instant-On"**: Remoção do ecrã de setup; o PWA entra direto no modo de leitura NFC.
+- **Documento Atualizado**: 📱 [Hardware Mobile](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/DECISAO_HARDWARE_MOBILE.md) - Marcado como Implementado.
 
-**08 Dezembro 2025 (Sessão 2):**
+**06 Abril 2026 (Sessão Estratégica - Gemini):**
+- **Laboratório Virtual de Braga**: Configurado simulador **Wokwi** para testar ESP32 sem hardware físico em Braga.
+- **Debate de Arquitetura V2**: Identificados 4 pontos críticos para scale-up industrial (Segurança, Conectividade, Escalabilidade).
+- **Resiliência Híbrida**: Proposta de "BLE Harvesting" para zonas sem rede (AirTag style) e "Human-Relay Mesh".
+- **Segurança IoT**: Identificada falta de Auth nos endpoints (Solução: API Keys).
+- **Escalabilidade**: Planeamento de Cold Storage no BigQuery para reduzir custos Firestore.
+- **Documentos Criados (Ativos de Inovação)**:
+  - 🏗️ [Estratégia V2](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/ESTRATEGIA_ARQUITETURA_V2.md) - Visão de Futuro.
+  - 🧪 [Plano de Testes V2](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/PLANO_DE_TESTES_V2.md) - Protocolo de Validação.
+  - 📡 [Guia do Simulador](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/SIMULADOR_WOKWI_GUIA.md) - Laboratório Virtual.
+- **Hardware**: Decisão de focar no ESP32 (Tipo B) para o produto final.
+
+**08 Dezembro 2025 (Sessão 3):**
 - Componentes melhorados para nível enterprise
 - Ficheiros antigos arquivados em `memoria/_arquivo/`
 
@@ -309,10 +312,18 @@ Hardware:     arduino_rfid_simple/, Hardware_ESP32/
 
 ## TAREFAS PENDENTES (Atualizado 17/12/2025)
 
-### BAIXA PRIORIDADE
-1. **Notificações Push** ❌
-   - Alertas de manutenção
-   - Sessões longas
+### 🛠️ TAREFAS PENDENTES (Antes da Entrega - Junho 2025)
+1. **Segurança IoT (API Keys)** ❌ - Implementar chave de proteção nos headers (Fácil/Grátis)
+2. **Higiene de Pastas** ❌ - Agrupar Hardware e limpar raiz do projeto
+3. **Notificações Push** ❌ - Alertas reais de manutenção e sessões longas
+4. **Polimento UI/UX** ❌ - Remover DevTools e checklist de design final
+5. **Testes de Stress** ❌ - Validar estabilidade básica do sistema
+
+### 🚀 VISÃO ESTRATÉGICA (Futuro Casais / V3)
+1. **Human-Relay Mesh (BLE Harvesting)** ❌ - Funcionários como estafetas de dados (M2M)
+2. **ESP-NOW Mesh Networking** ❌ - Comunicação direta entre máquinas sem rede
+3. **BigQuery & IA Predict** ❌ - Análise de grandes dados e manutenção preditiva avançada
+4. **Escudo Digital de Segurança** ❌ - Proximidade BLE para proteção de operadores
 
 ### CONCLUÍDO NESTA SESSÃO (17/12/2025 - Sessão 2) ✅
 

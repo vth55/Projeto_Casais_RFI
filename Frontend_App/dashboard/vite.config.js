@@ -115,4 +115,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'zustand', 'recharts'],
   },
+  server: {
+    allowedHosts: true,
+  },
 })

@@ -27,9 +27,10 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState } from '../components/ui';
+import { formatCurrency, formatHours, formatNumber } from '../utils/formatters';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
-  <div className="flex border-b border-slate-200">
+  <div className="flex border-b border-slate-200 dark:border-slate-700">
     {tabs.map(tab => (
       <button
         key={tab.id}
@@ -37,7 +38,7 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
           activeTab === tab.id
             ? 'border-primary-500 text-primary-600'
-            : 'border-transparent text-slate-500 hover:text-slate-700'
+            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'
         }`}
       >
         {tab.label}
@@ -47,7 +48,8 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
 );
 
 // Formulário de tarifário alinhado com o esquema do documento SISTEMA_TARIFARIOS.md
-const MachineTariffForm = ({ machineName, onSave, onCancel }) => {
+const MachineTariffForm = ({ machines, initialMachineId, onSave, onCancel }) => {
+  const [machineId, setMachineId] = useState(initialMachineId || (machines?.length > 0 ? machines[0].id : ''));
   const [type, setType] = useState('MACHINE_ONLY');
   const [machineCost, setMachineCost] = useState('');
   const [operatorCost, setOperatorCost] = useState('');
@@ -58,17 +60,25 @@ const MachineTariffForm = ({ machineName, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ type, machineCostPerHour: parseFloat(machineCost) || 0, operatorCostPerHour: parseFloat(operatorCost) || 0 });
+    if (!machineId) return;
+    onSave(machineId, { type, machineCostPerHour: parseFloat(machineCost) || 0, operatorCostPerHour: parseFloat(operatorCost) || 0 });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-slate-50 rounded-lg px-4 py-3 text-sm text-slate-600">
-        Máquina: <span className="font-semibold text-slate-800">{machineName}</span>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          Equipamento Alvo
+        </label>
+        <Select
+          value={machineId}
+          onChange={(e) => setMachineId(e.target.value)}
+          options={(machines || []).map(m => ({ value: m.id, label: m.name }))}
+        />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de Tarifário</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Tipo de Tarifário</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'MACHINE_ONLY', label: 'Só Máquina', sub: 'Combustível, desgaste, manutenção' },
@@ -81,13 +91,13 @@ const MachineTariffForm = ({ machineName, onSave, onCancel }) => {
               className={`text-left p-4 rounded-xl border-2 transition-all ${
                 type === opt.value
                   ? 'border-primary-500 bg-primary-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'
               }`}
             >
-              <p className={`font-semibold text-sm ${type === opt.value ? 'text-primary-700' : 'text-slate-700'}`}>
+              <p className={`font-semibold text-sm ${type === opt.value ? 'text-primary-700' : 'text-slate-700 dark:text-slate-200'}`}>
                 {opt.label}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">{opt.sub}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{opt.sub}</p>
             </button>
           ))}
         </div>
@@ -101,7 +111,7 @@ const MachineTariffForm = ({ machineName, onSave, onCancel }) => {
           min="0"
           value={machineCost}
           onChange={e => setMachineCost(e.target.value)}
-          placeholder="25.00"
+          placeholder="Ex: 25.00"
           icon={Euro}
           required
         />
@@ -113,7 +123,7 @@ const MachineTariffForm = ({ machineName, onSave, onCancel }) => {
             min="0"
             value={operatorCost}
             onChange={e => setOperatorCost(e.target.value)}
-            placeholder="15.00"
+            placeholder="Ex: 15.00"
             icon={Euro}
           />
         )}
@@ -121,7 +131,7 @@ const MachineTariffForm = ({ machineName, onSave, onCancel }) => {
 
       <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-4 flex items-center justify-between">
         <span className="text-sm font-medium text-primary-700">Total por hora</span>
-        <span className="text-2xl font-bold text-primary-800">€{total.toFixed(2)}/h</span>
+        <span className="text-2xl font-bold text-primary-800">{formatCurrency(total)}/h</span>
       </div>
 
       <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
@@ -144,10 +154,11 @@ const formatDate = (ts) => {
 };
 
 const FinanceiroView = () => {
-  const { activeView, machines, getFilteredSessions, setMachineTariff } = useStore();
-  const [activeTab, setActiveTab] = useState(
-    activeView === 'financeiro-custos' ? 'costs' : 'tariffs'
-  );
+  const { activeView, setActiveView, machines, getFilteredSessions, setMachineTariff } = useStore();
+
+  // Derivar a tab activa DIRECTAMENTE do activeView — sem estado local
+  const activeTab = activeView === 'financeiro-custos' ? 'costs' : 'tariffs';
+
   const [selectedMachineId, setSelectedMachineId] = useState('');
   const [showTariffModal, setShowTariffModal] = useState(false);
 
@@ -230,20 +241,20 @@ const FinanceiroView = () => {
       .sort((a, b) => b.totalCost - a.totalCost);
   }, [machines, filteredSessions]);
 
-  const handleSaveTariff = async (tariffData) => {
-    if (!selectedMachine) return;
-    await setMachineTariff(selectedMachine.id, tariffData);
+  const handleSaveTariff = async (tariffMachineId, tariffData) => {
+    if (!tariffMachineId) return;
+    await setMachineTariff(tariffMachineId, tariffData);
     setShowTariffModal(false);
   };
 
   const handleExport = () => {
     const rows = [
       ['Métrica', 'Valor'],
-      ['Custo Total Real', `€${financialData.totalCost.toLocaleString('pt-PT')}`],
-      ['Total de Horas', `${financialData.totalHours}h`],
-      ['Custo Médio/Hora', `€${financialData.avgCostPerHour.toFixed(2)}/h`],
-      ['Custo Máquina', `€${financialData.machineCost.toLocaleString('pt-PT')}`],
-      ['Custo Operador', `€${financialData.operatorCost.toLocaleString('pt-PT')}`],
+      ['Custo Total Real', formatCurrency(financialData.totalCost)],
+      ['Total de Horas', formatHours(financialData.totalHours)],
+      ['Custo Médio/Hora', `${formatCurrency(financialData.avgCostPerHour)}/h`],
+      ['Custo Máquina', formatCurrency(financialData.machineCost)],
+      ['Custo Operador', formatCurrency(financialData.operatorCost)],
       ['Cobertura Tarifária', `${financialData.coverage}%`],
     ];
     const csv = rows.map(r => r.join(';')).join('\n');
@@ -266,8 +277,8 @@ const FinanceiroView = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Gestão Financeira</h2>
-          <p className="text-slate-500 mt-1">Tarifários versionados e custos reais por sessão</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Gestão Financeira</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Tarifários versionados e custos reais por sessão</p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExport}>
           Exportar
@@ -279,14 +290,14 @@ const FinanceiroView = () => {
         <StatCard
           icon={Euro}
           title="Custo Total Real"
-          value={financialData.totalCost.toLocaleString('pt-PT')}
+          value={formatNumber(financialData.totalCost, 2)}
           unit="€"
           color="primary"
         />
         <StatCard
           icon={Clock}
           title="Total de Horas"
-          value={financialData.totalHours}
+          value={formatNumber(financialData.totalHours, 1)}
           unit="h"
           color="sky"
         />
@@ -309,7 +320,7 @@ const FinanceiroView = () => {
 
       {/* Tabs */}
       <Card padding="none">
-        <TabNav tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <TabNav tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveView(id === 'costs' ? 'financeiro-custos' : 'financeiro-tarifarios')} />
 
         <div className="p-6">
 
@@ -327,9 +338,9 @@ const FinanceiroView = () => {
                         label="Selecionar Máquina"
                         value={selectedMachine?.id || ''}
                         onChange={e => setSelectedMachineId(e.target.value)}
-                        options={machines.map(m => ({
+                        options={machines.filter(m => m && m.id && m.name).map(m => ({
                           value: m.id,
-                          label: `${m.name}${m.currentTariff ? ` — €${m.currentTariff.totalCostPerHour}/h` : ' — sem tarifário'}`,
+                          label: `${m.name}${m.currentTariff ? ` — ${formatCurrency(m.currentTariff.totalCostPerHour || 0)}/h` : ' — sem tarifário'}`,
                         }))}
                       />
                     </div>
@@ -361,17 +372,17 @@ const FinanceiroView = () => {
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                             <div>
-                              <p className="text-xs text-slate-500">Custo Máquina</p>
-                              <p className="font-semibold text-slate-800">€{selectedMachine.currentTariff.machineCostPerHour.toFixed(2)}/h</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">Custo Máquina</p>
+                              <p className="font-semibold text-slate-800">{formatCurrency(selectedMachine.currentTariff.machineCostPerHour)}/h</p>
                             </div>
                             {selectedMachine.currentTariff.type === 'MACHINE_AND_OPERATOR' && (
                               <div>
-                                <p className="text-xs text-slate-500">Custo Operador</p>
-                                <p className="font-semibold text-slate-800">€{(selectedMachine.currentTariff.operatorCostPerHour || 0).toFixed(2)}/h</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Custo Operador</p>
+                                <p className="font-semibold text-slate-800">{formatCurrency(selectedMachine.currentTariff.operatorCostPerHour)}/h</p>
                               </div>
                             )}
                             <div>
-                              <p className="text-xs text-slate-500">Válido desde</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">Válido desde</p>
                               <p className="font-semibold text-slate-800">{formatDate(selectedMachine.currentTariff.validFrom)}</p>
                             </div>
                           </div>
@@ -400,7 +411,7 @@ const FinanceiroView = () => {
                       {/* Histórico de Tarifários */}
                       {selectedMachine.tariffHistory && selectedMachine.tariffHistory.length > 0 ? (
                         <div>
-                          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
                             <History className="w-4 h-4" />
                             Histórico de Tarifários
                           </h3>
@@ -433,12 +444,12 @@ const FinanceiroView = () => {
                                         </Badge>
                                       </Table.Cell>
                                       <Table.Cell align="right">
-                                        <span className="font-bold text-slate-900">€{t.totalCostPerHour.toFixed(2)}</span>
+                                        <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(t.totalCostPerHour)}</span>
                                       </Table.Cell>
-                                      <Table.Cell align="right">€{t.machineCostPerHour.toFixed(2)}</Table.Cell>
-                                      <Table.Cell align="right">€{(t.operatorCostPerHour || 0).toFixed(2)}</Table.Cell>
-                                      <Table.Cell className="text-xs text-slate-500">{formatDate(t.validFrom)}</Table.Cell>
-                                      <Table.Cell className="text-xs text-slate-500">
+                                      <Table.Cell align="right">{formatCurrency(t.machineCostPerHour)}</Table.Cell>
+                                      <Table.Cell align="right">{formatCurrency(t.operatorCostPerHour)}</Table.Cell>
+                                      <Table.Cell className="text-xs text-slate-500 dark:text-slate-400">{formatDate(t.validFrom)}</Table.Cell>
+                                      <Table.Cell className="text-xs text-slate-500 dark:text-slate-400">
                                         {t.validUntil ? formatDate(t.validUntil) : '—'}
                                       </Table.Cell>
                                       <Table.Cell align="center">
@@ -484,7 +495,7 @@ const FinanceiroView = () => {
               ) : (
                 <>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-700 mb-4">Evolução Mensal de Custos Reais</h3>
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Evolução Mensal de Custos Reais</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <AreaChart data={trendData}>
                         <defs>
@@ -502,7 +513,7 @@ const FinanceiroView = () => {
                         <YAxis stroke="#94a3b8" fontSize={12} tickFormatter={v => `€${v}`} />
                         <Tooltip
                           formatter={(value, name) => [
-                            `€${value.toLocaleString('pt-PT')}`,
+                            formatCurrency(value),
                             name === 'custos' ? 'Total' : name === 'maquina' ? 'Máquina' : 'Operador',
                           ]}
                           contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
@@ -522,14 +533,14 @@ const FinanceiroView = () => {
                     ].map(item => (
                       <div
                         key={item.label}
-                        className={`rounded-xl p-4 ${item.bold ? 'bg-primary-50 border border-primary-200' : 'bg-slate-50'}`}
+                        className={`rounded-xl p-4 ${item.bold ? 'bg-primary-50 border border-primary-200' : 'bg-slate-50 dark:bg-slate-800/50'}`}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-xs text-slate-500">{item.label}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{item.label}</span>
                         </div>
                         <p className={`text-xl font-bold ${item.bold ? 'text-primary-800' : 'text-slate-800'}`}>
-                          €{item.value.toLocaleString('pt-PT')}
+                          {formatCurrency(item.value)}
                         </p>
                       </div>
                     ))}
@@ -564,7 +575,7 @@ const FinanceiroView = () => {
                         tickFormatter={v => v.length > 14 ? v.slice(0, 14) + '…' : v}
                       />
                       <Tooltip
-                        formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, 'Custo Total']}
+                        formatter={(value) => [formatCurrency(value), 'Custo Total']}
                         contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                       />
                       <Bar dataKey="totalCost" radius={[0, 4, 4, 0]}>
@@ -596,18 +607,18 @@ const FinanceiroView = () => {
                                 <Truck className="w-4 h-4 text-primary-600" />
                               </div>
                               <div>
-                                <p className="font-medium text-slate-800">{machine.name}</p>
+                                <p className="font-medium text-slate-800">{machine.name || 'Sem Nome'}</p>
                                 {machine.currentTariff && (
-                                  <p className="text-xs text-slate-400">€{machine.currentTariff.totalCostPerHour}/h atual</p>
+                                  <p className="text-xs text-slate-400">{formatCurrency(machine.currentTariff.totalCostPerHour)}/h atual</p>
                                 )}
                               </div>
                             </div>
                           </Table.Cell>
-                          <Table.Cell align="right">{hours}h</Table.Cell>
-                          <Table.Cell align="right">€{mc.toLocaleString('pt-PT')}</Table.Cell>
-                          <Table.Cell align="right">€{opCost.toLocaleString('pt-PT')}</Table.Cell>
+                          <Table.Cell align="right">{formatHours(hours)}</Table.Cell>
+                          <Table.Cell align="right">{formatCurrency(mc)}</Table.Cell>
+                          <Table.Cell align="right">{formatCurrency(opCost)}</Table.Cell>
                           <Table.Cell align="right">
-                            <span className="font-bold text-slate-900">€{totalCost.toLocaleString('pt-PT')}</span>
+                            <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(totalCost)}</span>
                           </Table.Cell>
                           <Table.Cell align="center">
                             <Badge variant={hasTariff ? 'success' : 'warning'} dot size="sm">
@@ -633,13 +644,12 @@ const FinanceiroView = () => {
         description="O tarifário anterior será arquivado automaticamente com a data de hoje."
         size="md"
       >
-        {selectedMachine && (
-          <MachineTariffForm
-            machineName={selectedMachine.name}
-            onSave={handleSaveTariff}
-            onCancel={() => setShowTariffModal(false)}
-          />
-        )}
+        <MachineTariffForm
+          machines={machines}
+          initialMachineId={selectedMachineId}
+          onSave={handleSaveTariff}
+          onCancel={() => setShowTariffModal(false)}
+        />
       </Modal>
     </div>
   );

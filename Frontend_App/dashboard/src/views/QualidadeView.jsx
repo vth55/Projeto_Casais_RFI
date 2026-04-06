@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckCircle,
   AlertTriangle,
@@ -21,7 +21,7 @@ import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, StatusB
 
 // Componente para tab navigation
 const TabNav = ({ tabs, activeTab, onChange }) => (
-  <div className="flex border-b border-slate-200">
+  <div className="flex border-b border-slate-200 dark:border-slate-700">
     {tabs.map(tab => (
       <button
         key={tab.id}
@@ -29,7 +29,7 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
           activeTab === tab.id
             ? 'border-primary-500 text-primary-600'
-            : 'border-transparent text-slate-500 hover:text-slate-700'
+            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'
         }`}
       >
         {tab.label}
@@ -37,7 +37,7 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
           <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
             activeTab === tab.id
               ? 'bg-primary-100 text-primary-700'
-              : 'bg-slate-100 text-slate-600'
+              : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600'
           }`}>
             {tab.count}
           </span>
@@ -70,35 +70,35 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
   return (
     <div className="space-y-6">
       {/* Detalhes da sessão */}
-      <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
             <Truck className="w-5 h-5 text-primary-600" />
           </div>
           <div>
-            <p className="font-medium text-slate-900">{machine?.name || session.machineId}</p>
-            <p className="text-sm text-slate-500">Operador: {operator?.name || session.cardId}</p>
+            <p className="font-medium text-slate-900 dark:text-white">{machine?.name || session.machineId}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Operador: {operator?.name || session.cardId}</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200">
+        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200 dark:border-slate-700">
           <div>
-            <p className="text-xs text-slate-500">Início</p>
-            <p className="text-sm font-medium text-slate-900">
+            <p className="text-xs text-slate-500 dark:text-slate-400">Início</p>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">
               {startTime.toLocaleDateString('pt-PT')} {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Fim</p>
-            <p className="text-sm font-medium text-slate-900">
+            <p className="text-xs text-slate-500 dark:text-slate-400">Fim</p>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">
               {endTime.toLocaleDateString('pt-PT')} {endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Duração Registada</p>
-            <p className="text-sm font-medium text-slate-900">{session.durationHours?.toFixed(2)}h</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Duração Registada</p>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">{session.durationHours?.toFixed(2)}h</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Estado</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Estado</p>
             <StatusBadge status={session.validationStatus || 'PENDING'} />
           </div>
         </div>
@@ -109,7 +109,7 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
           <div>
-            <p className="font-medium text-amber-800">Alerta de Fadiga</p>
+            <p className="font-medium text-amber-800">Anomalia de Duração</p>
             <p className="text-sm text-amber-700 mt-0.5">
               Esta sessão excede 5 horas contínuas. Por favor verifique se a duração está correta.
             </p>
@@ -119,14 +119,14 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
 
       {/* Ações */}
       <div className="space-y-3">
-        <p className="text-sm font-medium text-slate-700">Ação de Validação</p>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Ação de Validação</p>
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => setAction('approve')}
             className={`p-4 rounded-lg border-2 text-center transition-all ${
               action === 'approve'
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-slate-200 hover:border-slate-300'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'
             }`}
           >
             <CheckCircle className={`w-6 h-6 mx-auto mb-2 ${action === 'approve' ? 'text-emerald-500' : 'text-slate-400'}`} />
@@ -139,7 +139,7 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
             className={`p-4 rounded-lg border-2 text-center transition-all ${
               action === 'correct'
                 ? 'border-amber-500 bg-amber-50'
-                : 'border-slate-200 hover:border-slate-300'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'
             }`}
           >
             <Clock className={`w-6 h-6 mx-auto mb-2 ${action === 'correct' ? 'text-amber-500' : 'text-slate-400'}`} />
@@ -152,7 +152,7 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
             className={`p-4 rounded-lg border-2 text-center transition-all ${
               action === 'reject'
                 ? 'border-red-500 bg-red-50'
-                : 'border-slate-200 hover:border-slate-300'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'
             }`}
           >
             <XCircle className={`w-6 h-6 mx-auto mb-2 ${action === 'reject' ? 'text-red-500' : 'text-slate-400'}`} />
@@ -185,7 +185,7 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
       />
 
       {/* Botões */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+      <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
         <Button variant="ghost" onClick={onClose}>
           Cancelar
         </Button>
@@ -207,6 +207,13 @@ const QualidadeView = () => {
     activeView === 'qualidade-alertas' ? 'fatigue' :
     activeView === 'qualidade-historico' ? 'history' : 'pending'
   );
+
+  useEffect(() => {
+    if (activeView === 'qualidade-alertas') setActiveTab('fatigue');
+    else if (activeView === 'qualidade-historico') setActiveTab('history');
+    else setActiveTab('pending');
+  }, [activeView]);
+
   const [selectedSession, setSelectedSession] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -262,7 +269,7 @@ const QualidadeView = () => {
 
   const tabs = [
     { id: 'pending', label: 'Pendentes', count: pendingValidations.length },
-    { id: 'fatigue', label: 'Alertas de Fadiga', count: fatigueAlerts.length },
+    { id: 'fatigue', label: 'Anomalias de Duração', count: fatigueAlerts.length },
     { id: 'history', label: 'Histórico', count: validatedSessions.length },
   ];
 
@@ -271,8 +278,8 @@ const QualidadeView = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Qualidade de Dados</h2>
-          <p className="text-slate-500 mt-1">Validação e correção de sessões</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Qualidade de Dados</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Validação e correção de sessões</p>
         </div>
       </div>
 
@@ -286,7 +293,7 @@ const QualidadeView = () => {
         />
         <StatCard
           icon={Timer}
-          title="Alertas de Fadiga"
+          title="Anomalias (>5h)"
           value={fatigueAlerts.length}
           color={fatigueAlerts.length > 0 ? 'red' : 'emerald'}
         />
@@ -308,7 +315,7 @@ const QualidadeView = () => {
       <Card padding="none">
         <TabNav tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-        <div className="p-4 border-b border-slate-200">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -316,7 +323,7 @@ const QualidadeView = () => {
               placeholder="Pesquisar por máquina ou operador..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -327,12 +334,12 @@ const QualidadeView = () => {
               icon={activeTab === 'pending' ? CheckCircle : activeTab === 'fatigue' ? Timer : Calendar}
               title={
                 activeTab === 'pending' ? 'Sem validações pendentes' :
-                activeTab === 'fatigue' ? 'Sem alertas de fadiga' :
-                'Sem registos de validação'
+                activeTab === 'fatigue' ? 'Sem anomalias registadas' :
+                'Não há sessões com necessidades de verificação neste momento.'
               }
               description={
-                activeTab === 'pending' ? 'Todas as sessões foram validadas.' :
-                activeTab === 'fatigue' ? 'Nenhuma sessão excedeu 5 horas contínuas.' :
+                activeTab === 'pending' ? 'Todas as sessões foram validadas e os custos atribuídos corretamente.' :
+                activeTab === 'fatigue' ? 'Nenhuma sessão excedeu 5 horas contínuas (Possível Esquecimento).' :
                 'O histórico de validações aparecerá aqui.'
               }
             />
@@ -347,8 +354,8 @@ const QualidadeView = () => {
                 return (
                   <div
                     key={session.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 ${
-                      isFatigue ? 'border-amber-200 bg-amber-50/50' : 'border-slate-200'
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                      isFatigue ? 'border-amber-200 bg-amber-50/50' : 'border-slate-200 dark:border-slate-700'
                     }`}
                     onClick={() => setSelectedSession(session)}
                   >
@@ -360,17 +367,17 @@ const QualidadeView = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-slate-900">
+                          <p className="font-medium text-slate-900 dark:text-white">
                             {machine?.name || session.machineId}
                           </p>
                           {isFatigue && (
                             <Badge variant="warning" size="sm">
                               <AlertTriangle className="w-3 h-3 mr-1" />
-                              Fadiga
+                              Possível Esquecimento
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-500 mt-0.5">
+                        <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                           <span className="flex items-center gap-1">
                             <User className="w-3.5 h-3.5" />
                             {operator?.name || session.cardId}
@@ -385,10 +392,10 @@ const QualidadeView = () => {
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className={`text-lg font-semibold ${isFatigue ? 'text-amber-600' : 'text-slate-900'}`}>
+                        <p className={`text-lg font-semibold ${isFatigue ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>
                           {session.durationHours?.toFixed(1)}h
                         </p>
-                        <p className="text-xs text-slate-500">duração</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">duração</p>
                       </div>
                       <Button variant="ghost" size="sm" icon={Eye}>
                         Validar

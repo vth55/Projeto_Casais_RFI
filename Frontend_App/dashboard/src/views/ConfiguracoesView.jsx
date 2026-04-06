@@ -23,8 +23,8 @@ const ConfigSection = ({ icon: Icon, title, description, children, action }) => 
           <Icon className="w-5 h-5 text-slate-600" />
         </div>
         <div>
-          <h3 className="font-semibold text-slate-900">{title}</h3>
-          <p className="text-sm text-slate-500 mt-0.5">{description}</p>
+          <h3 className="font-semibold text-slate-900 dark:text-white">{title}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
         </div>
       </div>
       {action}
@@ -151,7 +151,7 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
       {/* Info básica */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Nome do Perfil</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nome do Perfil</label>
           <input
             type="text"
             value={formData.name}
@@ -163,7 +163,7 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Cor</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Cor</label>
           <select
             value={formData.color}
             onChange={e => setFormData({ ...formData, color: e.target.value })}
@@ -179,7 +179,7 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
       {/* Nível Hierárquico - só para novos perfis ou customizados */}
       {!isSystem && availableLevels && availableLevels.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4" />
               Nível Hierárquico
@@ -194,7 +194,7 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
               <option key={lvl.level} value={lvl.level}>{getLevelLabel(lvl.level)}</option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Só pode criar perfis de nível inferior ao seu ({getLevelLabel(userLevel)})
           </p>
         </div>
@@ -208,13 +208,13 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
             <span>Nível: <strong>{getLevelLabel(role?.level)}</strong></span>
             <span className="text-slate-400">|</span>
             <Lock className="w-3.5 h-3.5" />
-            <span className="text-slate-500">Perfil de sistema (não pode alterar nível)</span>
+            <span className="text-slate-500 dark:text-slate-400">Perfil de sistema (não pode alterar nível)</span>
           </div>
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Descrição</label>
         <textarea
           value={formData.description}
           onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -227,8 +227,8 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
       {/* Permissões */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <label className="text-sm font-medium text-slate-700">Permissões</label>
-          <span className="text-xs text-slate-500">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Permissões</label>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {formData.permissions.length} selecionadas
           </span>
         </div>
@@ -259,10 +259,10 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
                       {allSelected && <Check className="w-3 h-3 text-white" />}
                       {someSelected && <div className="w-2 h-0.5 bg-primary-500" />}
                     </div>
-                    <span className="text-sm font-medium text-slate-700">{category.label}</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{category.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">{selectedCount}/{categoryPermissions.length}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{selectedCount}/{categoryPermissions.length}</span>
                     <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expandedCategory === key ? 'rotate-90' : ''}`} />
                   </div>
                 </button>
@@ -498,7 +498,7 @@ const ConfiguracoesView = () => {
           <div className="space-y-6">
             {/* Legenda de hierarquia */}
             <div className="flex flex-wrap items-center gap-4 p-3 bg-slate-50 rounded-lg">
-              <span className="text-sm font-medium text-slate-700">Níveis Hierárquicos:</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Níveis Hierárquicos:</span>
               <div className="flex flex-wrap gap-2">
                 <span className="px-2 py-0.5 text-xs rounded bg-red-50 text-red-600">Administração</span>
                 <span className="text-slate-400">&gt;</span>
@@ -600,8 +600,8 @@ const ConfiguracoesView = () => {
                     <Shield className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Administrador</p>
-                    <p className="text-xs text-slate-500">Acesso total ao sistema</p>
+                    <p className="font-medium text-slate-900 dark:text-white">Administrador</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Acesso total ao sistema</p>
                   </div>
                   {currentUser?.systemRole === 'admin' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
@@ -631,8 +631,8 @@ const ConfiguracoesView = () => {
                     <Truck className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Gestor de Frota</p>
-                    <p className="text-xs text-slate-500">Gestão de equipamentos e obras</p>
+                    <p className="font-medium text-slate-900 dark:text-white">Gestor de Frota</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Gestão de equipamentos e obras</p>
                   </div>
                   {currentUser?.systemRole === 'gestor_frota' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
@@ -662,8 +662,8 @@ const ConfiguracoesView = () => {
                     <Wallet className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Gestor Financeiro</p>
-                    <p className="text-xs text-slate-500">Custos, tarifários e relatórios</p>
+                    <p className="font-medium text-slate-900 dark:text-white">Gestor Financeiro</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Custos, tarifários e relatórios</p>
                   </div>
                   {currentUser?.systemRole === 'gestor_financeiro' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
@@ -693,8 +693,8 @@ const ConfiguracoesView = () => {
                     <Building2 className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Encarregado de Obra</p>
-                    <p className="text-xs text-slate-500">Restrito à sua obra</p>
+                    <p className="font-medium text-slate-900 dark:text-white">Encarregado de Obra</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Restrito à sua obra</p>
                   </div>
                   {currentUser?.systemRole === 'encarregado_obra' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
@@ -724,8 +724,8 @@ const ConfiguracoesView = () => {
                     <Eye className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Visualizador</p>
-                    <p className="text-xs text-slate-500">Apenas leitura</p>
+                    <p className="font-medium text-slate-900 dark:text-white">Visualizador</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Apenas leitura</p>
                   </div>
                   {currentUser?.systemRole === 'visualizador' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
@@ -755,8 +755,8 @@ const ConfiguracoesView = () => {
                     <Leaf className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">Gestor Sustentabilidade</p>
-                    <p className="text-xs text-slate-500">Emissões e relatórios ESG</p>
+                    <p className="font-medium text-slate-900 dark:text-white">Gestor Sustentabilidade</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Emissões e relatórios ESG</p>
                   </div>
                   {currentUser?.systemRole === 'gestor_sustentabilidade' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
@@ -799,29 +799,29 @@ const ConfiguracoesView = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Alertas de Manutenção</p>
-                  <p className="text-xs text-slate-500">Notificar quando máquina atinge 80% do limite de horas</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Alertas de Manutenção</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar quando máquina atinge 80% do limite de horas</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Alertas de Fadiga</p>
-                  <p className="text-xs text-slate-500">Notificar sessões com mais de 5 horas contínuas</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Anomalias de Duração</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar quando uma sessão excede um limite de tempo sem fecho</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Auto-Fecho de Sessões</p>
-                  <p className="text-xs text-slate-500">Fechar sessões automaticamente após 14 horas</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Fecho de Sessões</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Fechar sessões automaticamente após 14 horas</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Notificações por Email</p>
-                  <p className="text-xs text-slate-500">Enviar resumo diário por email</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Notificações por Email</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Enviar resumo diário por email</p>
                 </div>
                 <Badge variant="default">Inativo</Badge>
               </div>
@@ -840,8 +840,8 @@ const ConfiguracoesView = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Criar Dados Demo</p>
-                  <p className="text-xs text-slate-500">Criar dados de exemplo para testes</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Criar Dados Demo</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Criar dados de exemplo para testes</p>
                 </div>
                 <Button size="sm" icon={RefreshCw} onClick={handleCreateMockData} loading={loading}>
                   Criar
@@ -867,29 +867,29 @@ const ConfiguracoesView = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Limite Manutenção</p>
-                    <p className="text-xs text-slate-500">Horas até manutenção preventiva</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Limite Manutenção</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Horas até manutenção preventiva</p>
                   </div>
                   <Badge>150h</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Alerta Fadiga</p>
-                    <p className="text-xs text-slate-500">Horas contínuas para alerta</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Anomalia de Duração</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Horas contínuas para disparar alerta</p>
                   </div>
                   <Badge>5h</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Auto-Fecho Sessão</p>
-                    <p className="text-xs text-slate-500">Fechar sessão automaticamente</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Fecho Sessão</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Fechar sessão automaticamente</p>
                   </div>
                   <Badge>14h</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Fator CO₂</p>
-                    <p className="text-xs text-slate-500">kg CO₂ por litro de diesel</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Fator CO₂</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">kg CO₂ por litro de diesel</p>
                   </div>
                   <Badge>2.68</Badge>
                 </div>
@@ -900,20 +900,20 @@ const ConfiguracoesView = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Nome</p>
-                    <p className="text-xs text-slate-500">{currentUser?.name || '-'}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Nome</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.name || '-'}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Email</p>
-                    <p className="text-xs text-slate-500">{currentUser?.email || '-'}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Email</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email || '-'}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Perfil</p>
-                    <p className="text-xs text-slate-500">{allRoles[currentUser?.systemRole]?.name || '-'}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Perfil</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{allRoles[currentUser?.systemRole]?.name || '-'}</p>
                   </div>
                   <Badge variant="primary">{currentUser?.systemRole}</Badge>
                 </div>
@@ -928,7 +928,7 @@ const ConfiguracoesView = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Configurações</h2>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Configurações</h2>
         <p className="text-slate-500 mt-1">Gerir configurações e permissões do sistema</p>
       </div>
 
@@ -973,8 +973,8 @@ const ConfiguracoesView = () => {
             <Shield className="w-5 h-5 text-slate-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-slate-900">CASAIS Fleet Intelligence</h3>
-            <p className="text-sm text-slate-500">Versão 2.0.0 - Sistema de Gestão de Frotas</p>
+            <h3 className="font-semibold text-slate-900 dark:text-white">CASAIS Fleet Intelligence</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Versão 2.0.0 - Sistema de Gestão de Frotas</p>
           </div>
           <Badge variant="success">Atualizado</Badge>
         </div>

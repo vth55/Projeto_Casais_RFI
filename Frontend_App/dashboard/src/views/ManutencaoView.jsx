@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, Image, X, Upload, Eye, Trash2, Camera } from 'lucide-react';
+import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, Image, X, Upload, Eye, Trash2, Camera, ShieldAlert, CheckCircle2, Phone, MessageSquare, Send, User, ChevronRight } from 'lucide-react';
 import useStore from '../store/useStore';
+import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
 import { getCategoryName } from '../utils/safeRender';
 
@@ -397,11 +398,244 @@ const PhotoThumbnails = ({ photos, onClick }) => {
   );
 };
 
+// ─── Avarias: Constantes e Componentes ────────────────────────
+const CATEGORIA_LABELS = {
+  mecanico: 'Mecânico',
+  hidraulico: 'Hidráulico',
+  eletrico: 'Elétrico',
+  pneus: 'Pneus / Rastos',
+  fugas: 'Fuga de Fluidos',
+  estrutura: 'Estrutura',
+  seguranca: 'Segurança',
+  outro: 'Outro',
+  motor: 'Motor',
+};
+
+// Lista de avarias — linha compacta, clicável para abrir detalhe
+const AvariaListItem = ({ avaria, onClick }) => {
+  const isResolvida = avaria.status === 'resolvida';
+  const createdDate = new Date(avaria.createdAt);
+  const timeStr = createdDate.toLocaleDateString('pt-PT') + ' ' + createdDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 hover:shadow-md group ${
+        isResolvida
+          ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 opacity-70'
+          : avaria.maquinaParada
+            ? 'border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-900/10 hover:border-red-300'
+            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary-300'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        {/* Indicador de estado */}
+        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+          isResolvida ? 'bg-emerald-500' : avaria.maquinaParada ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
+        }`} />
+
+        {/* Info principal */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm text-slate-900 dark:text-white">{avaria.machineId}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">·</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{CATEGORIA_LABELS[avaria.categoria] || avaria.categoria}</span>
+            {avaria.maquinaParada && !isResolvida && (
+              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded">PARADA</span>
+            )}
+            {isResolvida && (
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">Resolvida</span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{avaria.descricao}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">{timeStr}</span>
+            {avaria.operadorNome && avaria.operadorNome !== 'Não identificado' && (
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">por {avaria.operadorNome}</span>
+            )}
+            {avaria.hasPhoto && (
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-0.5">
+                <Camera className="w-3 h-3" /> {avaria.photoCount || 1}
+              </span>
+            )}
+            {(avaria.notas?.length > 0) && (
+              <span className="text-[11px] text-primary-500 flex items-center gap-0.5">
+                <MessageSquare className="w-3 h-3" /> {avaria.notas.length}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 transition-colors flex-shrink-0" />
+      </div>
+    </button>
+  );
+};
+
+// Modal de detalhe de uma avaria com contacto e notas
+const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
+  const [notaTexto, setNotaTexto] = useState('');
+  const isResolvida = avaria.status === 'resolvida';
+  const createdDate = new Date(avaria.createdAt);
+
+  const handleSubmitNota = () => {
+    if (!notaTexto.trim()) return;
+    onAddNota(avaria.id, notaTexto);
+    setNotaTexto('');
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmitNota();
+    }
+  };
+
+  // Formatar telefone para link
+  const phoneClean = avaria.operadorTelefone?.replace(/\s/g, '') || '';
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Detalhe da Avaria" size="lg">
+      <div className="space-y-5">
+        {/* Estado + Máquina */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${isResolvida ? 'bg-emerald-500' : avaria.maquinaParada ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{avaria.machineId}</h3>
+          </div>
+          {avaria.maquinaParada && !isResolvida && (
+            <span className="text-xs font-bold text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-2.5 py-1 rounded-lg">MÁQUINA PARADA</span>
+          )}
+          {isResolvida && (
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 px-2.5 py-1 rounded-lg">RESOLVIDA</span>
+          )}
+        </div>
+
+        {/* Info grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Tipo</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-white mt-0.5">{CATEGORIA_LABELS[avaria.categoria] || avaria.categoria}</p>
+          </div>
+          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Data</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-white mt-0.5">{createdDate.toLocaleDateString('pt-PT')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{createdDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+        </div>
+
+        {/* Descrição */}
+        <div>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Descrição</p>
+          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">{avaria.descricao}</p>
+        </div>
+
+        {/* Operador + Contacto */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-2">Reportado por</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{avaria.operadorNome || 'Não identificado'}</p>
+                {avaria.operadorTelefone && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{avaria.operadorTelefone}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Botões de contacto */}
+            {phoneClean && (
+              <div className="flex items-center gap-2">
+                <a
+                  href={`tel:${phoneClean}`}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  Ligar
+                </a>
+                <a
+                  href={`https://wa.me/351${phoneClean.replace(/^\+?351/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  WhatsApp
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Resolução */}
+        {avaria.resolvedAt && (
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+              Resolvida em {new Date(avaria.resolvedAt).toLocaleDateString('pt-PT')} por {avaria.resolvedBy || 'Gestor'}
+            </p>
+          </div>
+        )}
+
+        {/* Notas internas */}
+        <div>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-2">
+            Notas Internas ({avaria.notas?.length || 0})
+          </p>
+
+          {/* Lista de notas */}
+          {avaria.notas?.length > 0 && (
+            <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+              {avaria.notas.map((nota) => (
+                <div key={nota.id} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <p className="text-sm text-slate-800 dark:text-slate-200">{nota.texto}</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                    {nota.autor} · {new Date(nota.createdAt).toLocaleDateString('pt-PT')} {new Date(nota.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input para nova nota */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={notaTexto}
+              onChange={(e) => setNotaTexto(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Escrever nota interna..."
+              className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <Button size="sm" icon={Send} onClick={handleSubmitNota} disabled={!notaTexto.trim()}>
+              Enviar
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex justify-between mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+        <Button variant="outline" onClick={onClose}>Fechar</Button>
+        {!isResolvida && (
+          <Button icon={CheckCircle2} onClick={() => { onResolver(avaria.id); onClose(); }}>
+            Marcar como Resolvida
+          </Button>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
 const ManutencaoView = () => {
   const {
     activeView,
+    setActiveView,
     machines,
     maintenanceRecords,
+    updateMachine,
     addMaintenanceRecord,
     uploadMaintenancePhoto,
     addPhotoToMaintenance,
@@ -409,7 +643,14 @@ const ManutencaoView = () => {
     loading
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState(activeView === 'manutencao-calendario' ? 'calendar' : activeView === 'manutencao-historico' ? 'history' : 'alerts');
+  const { avarias, resolverAvaria, addNota } = useAvariasStore();
+  const [selectedAvaria, setSelectedAvaria] = useState(null);
+
+  // Derivar tab diretamente do activeView
+  const activeTab = activeView === 'manutencao-calendario' ? 'calendar' : activeView === 'manutencao-historico' ? 'history' : activeView === 'manutencao-avarias' ? 'avarias' : 'alerts';
+
+  const avariasPendentes = useMemo(() => avarias.filter((a) => a.status === 'pendente'), [avarias]);
+
   const [showNewModal, setShowNewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
@@ -444,6 +685,7 @@ const ManutencaoView = () => {
     { id: 'alerts', label: 'Alertas', count: alertMachines.length },
     { id: 'calendar', label: 'Calendário', count: 0 },
     { id: 'history', label: 'Histórico', count: maintenanceRecords.length },
+    { id: 'avarias', label: 'Casos de Avaria', count: avariasPendentes.length },
   ];
 
   // Sort maintenance records by date (newest first)
@@ -481,15 +723,16 @@ const ManutencaoView = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <StatCard icon={AlertTriangle} title="Alertas" value={alertMachines.length} color={alertMachines.length > 0 ? 'amber' : 'emerald'} />
         <StatCard icon={Wrench} title="Urgentes" value={urgentCount} color={urgentCount > 0 ? 'red' : 'emerald'} />
         <StatCard icon={Check} title="Concluídas" value={maintenanceRecords.length} color="primary" />
         <StatCard icon={Image} title="Com Fotos" value={maintenanceRecords.filter(r => r.photos?.length > 0).length} color="slate" />
+        <StatCard icon={ShieldAlert} title="Avarias" value={avariasPendentes.length} color={avariasPendentes.length > 0 ? 'red' : 'emerald'} />
       </div>
 
       <Card padding="none">
-        <TabNav tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <TabNav tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveView(id === 'calendar' ? 'manutencao-calendario' : id === 'history' ? 'manutencao-historico' : id === 'avarias' ? 'manutencao-avarias' : 'manutencao-alertas')} />
         <div className="p-6">
           {activeTab === 'alerts' && (
             alertMachines.length === 0
@@ -560,6 +803,12 @@ const ManutencaoView = () => {
                 </div>
               )
           )}
+
+          {activeTab === 'avarias' && (
+            avarias.length === 0
+              ? <EmptyState icon={ShieldAlert} title="Sem casos de avaria" description="Nenhuma avaria reportada pelos operadores. As avarias são submetidas via QR Code no terreno." />
+              : <div className="space-y-2">{avarias.map(a => <AvariaListItem key={a.id} avaria={a} onClick={() => setSelectedAvaria(a)} />)}</div>
+          )}
         </div>
       </Card>
 
@@ -583,6 +832,16 @@ const ManutencaoView = () => {
           onAddPhoto={handleAddPhotoToExisting}
           onRemovePhoto={handleRemovePhoto}
           uploading={uploading}
+        />
+      )}
+
+      {/* Modal: Detalhe de avaria */}
+      {selectedAvaria && (
+        <AvariaDetailModal
+          avaria={selectedAvaria}
+          onClose={() => setSelectedAvaria(null)}
+          onResolver={resolverAvaria}
+          onAddNota={addNota}
         />
       )}
     </div>

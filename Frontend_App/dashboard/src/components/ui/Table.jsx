@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 
 const Table = ({ children, className = '' }) => (
-  <div className={`overflow-x-auto rounded-lg border border-slate-200 ${className}`}>
+  <div className={`overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}>
     <table className="w-full text-sm">
       {children}
     </table>
@@ -10,13 +10,13 @@ const Table = ({ children, className = '' }) => (
 );
 
 Table.Head = ({ children }) => (
-  <thead className="bg-slate-50 border-b border-slate-200">
+  <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
     {children}
   </thead>
 );
 
 Table.Body = ({ children }) => (
-  <tbody className="divide-y divide-slate-100">
+  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
     {children}
   </tbody>
 );
@@ -24,7 +24,7 @@ Table.Body = ({ children }) => (
 Table.Row = ({ children, onClick, className = '' }) => (
   <tr
     className={`
-      ${onClick ? 'cursor-pointer hover:bg-slate-50' : ''}
+      ${onClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}
       transition-colors
       ${className}
     `}
@@ -53,9 +53,9 @@ Table.Header = ({
   return (
     <th
       className={`
-        px-4 py-3 font-semibold text-slate-600 whitespace-nowrap
+        px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap
         ${alignStyles[align]}
-        ${sortable ? 'cursor-pointer select-none hover:text-slate-900' : ''}
+        ${sortable ? 'cursor-pointer select-none hover:text-slate-900 dark:hover:text-white' : ''}
         ${className}
       `}
       onClick={sortable ? onSort : undefined}
@@ -78,7 +78,7 @@ Table.Cell = ({ children, align = 'left', className = '' }) => {
   };
 
   return (
-    <td className={`px-4 py-3 text-slate-700 ${alignStyles[align]} ${className}`}>
+    <td className={`px-4 py-3 text-slate-700 dark:text-slate-300 ${alignStyles[align]} ${className}`}>
       {children}
     </td>
   );

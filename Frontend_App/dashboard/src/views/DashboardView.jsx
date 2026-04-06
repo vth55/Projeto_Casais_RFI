@@ -46,7 +46,7 @@ const DateFilters = () => {
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl shadow-sm">
       {filters.map(filter => (
         <button
           key={filter.id}
@@ -54,7 +54,7 @@ const DateFilters = () => {
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             dateFilter === filter.id
               ? 'bg-primary-500 text-white shadow-md'
-              : 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-600 hover:bg-slate-100 dark:bg-slate-700/50'
           }`}
         >
           {filter.label}
@@ -83,10 +83,10 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
         <Play className="w-6 h-6 text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-slate-900 truncate">
+        <p className="font-semibold text-slate-900 dark:text-white truncate">
           {machine?.name || session.machineId}
         </p>
-        <div className="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
+        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           <User className="w-3.5 h-3.5" />
           <span className="truncate">{operator?.name || session.cardId}</span>
         </div>
@@ -95,7 +95,7 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
         <div className={`text-2xl font-bold tabular-nums ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}>
           {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}
         </div>
-        <p className="text-xs text-slate-500">em curso</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">em curso</p>
       </div>
     </div>
   );
@@ -214,8 +214,8 @@ const DashboardView = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Visão geral da frota • {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Visão geral da frota • {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <DateFilters />
       </div>
@@ -263,7 +263,7 @@ const DashboardView = () => {
       {maintenanceAlerts.length > 0 && (
         <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 shadow-lg">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-14 h-14 bg-white dark:bg-slate-800/20 rounded-xl flex items-center justify-center">
               <AlertTriangle className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
@@ -273,14 +273,14 @@ const DashboardView = () => {
               </p>
               <div className="flex flex-wrap gap-2 mt-4">
                 {maintenanceAlerts.slice(0, 3).map(machine => (
-                  <div key={machine.id} className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                  <div key={machine.id} className="bg-white dark:bg-slate-800/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
                     <span className="text-sm font-medium text-white">
                       {machine.name}: {machine.partialHours || machine.totalHours}h
                     </span>
                   </div>
                 ))}
                 {maintenanceAlerts.length > 3 && (
-                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                  <div className="bg-white dark:bg-slate-800/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
                     <span className="text-sm font-medium text-white">
                       +{maintenanceAlerts.length - 3} mais
                     </span>
@@ -289,7 +289,7 @@ const DashboardView = () => {
               </div>
             </div>
             <Button
-              className="bg-white text-amber-600 hover:bg-amber-50"
+              className="bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50"
               icon={ArrowRight}
               iconPosition="right"
               onClick={() => useStore.getState().setActiveView('manutencao')}
@@ -337,8 +337,8 @@ const DashboardView = () => {
           <Card className="h-full">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Atividade Semanal</h3>
-                <p className="text-sm text-slate-500">Horas trabalhadas e consumo de combustível</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Atividade Semanal</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Horas trabalhadas e consumo de combustível</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -368,18 +368,18 @@ const DashboardView = () => {
         <Card className="h-full">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Sessões Ativas</h3>
-              <p className="text-sm text-slate-500">{activeSessions.length} em curso</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Sessões Ativas</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{activeSessions.length} em curso</p>
             </div>
             <div className={`w-3 h-3 rounded-full ${activeSessions.length > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
           </div>
           <div className="space-y-3">
             {activeSessions.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Clock className="w-8 h-8 text-slate-400" />
                 </div>
-                <p className="text-slate-500">Nenhuma sessão ativa</p>
+                <p className="text-slate-500 dark:text-slate-400">Nenhuma sessão ativa</p>
               </div>
             ) : (
               activeSessions.map(session => (
@@ -401,8 +401,8 @@ const DashboardView = () => {
         <Card>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Emissões CO₂</h3>
-              <p className="text-sm text-slate-500">Tendência semanal</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Emissões CO₂</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Tendência semanal</p>
             </div>
             <Badge variant="success" className="flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -430,8 +430,8 @@ const DashboardView = () => {
         <Card>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Utilização por Equipamento</h3>
-              <p className="text-sm text-slate-500">Top 5 mais utilizados</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Utilização por Equipamento</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Top 5 mais utilizados</p>
             </div>
           </div>
           <div className="space-y-4">
@@ -439,19 +439,19 @@ const DashboardView = () => {
               <div key={item.name} className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                   item.status === 'active' ? 'bg-emerald-100' :
-                  item.status === 'maintenance' ? 'bg-red-100' : 'bg-slate-100'
+                  item.status === 'maintenance' ? 'bg-red-100' : 'bg-slate-100 dark:bg-slate-700/50'
                 }`}>
                   <Truck className={`w-5 h-5 ${
                     item.status === 'active' ? 'text-emerald-600' :
-                    item.status === 'maintenance' ? 'text-red-600' : 'text-slate-500'
+                    item.status === 'maintenance' ? 'text-red-600' : 'text-slate-500 dark:text-slate-400'
                   }`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-slate-700 truncate">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900">{item.value}%</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{item.value}%</span>
                   </div>
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{

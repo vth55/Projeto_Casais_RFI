@@ -15,7 +15,7 @@ const Select = forwardRef(({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-slate-700 mb-2">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           {label}
         </label>
       )}
@@ -23,13 +23,13 @@ const Select = forwardRef(({
         <select
           ref={ref}
           className={`
-            w-full appearance-none rounded-lg border bg-white px-4 py-2.5 pr-10 text-sm text-slate-900
+            w-full appearance-none rounded-lg border bg-white dark:bg-slate-900 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-slate-100
             transition-all duration-200
             focus:outline-none focus:ring-2 focus:ring-offset-0
-            disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
+            disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed
             ${hasError
               ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
-              : 'border-slate-300 focus:border-primary-500 focus:ring-primary-500/20'
+              : 'border-slate-300 dark:border-slate-600 focus:border-primary-500 focus:ring-primary-500/20'
             }
             ${className}
           `}

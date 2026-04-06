@@ -30,18 +30,16 @@ const navigation = [
     label: 'Obras',
     icon: Building2,
     submenu: [
-      { id: 'obras-lista', label: 'Lista de Obras' },
-      { id: 'obras-mapa', label: 'Mapa Geral' },
+      { id: 'obras-todas', label: 'Todas' },
+      { id: 'obras-em-curso', label: 'Em Curso' },
+      { id: 'obras-planeadas', label: 'Planeadas' },
+      { id: 'obras-concluidas', label: 'Concluídas' },
     ],
   },
   {
     id: 'maquinas',
     label: 'Equipamentos',
     icon: Truck,
-    submenu: [
-      { id: 'maquinas-lista', label: 'Lista de Equipamentos' },
-      { id: 'maquinas-localizacao', label: 'Mudar Localização' },
-    ],
   },
   {
     id: 'operadores',
@@ -66,6 +64,7 @@ const navigation = [
     submenu: [
       { id: 'manutencao-alertas', label: 'Alertas' },
       { id: 'manutencao-historico', label: 'Histórico' },
+      { id: 'manutencao-avarias', label: 'Avarias' },
     ],
   },
   {
@@ -227,9 +226,8 @@ const Sidebar = ({ className = 'hidden md:flex', onNavigate }) => {
                   </div>
                   {hasSubmenu && (
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
-                        menuExpanded ? 'rotate-180' : ''
-                      }`}
+                      className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${menuExpanded ? 'rotate-180' : ''
+                        }`}
                     />
                   )}
                 </button>

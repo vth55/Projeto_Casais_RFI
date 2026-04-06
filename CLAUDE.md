@@ -19,6 +19,11 @@ cd Frontend_App/dashboard && npm run dev --host   # Frontend (porta 5173)
 cd Backend_Cloud && firebase deploy               # Backend
 ```
 
+## Laboratório Virtual (ESP32)
+* Local: `Hardware_ESP32/wokwi_simulator/`
+* Guia: `docs/SIMULADOR_WOKWI_GUIA.md`
+* Objetivo: Testar comunicação Cloud sem hardware físico (Emulador Wokwi).
+
 ## BUGS CONHECIDOS (Verificar antes de mudar código)
 1. **Objects as React child**: `machine.category` e `machine.location` são OBJETOS no Firestore
    - Solução: `typeof x === 'object' ? x?.name : x`
@@ -34,15 +39,22 @@ cd Backend_Cloud && firebase deploy               # Backend
 ```
 
 ## Prioridades Atuais
-1. **RFID de Localização** - Cartões para mudar localização de máquinas
-2. **Cargos de Funcionários** - Encarregado de Obra, Operador, etc.
-3. **Auto-assign funcionários a obras** - Baseado em uso de máquinas
+1. **Smartphone-as-Machine** - Ver `docs/DECISAO_HARDWARE_MOBILE.md` para pivot de hardware.
+2. **Segurança IoT (API Keys)** - Proteção contra injeção de dados falsos (V2)
+3. **Resiliência BLE (Harvesting)** - Sincronização offline-first via telemóvel (V2)
+4. **Higiene de Pastas** - Agrupar hardware e limpar raiz do projeto
 
 ## Recentemente Implementado (09/12/2025)
 - Módulo Obras com GPS/Google Maps
 - Gráficos comparativos Período vs Período
 - Mudança bulk de localização de máquinas
 - Remoção de referências Gemini/IA
+
+**06 Abril 2026 (Sessão Estratégica - Gemini):**
+- **Sessão de Arquitetura V2**: Debatida a escalabilidade para 500+ máquinas e segurança enterprise.
+- **Pivot de Hardware (Braga)**: Decidido o uso do telemóvel Android como hardware da máquina para a apresentação.
+- **Desativação do Laboratório Virtual**: O simulador Wokwi foi removido por ser redundante face ao novo "Hub Mobile".
+- **Documento de Contexto**: Criado `docs/DECISAO_HARDWARE_MOBILE.md` com o resumo da estratégia para o executor.
 
 ## Regras de Código
 - Código final tem de ser de grau Enterprise-level

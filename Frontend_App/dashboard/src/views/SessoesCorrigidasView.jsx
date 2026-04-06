@@ -138,7 +138,7 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
           activeTab === tab.id
             ? 'border-primary-500 text-primary-600'
-            : 'border-transparent text-slate-500 hover:text-slate-700'
+            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700'
         }`}
       >
         {tab.label}
@@ -188,10 +188,10 @@ const PendingAlertCard = ({ alert, onResendEmail, onViewDetails }) => {
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-slate-900">{alert.machineName}</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">{alert.machineName}</h3>
               <AlertTypeBadge type={alert.type} />
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-500">
+            <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <User className="w-3.5 h-3.5" />
                 {alert.operatorName}
@@ -204,7 +204,7 @@ const PendingAlertCard = ({ alert, onResendEmail, onViewDetails }) => {
             <div className="flex items-center gap-2 mt-2">
               <EscalationBadge level={alert.escalationLevel} hoursPending={alert.hoursPending} />
               {alert.emailResendCount > 0 && (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   (email enviado {alert.emailResendCount + 1}x)
                 </span>
               )}
@@ -231,7 +231,7 @@ const PendingAlertCard = ({ alert, onResendEmail, onViewDetails }) => {
         </div>
       </div>
       <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-sm">
-        <div className="text-slate-500">
+        <div className="text-slate-500 dark:text-slate-400">
           Criado: {formatDateTime(alert.createdAt)}
         </div>
         <div className="text-slate-600">
@@ -252,8 +252,8 @@ const AlertDetailModal = ({ alert, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Detalhes do Alerta</h3>
-            <p className="text-sm text-slate-500 mt-1">ID: {alert.id}</p>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Detalhes do Alerta</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">ID: {alert.id}</p>
           </div>
           <button
             onClick={onClose}
@@ -268,33 +268,33 @@ const AlertDetailModal = ({ alert, onClose }) => {
           {/* Info da Sessão */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
                 <Truck className="w-4 h-4" />
                 Máquina
               </div>
-              <p className="font-semibold text-slate-900">{alert.machineName}</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{alert.machineName}</p>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
                 <User className="w-4 h-4" />
                 Operador
               </div>
-              <p className="font-semibold text-slate-900">{alert.operatorName}</p>
-              <p className="text-xs text-slate-500">{alert.operatorEmail}</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{alert.operatorName}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{alert.operatorEmail}</p>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
                 <Building2 className="w-4 h-4" />
                 Obra
               </div>
-              <p className="font-semibold text-slate-900">{alert.obraName || 'N/A'}</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{alert.obraName || 'N/A'}</p>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
                 <Calendar className="w-4 h-4" />
                 Data
               </div>
-              <p className="font-semibold text-slate-900">
+              <p className="font-semibold text-slate-900 dark:text-white">
                 {formatDateTime(alert.originalStartTime)?.split(',')[0]}
               </p>
             </div>
@@ -312,7 +312,7 @@ const AlertDetailModal = ({ alert, onClose }) => {
           {/* Comparação de Horários */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
             <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-              <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+              <h4 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Comparação de Horários
               </h4>
@@ -320,13 +320,13 @@ const AlertDetailModal = ({ alert, onClose }) => {
             <div className="p-4">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Campo</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Campo</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Original</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Original</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Corrigido</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Corrigido</p>
                 </div>
 
                 <div className="text-left">
@@ -404,7 +404,7 @@ const AlertDetailModal = ({ alert, onClose }) => {
           {/* Audit Trail */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
             <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-              <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+              <h4 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <History className="w-4 h-4" />
                 Histórico de Auditoria
               </h4>
@@ -422,18 +422,18 @@ const AlertDetailModal = ({ alert, onClose }) => {
                     }`} />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-slate-900">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
                           {entry.action === 'CREATED' && 'Alerta Criado'}
                           {entry.action === 'EMAIL_RESENT' && 'Email Reenviado'}
                           {entry.action === 'VALIDATED' && 'Validado pelo Operador'}
                           {entry.action === 'CORRECTED' && 'Corrigido pelo Operador'}
                         </p>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           {formatDateTime(entry.timestamp)}
                         </span>
                       </div>
                       {entry.validatedBy && (
-                        <p className="text-xs text-slate-500">Por: {entry.validatedBy}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Por: {entry.validatedBy}</p>
                       )}
                       {entry.details && (
                         <p className="text-xs text-slate-600 mt-1">{entry.details}</p>
@@ -573,8 +573,8 @@ const SessoesCorrigidasView = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Validação de Sessões</h2>
-          <p className="text-slate-500 mt-1">Gestão de alertas e correções de sessões</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Validação de Sessões</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de alertas e correções de sessões</p>
         </div>
         <Button variant="outline" icon={Download}>
           Exportar CSV
@@ -707,10 +707,10 @@ const SessoesCorrigidasView = () => {
                     <Table.Row key={alert.id}>
                       <Table.Cell>
                         <div className="text-sm">
-                          <p className="font-medium text-slate-900">
+                          <p className="font-medium text-slate-900 dark:text-white">
                             {formatDateTime(alert.validatedAt)?.split(',')[0]}
                           </p>
-                          <p className="text-slate-500 text-xs">
+                          <p className="text-slate-500 dark:text-slate-400 text-xs">
                             {formatDateTime(alert.validatedAt)?.split(',')[1]?.trim()}
                           </p>
                         </div>

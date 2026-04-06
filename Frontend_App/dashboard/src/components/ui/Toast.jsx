@@ -10,24 +10,24 @@ const icons = {
 
 const styles = {
   success: {
-    bg: 'bg-emerald-50 border-emerald-200',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800',
     icon: 'text-emerald-500',
-    text: 'text-emerald-800',
+    text: 'text-emerald-800 dark:text-emerald-200',
   },
   error: {
-    bg: 'bg-red-50 border-red-200',
+    bg: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800',
     icon: 'text-red-500',
-    text: 'text-red-800',
+    text: 'text-red-800 dark:text-red-200',
   },
   warning: {
-    bg: 'bg-amber-50 border-amber-200',
+    bg: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800',
     icon: 'text-amber-500',
-    text: 'text-amber-800',
+    text: 'text-amber-800 dark:text-amber-200',
   },
   info: {
-    bg: 'bg-sky-50 border-sky-200',
+    bg: 'bg-sky-50 dark:bg-sky-900/30 border-sky-200 dark:border-sky-800',
     icon: 'text-sky-500',
-    text: 'text-sky-800',
+    text: 'text-sky-800 dark:text-sky-200',
   },
 };
 

@@ -236,6 +236,21 @@ const QRCodeTab = () => {
         </button>
       </div>
 
+      {/* Simular Reporte de Avaria */}
+      <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+        <p className="text-xs font-medium text-purple-700 mb-2">Simular Reporte de Avaria (Móvel)</p>
+        <p className="text-[10px] text-purple-600 mb-3">
+          Abre o ecrã que o operador vê ao ler o QR Code — popup com tamanho de iPhone.
+        </p>
+        <button
+          onClick={() => window.open('#/reporte-avaria', '_blank', 'width=390,height=844')}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Abrir Ecrã de Avaria (Mobile)
+        </button>
+      </div>
+
       {/* Instruções */}
       <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
         <p className="text-xs font-medium text-blue-700 mb-1">Para a apresentação:</p>

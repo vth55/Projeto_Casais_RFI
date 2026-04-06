@@ -25,12 +25,12 @@ const RelatoriosView = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Relatórios</h2>
-          <p className="text-slate-500 mt-1">Exportação de dados e relatórios</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Relatórios</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Exportação de dados e relatórios</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/50 p-1 rounded-lg">
           {['week', 'month', 'quarter', 'year'].map(p => (
-            <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${period === p ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+            <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${period === p ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:text-white'}`}>
               {p === 'week' ? 'Semana' : p === 'month' ? 'Mês' : p === 'quarter' ? 'Trimestre' : 'Ano'}
             </button>
           ))}
@@ -45,12 +45,12 @@ const RelatoriosView = () => {
                 <report.icon className="w-6 h-6 text-primary-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-slate-900">{report.name}</h3>
-                <p className="text-sm text-slate-500 mt-1">{report.description}</p>
+                <h3 className="font-semibold text-slate-900 dark:text-white">{report.name}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{report.description}</p>
                 <Badge variant="default" size="sm" className="mt-2">{report.format}</Badge>
               </div>
             </div>
-            <div className="flex justify-end mt-4 pt-4 border-t border-slate-100">
+            <div className="flex justify-end mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
               <Button size="sm" icon={Download} onClick={(e) => { e.stopPropagation(); handleExport(report.id); }}>Exportar</Button>
             </div>
           </Card>
@@ -59,29 +59,29 @@ const RelatoriosView = () => {
 
       <Card>
         <div className="flex items-center gap-4 mb-4">
-          <div className="p-2.5 bg-slate-100 rounded-lg"><Calendar className="w-5 h-5 text-slate-600" /></div>
+          <div className="p-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-lg"><Calendar className="w-5 h-5 text-slate-600 dark:text-slate-300" /></div>
           <div>
-            <h3 className="font-semibold text-slate-900">Relatórios Agendados</h3>
-            <p className="text-sm text-slate-500">Configure relatórios automáticos por email</p>
+            <h3 className="font-semibold text-slate-900 dark:text-white">Relatórios Agendados</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Configure relatórios automáticos por email</p>
           </div>
         </div>
         <EmptyState icon={FileText} title="Sem relatórios agendados" description="Configure relatórios automáticos para receber por email." actionLabel="Agendar Relatório" />
       </Card>
 
       <Card>
-        <h3 className="font-semibold text-slate-900 mb-4">Dados Disponíveis</h3>
+        <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Dados Disponíveis</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 bg-slate-50 rounded-lg text-center">
-            <p className="text-2xl font-bold text-slate-900">{machines.length}</p>
-            <p className="text-sm text-slate-500">Equipamentos</p>
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{machines.length}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Equipamentos</p>
           </div>
-          <div className="p-4 bg-slate-50 rounded-lg text-center">
-            <p className="text-2xl font-bold text-slate-900">{operators.length}</p>
-            <p className="text-sm text-slate-500">Operadores</p>
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{operators.length}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Operadores</p>
           </div>
-          <div className="p-4 bg-slate-50 rounded-lg text-center">
-            <p className="text-2xl font-bold text-slate-900">{sessions.length}</p>
-            <p className="text-sm text-slate-500">Sessões</p>
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{sessions.length}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Sessões</p>
           </div>
         </div>
       </Card>

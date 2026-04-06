@@ -119,14 +119,14 @@ const StatCard = ({
 
   if (loading) {
     return (
-      <div className={`bg-white rounded-2xl border border-slate-200 p-6 ${className}`}>
+      <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-slate-200 rounded-xl" />
-            <div className="h-4 bg-slate-200 rounded w-24" />
+            <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24" />
           </div>
-          <div className="h-10 bg-slate-200 rounded w-24 mb-2" />
-          <div className="h-3 bg-slate-200 rounded w-20" />
+          <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-2" />
+          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20" />
         </div>
       </div>
     );
@@ -182,7 +182,7 @@ const StatCard = ({
   // Variant: Outline - card with colored left border
   if (variant === 'outline') {
     return (
-      <div className={`bg-white rounded-2xl border-l-4 ${scheme.border} border border-slate-200 p-6 hover:shadow-lg transition-shadow duration-300 ${className}`}>
+      <div className={`bg-white dark:bg-slate-800 rounded-2xl border-l-4 ${scheme.border} border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow duration-300 ${className}`}>
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500 mb-2">{title}</p>
@@ -191,7 +191,7 @@ const StatCard = ({
                 {formatValue(displayValue)}
               </span>
               {unit && (
-                <span className="text-sm font-medium text-slate-400">{unit}</span>
+                <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{unit}</span>
               )}
             </div>
             {(trend !== undefined || trendLabel) && (
@@ -220,7 +220,7 @@ const StatCard = ({
 
   // Default variant - clean card with icon
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-slate-300 transition-all duration-300 ${className}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 ${className}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
@@ -229,15 +229,15 @@ const StatCard = ({
                 <Icon className={`w-5 h-5 ${scheme.text}`} />
               </div>
             )}
-            <span className="text-sm font-medium text-slate-500">{title}</span>
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</span>
           </div>
 
           <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-slate-900 tabular-nums">
+            <span className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
               {formatValue(displayValue)}
             </span>
             {unit && (
-              <span className="text-sm font-medium text-slate-400">{unit}</span>
+              <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{unit}</span>
             )}
           </div>
         </div>

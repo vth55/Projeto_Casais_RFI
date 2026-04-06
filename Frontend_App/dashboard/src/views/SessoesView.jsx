@@ -4,11 +4,11 @@ import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, StatusBadge, Table, EmptyState, Skeleton, Modal } from '../components/ui';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
-  <div className="flex border-b border-slate-200">
+  <div className="flex border-b border-slate-200 dark:border-slate-700">
     {tabs.map(tab => (
-      <button key={tab.id} onClick={() => onChange(tab.id)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+      <button key={tab.id} onClick={() => onChange(tab.id)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}>
         {tab.label}
-        {tab.count !== undefined && <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600'}`}>{tab.count}</span>}
+        {tab.count !== undefined && <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600'}`}>{tab.count}</span>}
       </button>
     ))}
   </div>
@@ -31,10 +31,10 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-900">{machine?.name || session.machineId}</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">{machine?.name || session.machineId}</h3>
               {isLong && <Badge variant="warning">+5h</Badge>}
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+            <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-1">
               <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" />{operator?.name || session.cardId}</span>
               <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
@@ -42,7 +42,7 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
         </div>
         <div className="text-right">
           <div className={`text-2xl font-bold tabular-nums ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}>{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}</div>
-          <p className="text-xs text-slate-500">em curso</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">em curso</p>
         </div>
       </div>
     </Card>
@@ -86,51 +86,51 @@ const ValidationModal = ({ session, machine, operator, onClose, onValidate }) =>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Equipamento</label>
-            <p className="text-sm text-slate-900">{machine?.name || session.machineId}</p>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Equipamento</label>
+            <p className="text-sm text-slate-900 dark:text-white">{machine?.name || session.machineId}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Operador</label>
-            <p className="text-sm text-slate-900">{operator?.name || session.cardId}</p>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Operador</label>
+            <p className="text-sm text-slate-900 dark:text-white">{operator?.name || session.cardId}</p>
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
-          <h4 className="text-sm font-semibold text-slate-700 mb-3">Horários Registados</h4>
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Horários Registados</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Início</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Início</label>
               <input
                 type="datetime-local"
                 value={correctedStart}
                 onChange={(e) => setCorrectedStart(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Fim</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Fim</label>
               <input
                 type="datetime-local"
                 value={correctedEnd}
                 onChange={(e) => setCorrectedEnd(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
               />
             </div>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Notas (opcional)</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notas (opcional)</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             placeholder="Motivo da correção ou observações..."
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button variant="outline" onClick={() => handleValidate('confirm')} disabled={loading}>Confirmar Original</Button>
           <Button onClick={() => handleValidate('correct')} disabled={loading} icon={CheckCircle}>Guardar Correção</Button>
@@ -141,8 +141,11 @@ const ValidationModal = ({ session, machine, operator, onClose, onValidate }) =>
 };
 
 const SessoesView = () => {
-  const { activeView, sessions, machines, operators, getFilteredSessions, updateSession, loading } = useStore();
-  const [activeTab, setActiveTab] = useState(activeView === 'sessoes-historico' ? 'history' : activeView === 'sessoes-validacoes' ? 'validations' : 'active');
+  const { activeView, setActiveView, sessions, machines, operators, getFilteredSessions, updateSession, loading } = useStore();
+
+  // Derivar tab directamente do activeView
+  const activeTab = activeView === 'sessoes-historico' ? 'history' : activeView === 'sessoes-validacoes' ? 'validations' : 'active';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [validatingSession, setValidatingSession] = useState(null);
 
@@ -178,7 +181,7 @@ const SessoesView = () => {
   // Exportar para CSV
   const handleExportCSV = () => {
     const sessionsToExport = activeTab === 'active' ? activeSessions :
-                            activeTab === 'history' ? closedSessions : pendingValidations;
+      activeTab === 'history' ? closedSessions : pendingValidations;
     if (sessionsToExport.length === 0) {
       alert('Não há sessões para exportar');
       return;
@@ -235,7 +238,7 @@ const SessoesView = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div><h2 className="text-2xl font-bold text-slate-900">Sessões</h2><p className="text-slate-500 mt-1">Histórico de utilização</p></div>
+        <div><h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sessões</h2><p className="text-slate-500 dark:text-slate-400 mt-1">Histórico de utilização</p></div>
         <Button variant="outline" icon={Download} onClick={handleExportCSV}>Exportar CSV</Button>
       </div>
 
@@ -247,11 +250,11 @@ const SessoesView = () => {
       </div>
 
       <Card padding="none">
-        <TabNav tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-        <div className="p-4 border-b border-slate-200">
+        <TabNav tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveView(id === 'history' ? 'sessoes-historico' : id === 'validations' ? 'sessoes-validacoes' : 'sessoes-ativas')} />
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+            <input type="text" placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
           </div>
         </div>
         <div className="p-6">
@@ -288,7 +291,7 @@ const SessoesView = () => {
               <div key={s.id} className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center"><Timer className="w-5 h-5 text-amber-600" /></div>
-                  <div><p className="font-medium text-slate-900">{machine?.name}</p><p className="text-sm text-slate-500">{operator?.name} • {startTime.toLocaleDateString('pt-PT')}</p></div>
+                  <div><p className="font-medium text-slate-900 dark:text-white">{machine?.name}</p><p className="text-sm text-slate-500 dark:text-slate-400">{operator?.name} • {startTime.toLocaleDateString('pt-PT')}</p></div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right"><p className="text-lg font-bold text-amber-600">{s.durationHours?.toFixed(1)}h</p><Badge variant="warning" size="sm">Validar</Badge></div>

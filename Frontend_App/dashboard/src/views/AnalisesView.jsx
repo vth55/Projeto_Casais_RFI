@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -12,7 +12,7 @@ import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Select, Skeleton } from '../components/ui';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
-  <div className="flex border-b border-slate-200">
+  <div className="flex border-b border-slate-200 dark:border-slate-700">
     {tabs.map(tab => (
       <button
         key={tab.id}
@@ -20,7 +20,7 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
           activeTab === tab.id
             ? 'border-primary-500 text-primary-600'
-            : 'border-transparent text-slate-500 hover:text-slate-700'
+            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'
         }`}
       >
         {tab.label}
@@ -58,8 +58,8 @@ const ComparisonCard = ({ title, period1Value, period2Value, unit = '', icon: Ic
   const isNeutral = diff === 0;
 
   const TrendIcon = isNeutral ? Minus : isPositive ? TrendingUp : TrendingDown;
-  const trendColor = isNeutral ? 'text-slate-500' : isPositive ? 'text-emerald-600' : 'text-red-600';
-  const bgColor = isNeutral ? 'bg-slate-50' : isPositive ? 'bg-emerald-50' : 'bg-red-50';
+  const trendColor = isNeutral ? 'text-slate-500 dark:text-slate-400' : isPositive ? 'text-emerald-600' : 'text-red-600';
+  const bgColor = isNeutral ? 'bg-slate-50 dark:bg-slate-800/50' : isPositive ? 'bg-emerald-50' : 'bg-red-50';
 
   return (
     <Card>
@@ -71,12 +71,12 @@ const ComparisonCard = ({ title, period1Value, period2Value, unit = '', icon: Ic
             </div>
           )}
           <div>
-            <p className="text-sm font-medium text-slate-500">{title}</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-slate-900">
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">
                 {period2Value.toLocaleString('pt-PT')}
               </span>
-              <span className="text-sm text-slate-500">{unit}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{unit}</span>
             </div>
           </div>
         </div>
@@ -89,15 +89,15 @@ const ComparisonCard = ({ title, period1Value, period2Value, unit = '', icon: Ic
           </div>
         </div>
       </div>
-      <div className="mt-4 pt-4 border-t border-slate-100">
+      <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Período anterior:</span>
-          <span className="font-medium text-slate-700">
+          <span className="text-slate-500 dark:text-slate-400">Período anterior:</span>
+          <span className="font-medium text-slate-700 dark:text-slate-200">
             {period1Value.toLocaleString('pt-PT')} {unit}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm mt-1">
-          <span className="text-slate-500">Variação:</span>
+          <span className="text-slate-500 dark:text-slate-400">Variação:</span>
           <span className={`font-medium ${trendColor}`}>
             {isPositive ? '+' : ''}{diff.toLocaleString('pt-PT')} {unit}
           </span>
@@ -120,6 +120,13 @@ const AnalisesView = () => {
     activeView === 'analises-utilizacao' ? 'utilization' :
     activeView === 'analises-comparacao' ? 'comparison' : 'general'
   );
+
+  useEffect(() => {
+    if (activeView === 'analises-emissoes') setActiveTab('emissions');
+    else if (activeView === 'analises-utilizacao') setActiveTab('utilization');
+    else if (activeView === 'analises-comparacao') setActiveTab('comparison');
+    else setActiveTab('general');
+  }, [activeView]);
 
   // Estados para comparação de períodos
   const [period1, setPeriod1] = useState('last_month');
@@ -267,8 +274,8 @@ const AnalisesView = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Análises</h2>
-        <p className="text-slate-500 mt-1">Estatísticas, tendências e comparações</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Análises</h2>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Estatísticas, tendências e comparações</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -286,7 +293,7 @@ const AnalisesView = () => {
           {activeTab === 'general' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Atividade Semanal</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Atividade Semanal</h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -298,7 +305,7 @@ const AnalisesView = () => {
                 </ResponsiveContainer>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Tendência de Consumo</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Tendência de Consumo</h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -332,16 +339,16 @@ const AnalisesView = () => {
                   <p className="text-2xl font-bold text-amber-700">{hourlyStats.avgPerHour}</p>
                   <p className="text-xs text-amber-500 mt-1">sessões/hora</p>
                 </div>
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <p className="text-xs font-medium text-slate-600 mb-1">Horas Ativas</p>
-                  <p className="text-2xl font-bold text-slate-700">{hourlyStats.activeHours}</p>
-                  <p className="text-xs text-slate-500 mt-1">de 24 horas</p>
+                  <p className="text-2xl font-bold text-slate-700 dark:text-slate-200">{hourlyStats.activeHours}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">de 24 horas</p>
                 </div>
               </div>
 
               {/* Gráfico de atividade por hora */}
               <Card>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribuição de Sessões por Hora do Dia</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Distribuição de Sessões por Hora do Dia</h3>
                 <ResponsiveContainer width="100%" height={350}>
                   <BarChart data={hourlyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -373,7 +380,7 @@ const AnalisesView = () => {
 
               {/* Gráfico de linha - horas de trabalho por hora */}
               <Card>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Horas de Trabalho e Consumo por Hora</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Horas de Trabalho e Consumo por Hora</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <ComposedChart data={hourlyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -414,7 +421,7 @@ const AnalisesView = () => {
 
               {/* Heatmap simplificado - períodos do dia */}
               <Card>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Períodos de Maior Atividade</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Períodos de Maior Atividade</h3>
                 <div className="grid grid-cols-4 gap-4">
                   {[
                     { label: 'Madrugada', period: '00h-06h', hours: hourlyData.slice(0, 6) },
@@ -426,8 +433,8 @@ const AnalisesView = () => {
                     const intensity = totalSessoes / 60; // 0 to 1
                     const bgColor = intensity > 0.6 ? 'bg-primary-500' :
                                    intensity > 0.3 ? 'bg-primary-300' :
-                                   intensity > 0.1 ? 'bg-primary-100' : 'bg-slate-100';
-                    const textColor = intensity > 0.3 ? 'text-white' : 'text-slate-700';
+                                   intensity > 0.1 ? 'bg-primary-100' : 'bg-slate-100 dark:bg-slate-700/50';
+                    const textColor = intensity > 0.3 ? 'text-white' : 'text-slate-700 dark:text-slate-200';
 
                     return (
                       <div
@@ -453,7 +460,7 @@ const AnalisesView = () => {
               <div className="bg-gradient-to-r from-primary-50 to-primary-100/50 rounded-xl p-6">
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <PeriodSelector label="Período 1" value={period1} onChange={setPeriod1} />
-                  <div className="flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-sm">
+                  <div className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 rounded-full shadow-sm">
                     <ArrowLeftRight className="w-5 h-5 text-primary-600" />
                   </div>
                   <PeriodSelector label="Período 2" value={period2} onChange={setPeriod2} />
@@ -487,7 +494,7 @@ const AnalisesView = () => {
 
               {/* Gráfico de Barras Comparativo */}
               <Card>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
                   Comparação: {getPeriodLabel(period1)} vs {getPeriodLabel(period2)}
                 </h3>
                 <ResponsiveContainer width="100%" height={350}>
@@ -513,7 +520,7 @@ const AnalisesView = () => {
 
               {/* Gráfico de Tendência */}
               <Card>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Tendência Semanal</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Tendência Semanal</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <ComposedChart data={trendComparisonData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -540,7 +547,7 @@ const AnalisesView = () => {
           {/* Tab: Emissões */}
           {activeTab === 'emissions' && (
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Emissões CO₂ Semanais</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Emissões CO₂ Semanais</h3>
               <ResponsiveContainer width="100%" height={350}>
                 <AreaChart data={chartData}>
                   <defs>
@@ -566,24 +573,24 @@ const AnalisesView = () => {
           {activeTab === 'utilization' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Utilização por Equipamento</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Utilização por Equipamento</h3>
                 <div className="space-y-4">
                   {utilizationData.map((item, i) => (
                     <div key={item.name} className="flex items-center gap-4">
                       <span className="text-sm font-medium text-slate-600 w-28 truncate">{item.name}</span>
-                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full"
                           style={{ width: `${item.value}%`, backgroundColor: COLORS[i % COLORS.length] }}
                         />
                       </div>
-                      <span className="text-sm font-semibold text-slate-900 w-12 text-right">{item.value}%</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white w-12 text-right">{item.value}%</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribuição</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Distribuição</h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie

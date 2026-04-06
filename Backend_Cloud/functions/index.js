@@ -250,14 +250,16 @@ function calculateSessionCost(durationHours, tariff) {
 }
 
 exports.handleSessionTrigger = onRequest(async (req, res) => {
+    res.set('Content-Type', 'application/json');
 
     if (req.method !== 'POST') {
-        return res.status(405).send({ error: 'Apenas POST permitido.' });
+        return res.status(405).json({ error: 'Apenas POST permitido.' });
     }
 
-    const { cardId, machineId } = req.body;
+    const body = req.body || {};
+    const { cardId, machineId } = body;
     if (!cardId || !machineId) {
-        return res.status(400).send({ error: 'Faltam dados (cardId ou machineId).' });
+        return res.status(400).json({ error: 'Faltam dados (cardId ou machineId).' });
     }
 
     const normalizedCard = cardId.toUpperCase().trim();
@@ -283,7 +285,7 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
             if (!locationCardSnap.exists) {
                 console.log(`❌ Cartão de localização não registado: ${normalizedCard}`);
-                return res.status(404).send({
+                return res.status(404).json({
                     status: 'LOCATION_NOT_FOUND',
                     message: 'Cartão de localização não registado no sistema.'
                 });
@@ -294,7 +296,7 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
             const machineSnap = await machineRef.get();
 
             if (!machineSnap.exists) {
-                return res.status(404).send({
+                return res.status(404).json({
                     status: 'MACHINE_NOT_FOUND',
                     message: 'Máquina não encontrada.'
                 });
@@ -353,7 +355,7 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                 }, { merge: true });
 
                 console.log(`Acesso bloqueado: ${normalizedCard}`);
-                return res.status(403).send({
+                return res.status(403).json({
                     status: 'DENIED',
                     message: 'Acesso negado. Cartão não registado.'
                 });
@@ -362,45 +364,45 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
         const machineRef = db.doc(`${MACHINES_PATH}/${normalizedMachine}`);
 
-            if (!activeSessionQuery.empty) {
-                const sessionDoc = activeSessionQuery.docs[0];
-                const startTime = sessionDoc.data().startTime.toDate();
-                const endTime = new Date();
-                
-                if (sessionDoc.data().cardId !== normalizedCard) {
-                     return res.status(403).send({ 
-                        status: 'DENIED', 
-                        message: 'Sessão iniciada por outro cartão. Sessão não encerrada.' 
-                    });
-                }
+        if (!activeSessionQuery.empty) {
+            const sessionDoc = activeSessionQuery.docs[0];
+            const startTime = sessionDoc.data().startTime.toDate();
+            const endTime = new Date();
 
-                const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-
-                // Calcular custo com base no tarifário vigente da máquina
-                const machineSnap = await machineRef.get();
-                const machineData = machineSnap.exists ? machineSnap.data() : {};
-                const tariffHistory = machineData.tariffHistory
-                    || (machineData.currentTariff ? [machineData.currentTariff] : []);
-                const activeTariff = getTariffForDate(startTime, tariffHistory);
-                const costResult = calculateSessionCost(durationHours, activeTariff);
-
-                console.log(`🔒 Sessão encerrada: ${normalizedMachine} | ${durationHours.toFixed(2)}h`);
-                if (costResult) {
-                    console.log(`💰 Custo: €${costResult.costs.totalCost} (tarifário: ${activeTariff.id})`);
-                } else {
-                    console.log(`⚠️  Máquina ${normalizedMachine} sem tarifário definido — custo não calculado`);
-                }
-
-                await sessionDoc.ref.update({
-                    endTime: admin.firestore.Timestamp.fromDate(endTime),
-                    durationHours: durationHours,
-                    status: 'CLOSED',
-                    ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
+            if (sessionDoc.data().cardId !== normalizedCard) {
+                return res.status(403).json({
+                    status: 'DENIED',
+                    message: 'Sessão iniciada por outro cartão. Sessão não encerrada.'
                 });
+            }
 
-                await db.runTransaction(async (t) => {
-                    const mDoc = await t.get(machineRef);
-                    if (!mDoc.exists) return;
+            const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+
+            // Calcular custo com base no tarifário vigente da máquina
+            const machineSnap = await machineRef.get();
+            const machineData = machineSnap.exists ? machineSnap.data() : {};
+            const tariffHistory = machineData.tariffHistory
+                || (machineData.currentTariff ? [machineData.currentTariff] : []);
+            const activeTariff = getTariffForDate(startTime, tariffHistory);
+            const costResult = calculateSessionCost(durationHours, activeTariff);
+
+            console.log(`🔒 Sessão encerrada: ${normalizedMachine} | ${durationHours.toFixed(2)}h`);
+            if (costResult) {
+                console.log(`💰 Custo: €${costResult.costs.totalCost} (tarifário: ${activeTariff.id})`);
+            } else {
+                console.log(`⚠️  Máquina ${normalizedMachine} sem tarifário definido — custo não calculado`);
+            }
+
+            await sessionDoc.ref.update({
+                endTime: admin.firestore.Timestamp.fromDate(endTime),
+                durationHours: durationHours,
+                status: 'CLOSED',
+                ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
+            });
+
+            await db.runTransaction(async (t) => {
+                const mDoc = await t.get(machineRef);
+                if (!mDoc.exists) return;
                 const newTotal = (mDoc.data().totalHours || 0) + durationHours;
                 t.update(machineRef, {
                     totalHours: newTotal,
@@ -421,10 +423,10 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
             };
 
             await db.collection(SESSIONS_PATH).add(newSession);
-            
-            await machineRef.set({ 
-                status: 'ACTIVE', 
-                lastOperator: normalizedCard 
+
+            await machineRef.set({
+                status: 'ACTIVE',
+                lastOperator: normalizedCard
             }, { merge: true });
 
             console.log(`Sessão iniciada: ${normalizedCard} em ${normalizedMachine}`);
@@ -433,7 +435,7 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
     } catch (error) {
         console.error("Erro no servidor:", error);
-        return res.status(500).send({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 });
 
