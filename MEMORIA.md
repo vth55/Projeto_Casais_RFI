@@ -208,13 +208,21 @@ Hardware:     arduino_rfid_simple/
 - [x] **UI Dinâmica**: `LiveSessionsBar` agora oculta-se automaticamente em modo offline para evitar discrepâncias de timers.
 - [x] **Assets PWA**: Novo ícone `icon-192.svg` com branding oficial Casais (#005EB8), atualização do `manifest.json` e remoção do botão de "voltar" em modo standalone.
 
+**11 Abril 2026 (Automação IoT Procore Fase 3 - Claude & Gemini):**
+- **Estado**: ✅ CONCLUÍDO (Backend Cloud Functions).
+- [x] **Refatoração do Exportador**: `procoreSessionExporter.js` sofreu um refactor integral para permitir a resolução paralela de entidades, com guardas de idempotência e limpeza de código não utilizado.
+- [x] **Gestão Segura de Tokens**: Processo de refresh automático de OAuth injetado transparentemente direto no `procoreFetch`.
+- [x] **Motor de Resiliência (Retry)**: Criada nova Cloud Function cron (`procoreExportRetry`) que corre de 30 em 30 min com backoff exponencial (5m → 20m → 60m → cancelamento) para recuperar payloads de Timecards que falhem.
+- [x] **Trigger Nativo PWA -> ERP**: O disparo foi agrafado aos fechos reais e `autoCloseStuckSessions` na função principal `handleSessionTrigger` via "fire-and-forget".
+- **Próximo Passo**: (Opcional/Fase 4) Dashboards executivos e UI com Budget vs Spend importados.
+
 **07 Abril 2026 (Auditoria Final Fase 2 - Gemini):**
 - **Estado**: ✅ CONCLUÍDO (Backend + Frontend).
 - [x] **Match de Entidades**: Implementada lógica de normalização e fuzzy match em `useStore.js` para vincular Obras e Operadores locais a Projetos e Users do Procore.
 - [x] **Badges Procore**: Adicionados indicadores visuais (`Link2`) no `ObrasView` e `OperadoresView` para identificar registos sincronizados.
 - [x] **Aba de Integrações**: Criada nova secção em `ConfiguracoesView` com status da Cloud Cloud, estatísticas de sync e botão de disparo manual.
-- [x] **Sincronização de Docs**: `MATRIZ_ACOMPANHAMENTO.md` e `project_procore_integration.md` retificados para refletir o progresso real.
-- **Próximo Passo**: **FASE 3 (Push IoT)** — Ligar o fechamento de sessões no backend ao envio automático de Timecards para o Procore.
+- [x] **Sincronização de Docs**: `MATRIZ_ACOMPANHAMENTO.md` e `project_procore_status.md` retificados para refletir o progresso real.
+- **Fase Seguintes Cumpridas**: FASE 3 (Push IoT).
 
 **0715: | 1.1.0-stable | 07/04/2026 | Purga ESP32 + Fase 1 e 2 Procore (Sync + UI) |
 Chunk 1B & 1C - Claude Opus):**

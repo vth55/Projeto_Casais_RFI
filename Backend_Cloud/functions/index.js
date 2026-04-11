@@ -9,6 +9,7 @@
  * - procoreBridge: Integração OAuth2 + REST API Procore (Chunks 1A/1B)
  * - procoreScheduledSync: Cron job horário de sincronização Procore → Firestore (Chunk 1C)
  * - procoreSessionExport: Exportar sessões para Procore (Timecard Entries)
+ * - procoreExportRetry: Cron job (30 min) de retry de exports Procore falhados
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
@@ -404,16 +405,15 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                 ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
             });
 
-            // Exportar sessão terminada para o Procore
+            // Exportar sessão terminada para o Procore (fire-and-forget — persiste resultado internamente)
             procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').then((result) => {
                 if (result.exported) {
-                    console.log(`[Procore] Sessão exportada (end): ${result.timecardId}`);
-                    sessionDoc.ref.set({ procoreExport: result }, { merge: true });
+                    console.log(`[Procore] Sessão exportada (end): timecardId=${result.timecardId}`);
                 } else {
-                    console.log(`[Procore] Export ignorado (end): ${result.reason}`);
+                    console.log(`[Procore] Export (end) adiado/ignorado: ${result.reason}`);
                 }
             }).catch((err) => {
-                console.error('[Procore] Export sessão falhou:', err.message);
+                console.error('[Procore] Export sessão (end) falhou:', err.message);
             });
 
             await db.runTransaction(async (t) => {
@@ -440,16 +440,15 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
             const sessionRef = await db.collection(SESSIONS_PATH).add(newSession);
 
-            // Exportar sessão iniciada para o Procore (marcar presença)
+            // Exportar sessão iniciada para o Procore — marca presença (fire-and-forget)
             procoreSessionExporter.exportSessionToProcore(sessionRef.id, 'start').then((result) => {
                 if (result.exported) {
-                    console.log(`[Procore] Sessão exportada (start): ${result.timecardId}`);
-                    sessionRef.set({ procoreExport: result }, { merge: true });
+                    console.log(`[Procore] Sessão exportada (start): timecardId=${result.timecardId}`);
                 } else {
-                    console.log(`[Procore] Export ignorado (start): ${result.reason}`);
+                    console.log(`[Procore] Export (start) adiado/ignorado: ${result.reason}`);
                 }
             }).catch((err) => {
-                console.error('[Procore] Export sessão falhou:', err.message);
+                console.error('[Procore] Export sessão (start) falhou:', err.message);
             });
 
             await machineRef.set({
@@ -647,6 +646,17 @@ exports.autoCloseStuckSessions = onSchedule(
                         status: 'AUTO_CLOSED',
                         autoClosedAt: admin.firestore.Timestamp.now(),
                         autoCloseReason: `Sessão aberta há ${hoursOpen.toFixed(1)} horas (limite: ${autoCloseThreshold}h)`,
+                    });
+
+                    // Exportar sessão auto-fechada para o Procore (fire-and-forget)
+                    procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').then((result) => {
+                        if (result.exported) {
+                            console.log(`[Procore] AUTO_CLOSED exportada: timecardId=${result.timecardId}`);
+                        } else {
+                            console.log(`[Procore] AUTO_CLOSED export adiado/ignorado: ${result.reason}`);
+                        }
+                    }).catch((err) => {
+                        console.error('[Procore] AUTO_CLOSED export falhou:', err.message);
                     });
 
                     // Atualizar máquina
@@ -1120,3 +1130,31 @@ exports.procoreBridge = procoreBridge;
 
 const { procoreScheduledSync } = require('./procore/procoreScheduler');
 exports.procoreScheduledSync = procoreScheduledSync;
+
+// ============================================
+// PROCORE EXPORT RETRY (Fase 3 — Automação IoT)
+// ============================================
+// Cron job (a cada 30 min) que tenta re-exportar sessões cujo envio
+// inicial para o Procore falhou (token expirado, sem projeto mapeado, etc.).
+// Usa backoff exponencial: 5 min → 20 min → 60 min → give up.
+// As sessões elegíveis têm procoreExport.exported=false e
+// procoreExport.nextRetryAfter <= now.
+
+exports.procoreExportRetry = onSchedule(
+    {
+        schedule: 'every 30 minutes',
+        timeZone: 'Europe/Lisbon',
+    },
+    async () => {
+        console.log('[procoreExportRetry] iniciando run de retry...');
+        try {
+            const { retryFailedExports } = require('./procore/procoreSessionExporter');
+            const stats = await retryFailedExports();
+            console.log(`[procoreExportRetry] concluído: retried=${stats.retried} succeeded=${stats.succeeded}`);
+            return stats;
+        } catch (err) {
+            console.error('[procoreExportRetry] erro crítico:', err.message);
+            throw err;
+        }
+    }
+);
