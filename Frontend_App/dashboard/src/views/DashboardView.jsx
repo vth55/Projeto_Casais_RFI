@@ -296,6 +296,329 @@ const ProcoreSyncCard = ({ compact = false }) => {
 };
 
 // ============================================================
+// PROCORE RECONCILIATION PANEL — Fase 4: Executive Dashboard
+// ============================================================
+
+const SyncRateRing = ({ rate, size = 128, strokeWidth = 10 }) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
+
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const displayRate = mounted ? rate : 0;
+  const offset = circumference - (displayRate / 100) * circumference;
+  const color = rate >= 85 ? '#10b981' : rate >= 60 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" role="img" aria-label={`Taxa de sincronização: ${Math.round(rate)}%`}>
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="currentColor"
+          className="text-slate-100 dark:text-slate-700/50"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={color}
+          strokeWidth={strokeWidth} strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          className="drop-shadow-sm"
+          style={{ transition: 'stroke-dashoffset 1.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-black tabular-nums text-slate-900 dark:text-white">
+          {Math.round(rate)}<span className="text-lg text-slate-400">%</span>
+        </span>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">sync rate</span>
+      </div>
+    </div>
+  );
+};
+
+const ProcoreReconciliationPanel = () => {
+  const { sessions } = useStore();
+  const { status, loading, error, refetch } = useProcoreStatus();
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
+
+  const recon = useMemo(() => {
+    const closed = sessions.filter(s => s.status === 'CLOSED' || s.status === 'AUTO_CLOSED');
+    const exported = closed.filter(s => s.procoreExport?.exported === true);
+    const pendingRetry = closed.filter(s =>
+      s.procoreExport?.exported === false &&
+      s.procoreExport?.nextRetryAfter &&
+      !s.procoreExport?.gaveUp
+    );
+    const failed = closed.filter(s =>
+      s.procoreExport?.exported === false &&
+      (s.procoreExport?.gaveUp || (!s.procoreExport?.nextRetryAfter && s.procoreExport?.retryCount > 0))
+    );
+
+    const localHours = closed.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+    const exportedHours = exported.reduce((sum, s) => sum + (s.procoreExport?.hours || s.durationHours || 0), 0);
+    const syncRate = closed.length > 0 ? (exported.length / closed.length) * 100 : 0;
+
+    return {
+      totalClosed: closed.length,
+      exportedCount: exported.length,
+      pendingCount: pendingRetry.length,
+      failedCount: failed.length,
+      localHours: Math.round(localHours * 10) / 10,
+      exportedHours: Math.round(exportedHours * 10) / 10,
+      syncRate,
+      gapHours: Math.round((localHours - exportedHours) * 10) / 10,
+      gapPercent: localHours > 0 ? Math.round(((localHours - exportedHours) / localHours) * 1000) / 10 : 0,
+    };
+  }, [sessions]);
+
+  const handleSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const res = await fetch(PROCORE_SYNC_URL, { method: 'POST' });
+      if (!res.ok && res.status !== 207) {
+        const text = await res.text();
+        throw new Error(`Sync falhou (${res.status}): ${text.slice(0, 160)}`);
+      }
+      await refetch();
+    } catch (err) {
+      setSyncError(err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <Skeleton.Stat />
+        <Skeleton className="h-32 mt-4" />
+      </Card>
+    );
+  }
+
+  if (error || !status?.connected) {
+    return (
+      <div className="rounded-lg overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <div className="flex items-center gap-4 p-6">
+          <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0">
+            <Link2 className="w-7 h-7 text-slate-400" />
+          </div>
+          <div className="flex-1">
+            <p className="text-lg font-bold text-slate-900 dark:text-white">Procore não conectado</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              {error ? `Erro: ${error}` : 'Conecta o Procore nas Configurações para ativar o painel de reconciliação.'}
+            </p>
+          </div>
+          <a
+            href="/api/procore/authorize"
+            className="px-5 py-2.5 text-sm font-bold text-white casais-gradient rounded-lg shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all hover:-translate-y-0.5"
+          >
+            Conectar Procore
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const counts = status?.last_sync_counts || { projects: 0, equipment: 0, directory: 0 };
+  const lastSyncLabel = formatRelativeTime(status?.last_sync_at);
+  const hasSyncErrors = !!status?.last_sync_errors && Object.keys(status.last_sync_errors).length > 0;
+  const maxBarWidth = recon.localHours || 1;
+
+  const pipelineSteps = [
+    { label: 'Exportadas', count: recon.exportedCount, icon: CheckCircle2, bg: 'bg-emerald-500', },
+    { label: 'Em Retry',   count: recon.pendingCount,  icon: RefreshCw,    bg: 'bg-amber-500',   },
+    { label: 'Falharam',   count: recon.failedCount,   icon: XCircle,      bg: 'bg-red-500',     },
+  ];
+
+  return (
+    <div className="rounded-lg overflow-hidden border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-900/5 dark:shadow-black/20 animate-fade-in">
+      {/* ── Gradient Header ─────────────────────────────────────────── */}
+      <div className="casais-gradient px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white tracking-tight">Procore Reconciliation</h3>
+            <p className="text-xs text-white/60">
+              Sync {lastSyncLabel}
+              {status?.last_sync_trigger && (
+                <span className="ml-1">· {status.last_sync_trigger === 'cron' ? 'automática' : 'manual'}</span>
+              )}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant={hasSyncErrors ? 'warning' : 'success'}
+            className="text-[10px] uppercase tracking-wider border border-white/20"
+          >
+            {hasSyncErrors ? 'parcial' : 'operacional'}
+          </Badge>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            aria-label="Sincronizar agora com o Procore"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-primary-700 bg-white hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.97]"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'A sincronizar...' : 'Sincronizar'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Body ────────────────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-800 p-6">
+        <div className="flex gap-8 items-start">
+          {/* LEFT — Sync Rate Ring */}
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <SyncRateRing rate={recon.syncRate} />
+            <p className="text-xs text-slate-400 font-medium text-center mt-1">
+              {recon.exportedCount} de {recon.totalClosed} sessões
+            </p>
+          </div>
+
+          {/* RIGHT — Pipeline + Hours */}
+          <div className="flex-1 space-y-6 min-w-0">
+            {/* Export Pipeline */}
+            <div>
+              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em] mb-3">
+                Pipeline de Exportação
+              </h4>
+              <div className="space-y-2.5">
+                {pipelineSteps.map((step) => {
+                  const pct = recon.totalClosed > 0 ? (step.count / recon.totalClosed) * 100 : 0;
+                  return (
+                    <div key={step.label} className="flex items-center gap-3">
+                      <div className={`w-7 h-7 rounded-lg ${step.bg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                        <step.icon className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{step.label}</span>
+                          <span className="text-sm font-black tabular-nums text-slate-900 dark:text-white">{step.count}</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${step.bg}`}
+                            style={{
+                              width: mounted ? `${Math.max(pct, step.count > 0 ? 3 : 0)}%` : '0%',
+                              transition: 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Hours Reconciliation */}
+            <div>
+              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em] mb-3">
+                Reconciliação de Horas
+              </h4>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Horas Locais</span>
+                    <span className="text-sm font-black tabular-nums text-slate-900 dark:text-white">
+                      {recon.localHours.toLocaleString('pt-PT')}h
+                    </span>
+                  </div>
+                  <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full casais-gradient"
+                      style={{
+                        width: mounted ? '100%' : '0%',
+                        transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Horas Procore</span>
+                    <span className="text-sm font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {recon.exportedHours.toLocaleString('pt-PT')}h
+                    </span>
+                  </div>
+                  <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-emerald-500"
+                      style={{
+                        width: mounted ? `${maxBarWidth > 0 ? (recon.exportedHours / maxBarWidth) * 100 : 0}%` : '0%',
+                        transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s',
+                      }}
+                    />
+                  </div>
+                </div>
+                {recon.gapHours > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                    <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
+                      Gap: {recon.gapHours.toLocaleString('pt-PT')}h ({recon.gapPercent}%)
+                    </span>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sync errors */}
+        {(syncError || hasSyncErrors) && (
+          <div className="mt-5 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="inline w-3.5 h-3.5 mr-1.5 -mt-0.5" />
+              {syncError || Object.entries(status.last_sync_errors).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+            </p>
+          </div>
+        )}
+
+        {/* ── Footer — Procore Catalog Summary ─────────────────────── */}
+        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-6">
+              {[
+                { label: 'Obras', value: counts.projects, error: status?.last_sync_errors?.projects },
+                { label: 'Equipamentos', value: counts.equipment, error: status?.last_sync_errors?.equipment },
+                { label: 'Pessoas', value: counts.directory, error: status?.last_sync_errors?.directory },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-2">
+                  {item.error ? (
+                    <XCircle className="w-3.5 h-3.5 text-red-400" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  )}
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    <span className="font-bold tabular-nums text-slate-900 dark:text-white">{item.value ?? 0}</span>
+                    {' '}{item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {recon.totalClosed === 0 && (
+              <span className="text-xs text-slate-400 italic">Ainda sem sessões fechadas para reconciliar</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // MOBILE DASHBOARD — Layout Field Mode
 // ============================================================
 
@@ -672,8 +995,8 @@ const DashboardView = () => {
         />
       </div>
 
-      {/* Procore — sincronização (full width sobre os gráficos) */}
-      <ProcoreSyncCard />
+      {/* Procore Reconciliation Hub — Painel executivo Fase 4 */}
+      <ProcoreReconciliationPanel />
 
       {/* Gráficos e Sessões */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

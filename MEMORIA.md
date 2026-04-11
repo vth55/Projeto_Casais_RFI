@@ -208,6 +208,13 @@ Hardware:     arduino_rfid_simple/
 - [x] **UI Dinâmica**: `LiveSessionsBar` agora oculta-se automaticamente em modo offline para evitar discrepâncias de timers.
 - [x] **Assets PWA**: Novo ícone `icon-192.svg` com branding oficial Casais (#005EB8), atualização do `manifest.json` e remoção do botão de "voltar" em modo standalone.
 
+**11 Abril 2026 (UI/UX Refactoring Procore Fase 4 - Claude & Gemini):**
+- **Estado**: ✅ CONCLUÍDO (Frontend Dashboard).
+- [x] **Comando Central**: Fiel às guidelines da equipa (`frontend-design`, `frontend-specialist`), foi implementado o `ProcoreReconciliationPanel` no `DashboardView` para desktop, substituindo o anterior `ProcoreSyncCard`.
+- [x] **Design Premium Casais**: Respeito integral da paleta HSL brand (#005EB8) com remoção da cor roxa. Elementos com `cubic-bezier` animations perfeitamente coreografados, painéis geométricos *sharp-edge* e design assimétrico.
+- [x] **Dados Acionáveis**: Adicionados anéis de SVG dinâmicos para medir a integridade das sessões exportadas e barras duplas de progresso (Procore vs Local) com gap de horas e percentagens reconciliadas em tempo real.
+- **Próximo Passo**: Fase 5 - Polimento Final e Documentação Técnica.
+
 **11 Abril 2026 (Automação IoT Procore Fase 3 - Claude & Gemini):**
 - **Estado**: ✅ CONCLUÍDO (Backend Cloud Functions).
 - [x] **Refatoração do Exportador**: `procoreSessionExporter.js` sofreu um refactor integral para permitir a resolução paralela de entidades, com guardas de idempotência e limpeza de código não utilizado.

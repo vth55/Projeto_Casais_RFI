@@ -1,6 +1,6 @@
 # 🚀 ROADMAP: PROCORE INTEGRATION (CASAIS RFI)
 
-> **Status Atual:** ✅ FASE 3 CONCLUÍDA (Push IoT -> Procore). Próximo: Fase 4 (UX/UI Refactoring).
+> **Status Atual:** ✅ FASE 4 CONCLUÍDA (UX/UI Refactoring). Próximo: Fase 5 (Documentação e Polimento).
 > **Visão:** IoT Layer for Procore — Automatização total de dados de campo.
 
 ---
@@ -13,8 +13,8 @@
 | **1** | **Cloud Function "Procore Bridge"** (OAuth2 + Auth Flow) | ✅ CONCLUÍDO | **Opus** |
 | **2** | **Sincronização & Interface (Mirror + Badges UI)** | ✅ CONCLUÍDO | **Opus** |
 | **3** | **Push IoT (Automatic Timecards ao fechar sessão)** | ✅ CONCLUÍDO | **Opus** |
-| **4** | **UX/UI Refactoring** (Ajustes finos e dashboards Procore) | 🏗️ EM CURSO | **Sonnet** |
-| **5** | **Polimento e Documentação Técnica** | 🕒 PENDENTE | **Sonnet** |
+| **4** | **UX/UI Refactoring** (Procore Reconciliation Hub no Dashboard) | ✅ CONCLUÍDO | **Opus/Sonnet** |
+| **5** | **Polimento e Documentação Técnica** | 🏗️ EM CURSO | **Sonnet** |
 | **6** | **Demonstração Casais** (Final de linha) | 🕒 PENDENTE | **Sonnet** |
 
 ---
