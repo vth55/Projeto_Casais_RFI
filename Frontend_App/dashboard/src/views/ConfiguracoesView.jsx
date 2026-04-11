@@ -3,7 +3,7 @@ import {
   Settings, Database, Trash2, RefreshCw, Bell, Shield, Palette,
   Users, Plus, Edit2, Check, X, ChevronRight, Lock, Unlock,
   Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon,
-  Truck, Building2, Wallet, Leaf
+  Truck, Building2, Wallet, Leaf, Link2, Cloud, CloudOff, Activity
 } from 'lucide-react';
 import { createAllMockData } from '../utils/mockData';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -13,6 +13,264 @@ import useAuthStore from '../store/useAuthStore';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { PERMISSION_CATEGORIES, PERMISSIONS, DEFAULT_ROLES, ROLE_LEVELS, getLevelLabel } from '../config/permissions';
 import useThemeStore from '../store/useThemeStore';
+
+// ============================================================
+// PROCORE INTEGRATION SECTION — Fase 2 (UI)
+// ============================================================
+// Painel administrativo para a integração Procore Sandbox. Lê o estado de
+// conexão via `/api/procore/status`, permite disparar um sync manual via
+// `/api/procore/sync`, e mostra previews das subcoleções sincronizadas
+// (`procoreProjects`, `procoreDirectory`, `procoreEquipment`) que já chegam
+// pelos listeners em `useStore`.
+const ProcoreIntegrationSection = () => {
+  const { procoreProjects, procoreDirectory, procoreEquipment } = useStore();
+  const [status, setStatus] = React.useState(null);
+  const [loadingStatus, setLoadingStatus] = React.useState(true);
+  const [syncing, setSyncing] = React.useState(false);
+  const [statusError, setStatusError] = React.useState(null);
+  const [syncError, setSyncError] = React.useState(null);
+
+  const fetchStatus = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/procore/status', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus(await res.json());
+      setStatusError(null);
+    } catch (err) {
+      setStatusError(err.message || 'Falha a obter estado Procore');
+    } finally {
+      setLoadingStatus(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchStatus]);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const res = await fetch('/api/procore/sync', { method: 'POST' });
+      if (!res.ok && res.status !== 207) {
+        const text = await res.text();
+        throw new Error(`Sync falhou: ${text.slice(0, 200)}`);
+      }
+      await fetchStatus();
+    } catch (err) {
+      setSyncError(err.message || 'Erro desconhecido no sync');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Desconectar a integração Procore? Será preciso reautorizar para voltar a sincronizar.')) return;
+    try {
+      await fetch('/api/procore/disconnect', { method: 'POST' });
+      await fetchStatus();
+    } catch (err) {
+      setStatusError(err.message || 'Erro ao desconectar');
+    }
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+      return '—';
+    }
+  };
+
+  const connected = !!status?.connected;
+  const hasErrors = status?.last_sync_errors && Object.keys(status.last_sync_errors).length > 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Estado da Conexão */}
+      <Card>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-4 min-w-0">
+            <div className={`p-3 rounded-xl ${connected ? 'bg-gradient-to-br from-[#005EB8] to-[#0077d4]' : 'bg-slate-200 dark:bg-slate-700'}`}>
+              {connected ? (
+                <Cloud className="w-6 h-6 text-white" />
+              ) : (
+                <CloudOff className="w-6 h-6 text-slate-500" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Procore</h3>
+                {loadingStatus ? (
+                  <Badge variant="default" size="sm">A verificar...</Badge>
+                ) : connected ? (
+                  <Badge variant={hasErrors ? 'warning' : 'success'} size="sm">
+                    {hasErrors ? 'Conectado (com erros)' : 'Conectado'}
+                  </Badge>
+                ) : (
+                  <Badge variant="default" size="sm">Desconectado</Badge>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Sandbox: <code className="text-xs">sandbox.procore.com</code>
+                {status?.company_id && <> · Company ID: <code className="text-xs">{status.company_id}</code></>}
+              </p>
+              {statusError && (
+                <p className="text-xs text-red-600 mt-1">Erro de estado: {statusError}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {connected ? (
+              <>
+                <Button
+                  size="sm"
+                  icon={RefreshCw}
+                  onClick={handleSync}
+                  loading={syncing}
+                  disabled={syncing}
+                >
+                  {syncing ? 'A sincronizar...' : 'Sincronizar agora'}
+                </Button>
+                <Button size="sm" variant="ghost" icon={X} onClick={handleDisconnect}>
+                  Desconectar
+                </Button>
+              </>
+            ) : (
+              <a
+                href="/api/procore/authorize"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg bg-gradient-to-r from-[#005EB8] to-[#0077d4] hover:from-[#004a94] hover:to-[#0066b8] shadow-sm"
+              >
+                <Link2 className="w-4 h-4" />
+                Conectar Procore
+              </a>
+            )}
+          </div>
+        </div>
+
+        {connected && (
+          <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Último sync</p>
+              <p className="font-semibold text-slate-900 dark:text-white mt-1">{formatDate(status?.last_sync_at)}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Duração</p>
+              <p className="font-semibold text-slate-900 dark:text-white mt-1">
+                {status?.last_sync_duration_ms ? `${Math.round(status.last_sync_duration_ms)}ms` : '—'}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Token expira</p>
+              <p className="font-semibold text-slate-900 dark:text-white mt-1">
+                {status?.expires_in_seconds != null
+                  ? `${Math.max(0, Math.floor(status.expires_in_seconds / 60))} min`
+                  : '—'}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Conectado desde</p>
+              <p className="font-semibold text-slate-900 dark:text-white mt-1">{formatDate(status?.connected_at)}</p>
+            </div>
+          </div>
+        )}
+
+        {syncError && (
+          <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>{syncError}</span>
+          </div>
+        )}
+
+        {hasErrors && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+            <p className="font-semibold flex items-center gap-2 mb-1">
+              <AlertTriangle className="w-4 h-4" /> Erros no último sync
+            </p>
+            <ul className="ml-6 list-disc text-xs">
+              {Object.entries(status.last_sync_errors).map(([k, v]) => (
+                <li key={k}><strong>{k}:</strong> {String(v).slice(0, 120)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Card>
+
+      {/* Contadores de entidades sincronizadas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Projetos Procore</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{procoreProjects.length}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Mirror read-only</p>
+            </div>
+            <div className="p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20">
+              <Building2 className="w-6 h-6 text-primary-600" />
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Equipamentos</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{procoreEquipment.length}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Catálogo Procore</p>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
+              <Truck className="w-6 h-6 text-emerald-600" />
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Diretório</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{procoreDirectory.length}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Utilizadores</p>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20">
+              <Users className="w-6 h-6 text-amber-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Preview de projetos sincronizados */}
+      {procoreProjects.length > 0 && (
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4" /> Projetos Sincronizados
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Primeiros 5 projetos do mirror Procore</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {procoreProjects.slice(0, 5).map((p) => (
+              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm text-slate-900 dark:text-white truncate">
+                    {p.name || p.display_name || `Projeto ${p.id}`}
+                  </p>
+                  {p.project_number && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">#{p.project_number}</p>
+                  )}
+                </div>
+                <Badge variant="default" size="sm">ID {p.id}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+};
 
 // Componente de seção de configuração
 const ConfigSection = ({ icon: Icon, title, description, children, action }) => (
@@ -325,64 +583,40 @@ const AppearanceSection = () => {
   return (
     <ConfigSection icon={Palette} title="Aparência" description="Personalizar interface do sistema">
       <div className="space-y-3">
-        {/* Dark Mode Toggle */}
-        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3">
-            {isDark ? (
-              <Moon className="w-5 h-5 text-indigo-500" />
-            ) : (
-              <Sun className="w-5 h-5 text-amber-500" />
-            )}
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Modo Escuro</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {isDark ? 'Interface em modo escuro' : 'Interface em modo claro'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={toggleTheme}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-              isDark ? 'bg-primary-500' : 'bg-slate-300'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${
-                isDark ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </div>
 
-        {/* Idioma (apenas informativo) */}
-        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-          <div>
-            <p className="text-sm font-medium text-slate-900 dark:text-white">Idioma</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Idioma da interface</p>
-          </div>
-          <Badge>Português (PT)</Badge>
-        </div>
 
         {/* Preview do tema */}
         <div className="mt-4 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Pré-visualização</p>
-          <div className="flex gap-2">
-            <div className={`flex-1 p-3 rounded-lg text-center text-sm font-medium ${
-              !isDark
-                ? 'bg-white border-2 border-primary-500 text-primary-600'
-                : 'bg-slate-700 border border-slate-600 text-slate-400'
-            }`}>
-              <Sun className="w-4 h-4 mx-auto mb-1" />
-              Claro
-            </div>
-            <div className={`flex-1 p-3 rounded-lg text-center text-sm font-medium ${
-              isDark
-                ? 'bg-slate-900 border-2 border-primary-500 text-primary-400'
-                : 'bg-slate-200 border border-slate-300 text-slate-500'
-            }`}>
-              <Moon className="w-4 h-4 mx-auto mb-1" />
-              Escuro
-            </div>
+          <div className="flex gap-4">
+            <button
+              onClick={() => theme === 'dark' && toggleTheme()}
+              className={`flex-1 p-4 rounded-xl text-center transition-all duration-300 ${
+                !isDark
+                  ? 'bg-white border-2 border-primary-500 shadow-md transform scale-[1.02]'
+                  : 'bg-slate-700/50 border border-slate-600 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              <div className={`w-10 h-10 mx-auto mb-2 rounded-lg flex items-center justify-center ${!isDark ? 'bg-amber-100 text-amber-600' : 'bg-slate-800'}`}>
+                <Sun className="w-5 h-5" />
+              </div>
+              <p className="font-bold text-sm">Claro</p>
+              {!isDark && <Badge variant="primary" className="mt-2" size="sm">Ativo</Badge>}
+            </button>
+            <button
+              onClick={() => theme === 'light' && toggleTheme()}
+              className={`flex-1 p-4 rounded-xl text-center transition-all duration-300 ${
+                isDark
+                  ? 'bg-slate-900 border-2 border-primary-500 shadow-md transform scale-[1.02]'
+                  : 'bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-200'
+              }`}
+            >
+              <div className={`w-10 h-10 mx-auto mb-2 rounded-lg flex items-center justify-center ${isDark ? 'bg-indigo-900/50 text-indigo-400' : 'bg-white'}`}>
+                <Moon className="w-5 h-5" />
+              </div>
+              <p className="font-bold text-sm">Escuro</p>
+              {isDark && <Badge variant="primary" className="mt-2" size="sm">Ativo</Badge>}
+            </button>
           </div>
         </div>
       </div>
@@ -423,6 +657,7 @@ const ConfiguracoesView = () => {
   const tabs = [
     { id: 'general', label: 'Geral', icon: Settings },
     { id: 'roles', label: 'Perfis de Acesso', icon: Shield },
+    { id: 'integrations', label: 'Integrações', icon: Link2 },
     { id: 'demo', label: 'Modo Demo', icon: Users },
     { id: 'notifications', label: 'Notificações', icon: Bell },
     { id: 'appearance', label: 'Aparência', icon: Palette },
@@ -434,7 +669,7 @@ const ConfiguracoesView = () => {
     try {
       const result = await createAllMockData();
       setMessage({ type: 'success', text: `Dados criados: ${result.machines} máquinas, ${result.operators} operadores, ${result.sessions} sessões` });
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Erro ao criar dados mock' });
     }
     setLoading(false);
@@ -452,7 +687,7 @@ const ConfiguracoesView = () => {
         await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, `${basePath}/${col}`, d.id))));
       }
       setMessage({ type: 'success', text: 'Todos os dados foram eliminados' });
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Erro ao eliminar dados' });
     }
     setLoading(false);
@@ -829,6 +1064,9 @@ const ConfiguracoesView = () => {
           </ConfigSection>
         );
 
+      case 'integrations':
+        return <ProcoreIntegrationSection />;
+
       case 'appearance':
         return (
           <AppearanceSection />
@@ -966,19 +1204,6 @@ const ConfiguracoesView = () => {
       {/* Content */}
       {renderTabContent()}
 
-      {/* Version */}
-      <Card>
-        <div className="flex items-center gap-4">
-          <div className="p-2.5 bg-slate-100 rounded-lg">
-            <Shield className="w-5 h-5 text-slate-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-slate-900 dark:text-white">CASAIS Fleet Intelligence</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Versão 2.0.0 - Sistema de Gestão de Frotas</p>
-          </div>
-          <Badge variant="success">Atualizado</Badge>
-        </div>
-      </Card>
 
       {/* Role Edit Modal */}
       <Modal

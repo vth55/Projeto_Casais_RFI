@@ -325,7 +325,7 @@ export const getAvailableLevelsForCreation = (userRoleId, customRoles = {}) => {
 
   // Retorna apenas níveis inferiores ao do utilizador
   return Object.entries(ROLE_LEVELS)
-    .filter(([_, level]) => level > userRole.level)
+    .filter(([_key, level]) => level > userRole.level)
     .map(([name, level]) => ({ name, level }));
 };
 

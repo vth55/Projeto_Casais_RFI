@@ -40,7 +40,7 @@ export default defineConfig({
         // Cache de páginas para navegação offline
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Estratégia de cache para navegação
-        navigateFallback: 'index.html',
+        navigateFallback: 'offline.html',
         navigateFallbackDenylist: [/^\/api/, /^\/validar/],
         // Runtime caching
         runtimeCaching: [
@@ -84,8 +84,10 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: false, // Desativar em dev para evitar problemas
+        enabled: false,
+        navigateFallback: '/',
       },
+      manifest: false,
     }),
   ],
   build: {

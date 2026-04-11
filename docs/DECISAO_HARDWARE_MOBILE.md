@@ -3,7 +3,7 @@
 **Decisao:** 06 Abril 2026 | **Estado:** Implementado
 
 ## Estrategia
-O smartphone Android atua como **Unidade de Controlo da Maquina** autonoma (sem PC), substituindo o ESP32 para demonstracoes e testes.
+O smartphone Android atua como **Unidade de Controlo da Maquina** autonoma (sem PC), servindo como o Hub Mobile principal para operacoes de campo.
 
 ## Como Funciona
 1. Aceder a `/mobile-hub` no Chrome Android

@@ -2,8 +2,9 @@
 
 **Projeto:** Sistema de Gestão Inteligente de Frotas  
 **Cliente:** Grupo Casais (Curso Tecnologias Avançadas de Construção)  
-**Data:** Dezembro 2024  
-**Autor:** Vitor Hugo
+**Data:** Dezembro 2024 (Evolução Industrial Abr 2026)  
+**Higiene:** ✅ Hardware legado e simuladores removidos  
+**Versão:** v1.1.0-stable
 
 ---
 
@@ -22,14 +23,13 @@ Sistema Full-Stack PWA para gerir frotas de máquinas de construção, combinand
 │                    MÁQUINAS NO TERRENO                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  TIPO A: Arduino Uno + PC                                  │
-│  ├─ Arduino lê RFID                                        │
-│  ├─ Envia via Serial para Python                          │
-│  └─ Python → Cloud Functions                              │
+│  Móvel: PWA (NFC Nativo)                                    │
+│  ├─ Smartphone lê TAG NFC                                   │
+│  └─ Envia via API → Cloud Functions                         │
 │                                                             │
-│  TIPO B: ESP32 (Autónomo)                                  │
-│  ├─ ESP32 lê RFID                                          │
-│  └─ Envia direto via Wi-Fi → Cloud Functions              │
+│  Fixo: Arduino Uno + PC (Retrofit)                          │
+│  ├─ Arduino lê RFID                                         │
+│  └─ Ponte Serial → Cloud Functions                          │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -127,13 +127,6 @@ Arduino Pino 6 → Resistor 220Ω → LED AMARELO (perna longa +) → GND
 Arduino Pino 7 → Resistor 220Ω → LED VERMELHO (perna longa +) → GND
 ```
 
-**Ligação no ESP32:**
-```
-ESP32 Pino 25 → Resistor 220Ω → LED VERDE (+) → GND
-ESP32 Pino 26 → Resistor 220Ω → LED AMARELO (+) → GND
-ESP32 Pino 27 → Resistor 220Ω → LED VERMELHO (+) → GND
-```
-
 **O que cada LED significa:**
 | LED | Estado | Significado |
 |-----|--------|-------------|
@@ -146,7 +139,6 @@ ESP32 Pino 27 → Resistor 220Ω → LED VERMELHO (+) → GND
 
 **Código relevante:**
 - Arduino: `arduino_rfid_simple/arduino_rfid_led.ino`
-- ESP32: `Hardware_ESP32/fleet_rfid_hardware_led.cpp`
 - Python: `Hardware_Bridge_PC/serial_to_cloud_bridge.py` (linha ~14)
 
 ---
@@ -330,12 +322,6 @@ firebase deploy --only hosting
 3. Carrega o código (Upload)
 4. **IMPORTANTE:** Fecha o Monitor Serial depois!
 
-**ESP32 (com LEDs):**
-1. Abre `Hardware_ESP32/fleet_rfid_hardware_led.cpp`
-2. Edita linha 7-8 (Wi-Fi SSID e password)
-3. Carrega no ESP32
-4. Não precisa de PC!
-
 ---
 
 ### **4. Ponte Python (Arduino → Cloud)**
@@ -408,10 +394,6 @@ Projeto_Casais_RFI/
 ├── Hardware_Bridge_PC/
 │   └── serial_to_cloud_bridge.py        (Arduino → Cloud)
 │
-├── Hardware_ESP32/
-│   ├── fleet_rfid_hardware.cpp          (SEM LEDs - original)
-│   └── fleet_rfid_hardware_led.cpp      (COM LEDs - usar este!)
-│
 └── DOCUMENTACAO_PROJETO.md              (Este ficheiro!)
 ```
 
@@ -474,15 +456,11 @@ artifacts/
 3. Edita `serial_to_cloud_bridge.py` linha 7 com a porta correta
 4. Testa com: `python -m serial.tools.list_ports`
 
----
-
 ### **Problema: Frontend não atualiza em tempo real**
 **Soluções:**
 1. Verifica console do browser (F12) - há erros?
 2. Confirma que está ligado ao Firebase (ícone "LIGAÇÃO ATIVA")
 3. Verifica Regras do Firestore (devem permitir leitura pública)
-
----
 
 ### **Problema: Cartão não é reconhecido**
 **Soluções:**
@@ -490,8 +468,6 @@ artifacts/
 2. Vê os logs no terminal do Python
 3. Verifica logs do Backend: `firebase functions:log`
 4. ID do cartão está em MAIÚSCULAS?
-
----
 
 ### **Problema: LEDs não funcionam**
 **Soluções:**
@@ -510,7 +486,7 @@ artifacts/
 | Limite de CO₂ | 500 kg | `DashboardView.jsx` linha 23 |
 | Fator de emissão Diesel | 2.68 kg/L | `formatters.js` linha 1 |
 | Timeout de scan (Arduino) | 5 segundos | `arduino_rfid_led.ino` linha 61 |
-| Timeout HTTP (ESP32) | 10 segundos | `serial_to_cloud_bridge.py` linha 19 |
+| Timeout HTTP (PWA) | 10 segundos | `api/session` (Cloud Function) |
 
 ---
 
@@ -519,7 +495,6 @@ artifacts/
 ### **GPS (Localização em tempo real)**
 - Estrutura de dados já preparada
 - Parser em: `utils/telemetryParser.js`
-- Falta: Integrar módulo GPS no ESP32
 
 ### **CAN Bus (Diagnósticos do motor)**
 - Parser em: `utils/telemetryParser.js`
@@ -558,7 +533,7 @@ _Adiciona aqui o link do GitHub_
 - [ ] Backend deployado (`firebase deploy --only functions`)
 - [ ] Frontend a correr (`npm run dev`)
 - [ ] Python bridge ligado
-- [ ] Arduino/ESP32 com código dos LEDs carregado
+- [ ] Arduino com código dos LEDs carregado
 - [ ] LEDs montados e a funcionar
 - [ ] Pelo menos 2 operadores registados
 - [ ] Pelo menos 1 máquina com consumo configurado
@@ -578,7 +553,7 @@ _Adiciona aqui o link do GitHub_
 4. **Segurança:** Cartões não registados são bloqueados
 5. **Logs de Auditoria:** Todas as tentativas ficam guardadas
 6. **PWA:** Funciona em tablets no terreno sem app stores
-7. **Escalabilidade:** Preparado para GPS e CAN Bus
+7. **Teste 1 (Resiliência):** Durante o Beta-Release da Fase 2 do Mobile Hub.
 
 ---
 

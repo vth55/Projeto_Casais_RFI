@@ -13,15 +13,17 @@ export const filterSessionsByDate = (sessions, filterType) => {
       case 'today':
         return sessionDate >= today;
 
-      case 'week':
+      case 'week': {
         const weekAgo = new Date(today);
         weekAgo.setDate(weekAgo.getDate() - 7);
         return sessionDate >= weekAgo;
+      }
 
-      case 'month':
+      case 'month': {
         const monthAgo = new Date(today);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         return sessionDate >= monthAgo;
+      }
 
       default:
         return true;

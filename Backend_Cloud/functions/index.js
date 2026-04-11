@@ -6,6 +6,9 @@
  * - onAlertCreated: Enviar email quando alerta é criado
  * - resendAlertEmail: Reenviar email de validação
  * - autoCloseStuckSessions: Cron job para fechar sessões abandonadas
+ * - procoreBridge: Integração OAuth2 + REST API Procore (Chunks 1A/1B)
+ * - procoreScheduledSync: Cron job horário de sincronização Procore → Firestore (Chunk 1C)
+ * - procoreSessionExport: Exportar sessões para Procore (Timecard Entries)
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
@@ -13,6 +16,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
+const procoreSessionExporter = require('./procore/procoreSessionExporter');
 
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -400,6 +404,18 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                 ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
             });
 
+            // Exportar sessão terminada para o Procore
+            procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').then((result) => {
+                if (result.exported) {
+                    console.log(`[Procore] Sessão exportada (end): ${result.timecardId}`);
+                    sessionDoc.ref.set({ procoreExport: result }, { merge: true });
+                } else {
+                    console.log(`[Procore] Export ignorado (end): ${result.reason}`);
+                }
+            }).catch((err) => {
+                console.error('[Procore] Export sessão falhou:', err.message);
+            });
+
             await db.runTransaction(async (t) => {
                 const mDoc = await t.get(machineRef);
                 if (!mDoc.exists) return;
@@ -422,7 +438,19 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                 status: 'OPEN'
             };
 
-            await db.collection(SESSIONS_PATH).add(newSession);
+            const sessionRef = await db.collection(SESSIONS_PATH).add(newSession);
+
+            // Exportar sessão iniciada para o Procore (marcar presença)
+            procoreSessionExporter.exportSessionToProcore(sessionRef.id, 'start').then((result) => {
+                if (result.exported) {
+                    console.log(`[Procore] Sessão exportada (start): ${result.timecardId}`);
+                    sessionRef.set({ procoreExport: result }, { merge: true });
+                } else {
+                    console.log(`[Procore] Export ignorado (start): ${result.reason}`);
+                }
+            }).catch((err) => {
+                console.error('[Procore] Export sessão falhou:', err.message);
+            });
 
             await machineRef.set({
                 status: 'ACTIVE',
@@ -1075,3 +1103,20 @@ exports.checkLongSessions = onSchedule(
         }
     });
 
+// ============================================
+// PROCORE INTEGRATION (Fase 1 — Chunk 1A)
+// ============================================
+// OAuth2 bridge para a API REST do Procore. Endpoints expostos via hosting
+// rewrite em `/api/procore/**`. Ver `procore/procoreBridge.js`.
+
+const { procoreBridge } = require('./procore/procoreBridge');
+exports.procoreBridge = procoreBridge;
+
+// ============================================
+// PROCORE SCHEDULER (Fase 1 — Chunk 1C)
+// ============================================
+// Cron job (1h) que invoca runFullSync() para manter o catálogo Procore
+// (projects/equipment/directory) sincronizado em Firestore. Idempotente.
+
+const { procoreScheduledSync } = require('./procore/procoreScheduler');
+exports.procoreScheduledSync = procoreScheduledSync;

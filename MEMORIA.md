@@ -44,7 +44,8 @@
 - Fotos na Manutenção
 - Sistema de Email e Validação
 - DevTools completo
-- **Todos os botões agora têm funcionalidades reais** ✅
+- **Integração Procore (Fase 2 - Concluída)**: Sync horária + Badges UI + Aba Integrações.
+- **Todos os botões do Dashboard com funcionalidades reais** ✅
 
 ### O QUE FALTA (Baixa Prioridade)
 1. **Notificações Push** - Alertas de manutenção e sessões longas
@@ -85,7 +86,7 @@ cmd.exe /c "cd /d C:\Users\vitor\OneDrive\Área de Trabalho\Projeto_Casais_RFI &
 ## ARQUITETURA
 
 ```
-Hardware (Arduino/ESP32 + RFID)
+Hardware (Arduino + RFID)
          ↓
 Firebase Cloud Functions (handleSessionTrigger)
          ↓
@@ -185,12 +186,49 @@ Views:        Frontend_App/dashboard/src/views/
 Components:   Frontend_App/dashboard/src/components/
 Config:       Frontend_App/dashboard/src/config/
 Backend:      Backend_Cloud/functions/index.js
-Hardware:     arduino_rfid_simple/, Hardware_ESP32/
+Hardware:     arduino_rfid_simple/
 ```
 
 ---
 
 ## NOTAS DE SESSÃO
+
+**07 Abril 2026 (Fix Crítico de Persistência & PWA Navigation - Gemini):**
+- **Estado**: ✅ DEPLOYED & ESTÁVEL.
+- [x] **PWA Navigation History**: Sincronização da `activeView` com a History API do browser, permitindo utilização do botão "voltar" físico do telemóvel e novo botão visual no Header.
+- [x] **Firestore Protection**: Implementada função `sanitizeData` no `useStore.js` para filtrar campos de UI (`systemRoleLevel`, `totalHours`, etc.) antes da persistência.
+- [x] **PWA Industrial**: Deploy final bem-sucedido via Windows Native, corrigindo bloqueios de cache no hosting.
+- [x] **UI/UX Premium**: Validação visual do Dashboard com sistema de design Casais (Gradients/Glassmorphism).
+- **Resolução**: Eliminado erro `Unsupported field value: undefined` que bloqueava a edição manual de operadores e cartões RFID.
+
+**07 Abril 2026 (PWA Offline & UI Sync - Minimax):**
+- **Estado**: ✅ IMPLEMENTADO.
+- [x] **Modo Offline PWA**: `enableIndexedDbPersistence` ativado no Firebase. Cache local automático que permite usar a app sem rede e sincronizar ao voltar a net.
+- [x] **Indicador de Conexão**: Novo componente `useOnlineStatus` e indicador visual no `Header.jsx` (Online/Offline).
+- [x] **UI Dinâmica**: `LiveSessionsBar` agora oculta-se automaticamente em modo offline para evitar discrepâncias de timers.
+- [x] **Assets PWA**: Novo ícone `icon-192.svg` com branding oficial Casais (#005EB8), atualização do `manifest.json` e remoção do botão de "voltar" em modo standalone.
+
+**07 Abril 2026 (Auditoria Final Fase 2 - Gemini):**
+- **Estado**: ✅ CONCLUÍDO (Backend + Frontend).
+- [x] **Match de Entidades**: Implementada lógica de normalização e fuzzy match em `useStore.js` para vincular Obras e Operadores locais a Projetos e Users do Procore.
+- [x] **Badges Procore**: Adicionados indicadores visuais (`Link2`) no `ObrasView` e `OperadoresView` para identificar registos sincronizados.
+- [x] **Aba de Integrações**: Criada nova secção em `ConfiguracoesView` com status da Cloud Cloud, estatísticas de sync e botão de disparo manual.
+- [x] **Sincronização de Docs**: `MATRIZ_ACOMPANHAMENTO.md` e `project_procore_integration.md` retificados para refletir o progresso real.
+- **Próximo Passo**: **FASE 3 (Push IoT)** — Ligar o fechamento de sessões no backend ao envio automático de Timecards para o Procore.
+
+**0715: | 1.1.0-stable | 07/04/2026 | Purga ESP32 + Fase 1 e 2 Procore (Sync + UI) |
+Chunk 1B & 1C - Claude Opus):**
+- **Estado**: ✅ DEPLOYED.
+- [x] **Backend Sync**: Agendamento horário (v2) funcional para Projetos, Equipamentos e Diretório.
+- [x] **Frontend Bridge**: Implementação da Opção B (Enriquecimento) no Dashboard.
+- [x] **Industrialização**: Persistência idempotente e sanitização de dados antes do salvamento no Firestore.
+
+**06 Abril 2026 (Noite - A Revelação Procore):**
+- **Discovery**: Confirmado que a Casais utiliza **Procore**. O projeto pivota de "App Isolada" para **"IoT Layer for Procore"**.
+- **Procore Bridge**: Definido plano de 7 fases para integração total (Timecards, Daily Logs, Budget Sync).
+- **Mobile Hub Finalizado**: PWA totalmente funcional com Auto-ID, Auto-Registo e NFC ativado por gesto (Industrial-ready).
+- **Roadmap Persistente**: Criado [project_procore_integration.md](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/project_procore_integration.md) com as diretrizes e modelos de IA para cada fase.
+- **Próximo Passo**: Iniciar **FASE 0** (Registo no Developer Portal da Procore) amanhã usando o modelo **Sonnet**.
 
 **06 Abril 2026 (Industrialização Mobile - Claude Opus):**
 - **Mobile Hub Auto-ID**: Implementada lógica de auto-geração de ID (`M_MOB_...`) persistente.
@@ -201,7 +239,7 @@ Hardware:     arduino_rfid_simple/, Hardware_ESP32/
 - **Documento Atualizado**: 📱 [Hardware Mobile](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/DECISAO_HARDWARE_MOBILE.md) - Marcado como Implementado.
 
 **06 Abril 2026 (Sessão Estratégica - Gemini):**
-- **Laboratório Virtual de Braga**: Configurado simulador **Wokwi** para testar ESP32 sem hardware físico em Braga.
+- **Laboratório Virtual de Braga**: Configurado simulador para testar hardware sem hardware físico em Braga.
 - **Debate de Arquitetura V2**: Identificados 4 pontos críticos para scale-up industrial (Segurança, Conectividade, Escalabilidade).
 - **Resiliência Híbrida**: Proposta de "BLE Harvesting" para zonas sem rede (AirTag style) e "Human-Relay Mesh".
 - **Segurança IoT**: Identificada falta de Auth nos endpoints (Solução: API Keys).
@@ -209,8 +247,7 @@ Hardware:     arduino_rfid_simple/, Hardware_ESP32/
 - **Documentos Criados (Ativos de Inovação)**:
   - 🏗️ [Estratégia V2](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/ESTRATEGIA_ARQUITETURA_V2.md) - Visão de Futuro.
   - 🧪 [Plano de Testes V2](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/PLANO_DE_TESTES_V2.md) - Protocolo de Validação.
-  - 📡 [Guia do Simulador](file:///c:/Users/vitor/OneDrive/%C3%81rea%20de%20Trabalho/Projeto_Casais_RFI/docs/SIMULADOR_WOKWI_GUIA.md) - Laboratório Virtual.
-- **Hardware**: Decisão de focar no ESP32 (Tipo B) para o produto final.
+- **Hardware**: Decisão de focar no Arduino para o produto final.
 
 **08 Dezembro 2025 (Sessão 3):**
 - Componentes melhorados para nível enterprise

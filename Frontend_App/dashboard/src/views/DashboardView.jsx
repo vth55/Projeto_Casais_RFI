@@ -1,38 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  BarChart, Bar, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
-  Activity,
-  Truck,
-  Clock,
-  Fuel,
-  Leaf,
-  AlertTriangle,
-  Wrench,
-  TrendingUp,
-  ArrowRight,
-  Play,
-  User,
-  MapPin,
-  Calendar,
-  Zap,
+  Activity, Truck, Clock, Fuel, Leaf, AlertTriangle,
+  Wrench, TrendingUp, ArrowRight, Play, User, Zap, ChevronRight,
+  RefreshCw, Building2, CheckCircle2, XCircle, Link2,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
+import MachineStoryRings from '../components/ui/MachineStoryRings';
+import LiveTimer from '../components/ui/LiveTimer';
+import useDeviceType from '../hooks/useDeviceType';
 
 // Filtros de período
 const DateFilters = () => {
@@ -46,11 +26,13 @@ const DateFilters = () => {
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl shadow-sm">
+    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl shadow-sm" role="group" aria-label="Filtros de período">
       {filters.map(filter => (
         <button
           key={filter.id}
           onClick={() => setDateFilter(filter.id)}
+          aria-label={`Filtrar por ${filter.label}`}
+          aria-pressed={dateFilter === filter.id}
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             dateFilter === filter.id
               ? 'bg-primary-500 text-white shadow-md'
@@ -118,8 +100,348 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+// ============================================================
+// PROCORE SYNC CARD — Integração Chunk 1B
+// ============================================================
+
+const PROCORE_STATUS_URL = '/api/procore/status';
+const PROCORE_SYNC_URL = '/api/procore/sync';
+
+const formatRelativeTime = (iso) => {
+  if (!iso) return 'nunca';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diffMs) || diffMs < 0) return 'agora';
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'agora mesmo';
+  if (minutes < 60) return `há ${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `há ${days}d`;
+};
+
+const useProcoreStatus = () => {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch(PROCORE_STATUS_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setStatus(json);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Falha a obter estado Procore');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  return { status, loading, error, refetch: fetchStatus };
+};
+
+const ProcoreSyncCard = ({ compact = false }) => {
+  const { status, loading, error, refetch } = useProcoreStatus();
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(null);
+
+  const counts = status?.last_sync_counts || { projects: 0, equipment: 0, directory: 0 };
+  const totalSynced = (counts.projects || 0) + (counts.equipment || 0) + (counts.directory || 0);
+  const lastSyncLabel = formatRelativeTime(status?.last_sync_at);
+  const hasSyncErrors = !!status?.last_sync_errors && Object.keys(status.last_sync_errors).length > 0;
+
+  const handleSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const res = await fetch(PROCORE_SYNC_URL, { method: 'POST' });
+      if (!res.ok && res.status !== 207) {
+        const text = await res.text();
+        throw new Error(`Sync falhou (${res.status}): ${text.slice(0, 160)}`);
+      }
+      await refetch();
+    } catch (err) {
+      setSyncError(err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // ---- Estados de carregamento / desconectado ----
+  if (loading) {
+    return (
+      <Card className={`${compact ? 'p-4' : ''}`}>
+        <Skeleton.Stat />
+      </Card>
+    );
+  }
+
+  if (error || !status?.connected) {
+    return (
+      <Card className={`${compact ? 'p-4' : ''} border-2 border-dashed border-slate-200 dark:border-slate-700`}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0">
+            <Link2 className="w-5 h-5 text-slate-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">Procore desconectado</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {error ? `Erro: ${error}` : 'Liga a integração nas Configurações'}
+            </p>
+          </div>
+          <a
+            href="/api/procore/authorize"
+            className="text-xs font-semibold text-primary-600 hover:text-primary-700 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20"
+          >
+            Ligar
+          </a>
+        </div>
+      </Card>
+    );
+  }
+
+  // ---- Conectado ----
+  return (
+      <Card className={`${compact ? 'p-4' : ''} ${syncing ? 'animate-casais-sync' : ''} hover-enterprise`}>
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl casais-gradient flex items-center justify-center flex-shrink-0 shadow-md shadow-primary-500/20">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className={`font-bold text-slate-900 dark:text-white ${compact ? 'text-sm' : 'text-base'}`}>
+                  Procore
+                </h3>
+                <Badge variant={hasSyncErrors ? 'warning' : 'success'} className="text-[10px] uppercase tracking-wide">
+                  {hasSyncErrors ? 'parcial' : 'ativo'}
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                Última sync {lastSyncLabel}
+                {status?.last_sync_trigger && (
+                  <span className="ml-1 text-slate-400">
+                    · {status.last_sync_trigger === 'cron' ? 'auto' : 'manual'}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            aria-label="Sincronizar agora com o Procore"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'A sincronizar' : 'Sincronizar'}
+          </button>
+        </div>
+
+        {/* Counters */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Obras', value: counts.projects, error: status?.last_sync_errors?.projects },
+            { label: 'Equipamentos', value: counts.equipment, error: status?.last_sync_errors?.equipment },
+            { label: 'Pessoas', value: counts.directory, error: status?.last_sync_errors?.directory },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="relative p-3 rounded-xl casais-gradient-soft border border-slate-100/50 dark:border-slate-700/50"
+            >
+              <div className="flex items-center gap-1.5 mb-0.5">
+                {item.error ? (
+                  <XCircle className="w-3 h-3 text-red-500" />
+                ) : (
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                )}
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  {item.label}
+                </span>
+              </div>
+              <div className="text-xl font-bold tabular-nums text-slate-900 dark:text-white">
+                {item.value ?? 0}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Error/diagnostic line */}
+        {(syncError || hasSyncErrors) && (
+          <div className="mt-3 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <p className="text-[11px] text-amber-800 dark:text-amber-300 truncate">
+              <AlertTriangle className="inline w-3 h-3 mr-1 -mt-0.5" />
+              {syncError || Object.entries(status.last_sync_errors).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+            </p>
+          </div>
+        )}
+
+        {totalSynced === 0 && !syncError && !hasSyncErrors && (
+          <p className="mt-3 text-[11px] text-slate-400 italic">
+            Ainda sem dados — clica em <span className="font-semibold">Sincronizar</span> para o primeiro pull.
+          </p>
+        )}
+      </div>
+    </Card>
+  );
+};
+
+// ============================================================
+// MOBILE DASHBOARD — Layout Field Mode
+// ============================================================
+
+const MobileActiveSessionCard = ({ session, machine, operator }) => (
+  <button
+    onClick={() => useStore.getState().setActiveView('sessoes-ativas')}
+    aria-label={`Ver detalhes da sessão da máquina ${machine?.name || session.machineId}`}
+    className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform w-full text-left"
+    style={{ WebkitTapHighlightColor: 'transparent' }}
+  >
+    <div className="relative w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+      <Play className="w-5 h-5 text-emerald-600" />
+      <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+        {machine?.name || session.machineId}
+      </p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+        <User className="w-3 h-3 flex-shrink-0" />
+        {operator?.name || session.cardId}
+      </p>
+    </div>
+    <div className="text-right flex-shrink-0">
+      <LiveTimer
+        startTime={session.startTime}
+        className="text-sm text-emerald-600 dark:text-emerald-400"
+        warningAfterHours={5}
+      />
+      <p className="text-xs text-slate-400">em curso</p>
+    </div>
+  </button>
+);
+
+const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanceAlerts, chartData }) => {
+  const { setActiveView } = useStore();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+
+  return (
+    <div className="space-y-5">
+      {/* Greeting */}
+      <div className="px-1">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{greeting} 👋</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
+      </div>
+
+      {/* Machine Story Rings */}
+      <MachineStoryRings />
+
+      {/* Alerta de manutenção — destaque mobile */}
+      {maintenanceAlerts.length > 0 && (
+        <button
+          onClick={() => setActiveView('manutencao-alertas')}
+          className="w-full flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl active:scale-[0.98] transition-transform text-left"
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+        >
+          <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+              {maintenanceAlerts.length} alerta{maintenanceAlerts.length > 1 ? 's' : ''} de manutenção
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 truncate">
+              {maintenanceAlerts.slice(0, 2).map(m => m.name).join(', ')}
+              {maintenanceAlerts.length > 2 ? ` +${maintenanceAlerts.length - 2}` : ''}
+            </p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-amber-500 flex-shrink-0" />
+        </button>
+      )}
+
+      {/* KPI Grid 2x2 */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard icon={Activity} title="Horas" value={kpis.totalHours} unit="h" color="primary" variant="gradient" className="animate-fade-in stagger-1" />
+        <StatCard icon={Truck}    title="Utilização" value={kpis.utilizationRate} unit="%" color="emerald" variant="gradient" className="animate-fade-in stagger-2" />
+        <StatCard icon={Play}     title="Ativas" value={kpis.activeSessions} color={kpis.activeSessions > 0 ? 'emerald' : 'slate'} className="animate-fade-in stagger-3" />
+        <StatCard icon={Wrench}   title="Alertas" value={maintenanceAlerts.length} color={maintenanceAlerts.length > 0 ? 'red' : 'slate'} className="animate-fade-in stagger-4" />
+      </div>
+
+      {/* Sessões ativas */}
+      {activeSessions.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-sm font-bold text-slate-900 dark:text-white">Sessões em Curso</span>
+            <button onClick={() => setActiveView('sessoes-ativas')} className="text-xs text-primary-600 font-semibold">
+              Ver todas
+            </button>
+          </div>
+          <div className="space-y-2">
+            {activeSessions.slice(0, 3).map(session => (
+              <MobileActiveSessionCard
+                key={session.id}
+                session={session}
+                machine={machines.find(m => m.id === session.machineId)}
+                operator={operators.find(o => o.id === session.cardId || o.cardId === session.cardId)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Procore — sincronização */}
+      <ProcoreSyncCard compact />
+
+      {/* Mini gráfico de atividade */}
+      <Card className="p-4 hover-enterprise">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold text-slate-900 dark:text-white">Atividade Semanal</span>
+          <Badge variant="primary" className="text-xs">Horas</Badge>
+        </div>
+        <ResponsiveContainer width="100%" height={120}>
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="mobileGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#005EB8" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#005EB8" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+            <Tooltip content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              return (
+                <div className="bg-slate-900 text-white rounded-lg px-2 py-1 text-xs">
+                  <span className="font-bold">{payload[0]?.value}h</span>
+                </div>
+              );
+            }} />
+            <Area type="monotone" dataKey="horas" stroke="#005EB8" strokeWidth={2} fill="url(#mobileGradient)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Card>
+    </div>
+  );
+};
+
+// ============================================================
+// DASHBOARD VIEW — renderiza Field Mode ou Office Mode
+// ============================================================
+
 const DashboardView = () => {
   const { machines, operators, sessions, getFilteredSessions, getKPIs, loading } = useStore();
+  const { isMobile } = useDeviceType();
   const filteredSessions = getFilteredSessions();
   const kpis = getKPIs();
 
@@ -197,18 +519,33 @@ const DashboardView = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div className="flex items-center justify-between">
           <Skeleton variant="title" className="w-48" />
-          <Skeleton className="w-64 h-12" />
+          <Skeleton className="hidden md:block w-64 h-12" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {[...Array(4)].map((_, i) => <Skeleton.Stat key={i} />)}
         </div>
       </div>
     );
   }
 
+  // Field Mode (mobile) — layout completamente diferente
+  if (isMobile) {
+    return (
+      <MobileDashboard
+        kpis={kpis}
+        activeSessions={activeSessions}
+        machines={machines}
+        operators={operators}
+        maintenanceAlerts={maintenanceAlerts}
+        chartData={chartData}
+      />
+    );
+  }
+
+  // Office Mode (desktop/tablet) — layout original
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -230,6 +567,7 @@ const DashboardView = () => {
           color="primary"
           variant="gradient"
           trend={12}
+          className="animate-fade-in stagger-1"
         />
         <StatCard
           icon={Truck}
@@ -239,6 +577,7 @@ const DashboardView = () => {
           color="emerald"
           variant="gradient"
           trend={5}
+          className="animate-fade-in stagger-2"
         />
         <StatCard
           icon={Fuel}
@@ -248,6 +587,7 @@ const DashboardView = () => {
           color="amber"
           variant="gradient"
           trend={-3}
+          className="animate-fade-in stagger-3"
         />
         <StatCard
           icon={Leaf}
@@ -256,6 +596,7 @@ const DashboardView = () => {
           unit="kg"
           color="slate"
           variant="gradient"
+          className="animate-fade-in stagger-4"
         />
       </div>
 
@@ -263,7 +604,7 @@ const DashboardView = () => {
       {maintenanceAlerts.length > 0 && (
         <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 shadow-lg">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 bg-white dark:bg-slate-800/20 rounded-xl flex items-center justify-center">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
               <AlertTriangle className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
@@ -273,14 +614,14 @@ const DashboardView = () => {
               </p>
               <div className="flex flex-wrap gap-2 mt-4">
                 {maintenanceAlerts.slice(0, 3).map(machine => (
-                  <div key={machine.id} className="bg-white dark:bg-slate-800/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                  <div key={machine.id} className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
                     <span className="text-sm font-medium text-white">
                       {machine.name}: {machine.partialHours || machine.totalHours}h
                     </span>
                   </div>
                 ))}
                 {maintenanceAlerts.length > 3 && (
-                  <div className="bg-white dark:bg-slate-800/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
                     <span className="text-sm font-medium text-white">
                       +{maintenanceAlerts.length - 3} mais
                     </span>
@@ -289,7 +630,8 @@ const DashboardView = () => {
               </div>
             </div>
             <Button
-              className="bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50"
+              variant="primary"
+              className="border-none shadow-md"
               icon={ArrowRight}
               iconPosition="right"
               onClick={() => useStore.getState().setActiveView('manutencao')}
@@ -330,11 +672,14 @@ const DashboardView = () => {
         />
       </div>
 
+      {/* Procore — sincronização (full width sobre os gráficos) */}
+      <ProcoreSyncCard />
+
       {/* Gráficos e Sessões */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico Principal - Atividade */}
         <div className="lg:col-span-2">
-          <Card className="h-full">
+          <Card className="h-full hover-enterprise">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Atividade Semanal</h3>
@@ -365,7 +710,7 @@ const DashboardView = () => {
         </div>
 
         {/* Sessões Ativas */}
-        <Card className="h-full">
+        <Card className="h-full hover-enterprise">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Sessões Ativas</h3>
@@ -398,7 +743,7 @@ const DashboardView = () => {
       {/* Segunda linha de gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Emissões CO2 */}
-        <Card>
+        <Card className="hover-enterprise">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Emissões CO₂</h3>
@@ -427,7 +772,7 @@ const DashboardView = () => {
         </Card>
 
         {/* Utilização por Equipamento */}
-        <Card>
+        <Card className="hover-enterprise">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Utilização por Equipamento</h3>

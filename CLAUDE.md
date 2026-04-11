@@ -19,11 +19,6 @@ cd Frontend_App/dashboard && npm run dev --host   # Frontend (porta 5173)
 cd Backend_Cloud && firebase deploy               # Backend
 ```
 
-## Laboratório Virtual (ESP32)
-* Local: `Hardware_ESP32/wokwi_simulator/`
-* Guia: `docs/SIMULADOR_WOKWI_GUIA.md`
-* Objetivo: Testar comunicação Cloud sem hardware físico (Emulador Wokwi).
-
 ## BUGS CONHECIDOS (Verificar antes de mudar código)
 1. **Objects as React child**: `machine.category` e `machine.location` são OBJETOS no Firestore
    - Solução: `typeof x === 'object' ? x?.name : x`
@@ -53,13 +48,23 @@ cd Backend_Cloud && firebase deploy               # Backend
 **06 Abril 2026 (Sessão Estratégica - Gemini):**
 - **Sessão de Arquitetura V2**: Debatida a escalabilidade para 500+ máquinas e segurança enterprise.
 - **Pivot de Hardware (Braga)**: Decidido o uso do telemóvel Android como hardware da máquina para a apresentação.
-- **Desativação do Laboratório Virtual**: O simulador Wokwi foi removido por ser redundante face ao novo "Hub Mobile".
 - **Documento de Contexto**: Criado `docs/DECISAO_HARDWARE_MOBILE.md` com o resumo da estratégia para o executor.
 
 ## Regras de Código
 - Código final tem de ser de grau Enterprise-level
 - UI profissional e visualmente impactante (NÃO minimalista)
 - Não efetues commits no git nem atualizes logs de tarefas no fim de cada run. O Gemini fará isso por ti.
+
+## PROTOCOLO ANTIGRAVITY (USO OBRIGATÓRIO)
+A tua inteligência foi expandida via **Antigravity Kit**. Como Engenheiro de Elit da Casais, tens o dever de:
+
+1. **Auto-Agente:** Antes de qualquer `TASK`, identifica o domínio (Frontend, Backend, Security, etc.) em `.agent/agents/`.
+2. **Setup de Contexto:** Deves ler obrigatoriamente o ficheiro do agente correspondente (ex: `@frontend-specialist.md`) e as suas `skills` associadas antes de codificar.
+3. **Padrão Casais 2026:**
+   - **UI Impactante:** Segue as regras do `@frontend-design` (Gradients, Glassmorphism, Micro-animações).
+   - **Código Limpo:** Segue a skill `clean-code` (Conciso, sem over-engineering).
+   - **Segurança Enterprise:** Nenhuma API Key ou secret deve ser hardcoded (usa `defineSecret`).
+4. **Auditoria:** Sabe que o teu trabalho será validado pelo comando `python .agent/scripts/checklist.py .`. Zero erros de lint ou UX são aceitáveis.
 
 ## WORKFLOW EM EQUIPA (Gemini / MiniMax / Claude)
 

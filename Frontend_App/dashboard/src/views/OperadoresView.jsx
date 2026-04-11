@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Truck, Award } from 'lucide-react';
+import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Truck, Award, Link2 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
@@ -65,7 +65,6 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
     email: '',
     licenses: [],
     ...(operator || {}),
-    cardId: operator?.cardId ?? lastScannedCard ?? '',
   });
 
   const handleSubmit = (e) => {
@@ -319,7 +318,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
 };
 
 const OperadoresView = () => {
-  const { operators, sessions, obras, machines, loading, addOperator, deleteOperator, updateOperator } = useStore();
+  const { operators, sessions, obras, machines, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory } = useStore();
   const { can, getAssignableRoles, getAllRoles } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
@@ -340,6 +339,8 @@ const OperadoresView = () => {
       const isActive = opSessions.some(s => s.status === 'OPEN');
       const assignedObra = obras.find(o => o.id === op.assignedObraId);
       const systemRoleInfo = allSystemRoles[op.systemRole];
+      // Procore enrichment: matching por email/nome contra a directory sincronizada
+      const { procoreUser } = matchOperatorToProcore(op);
       return {
         ...op,
         totalHours: Math.round(totalHours * 10) / 10,
@@ -348,9 +349,10 @@ const OperadoresView = () => {
         assignedObraName: assignedObra?.name || null,
         systemRoleName: systemRoleInfo?.name || 'Operador',
         systemRoleLevel: systemRoleInfo?.level,
+        procoreUser: procoreUser || null,
       };
     });
-  }, [operators, sessions, obras, allSystemRoles]);
+  }, [operators, sessions, obras, allSystemRoles, procoreDirectory, matchOperatorToProcore]);
 
   // Calcular sugestões de auto-assign baseado no uso de máquinas
   const autoAssignSuggestions = useMemo(() => {
@@ -568,8 +570,19 @@ const OperadoresView = () => {
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${op.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600'}`}>
                         {op.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
                       </div>
-                      <div>
-                        <span className="font-medium block">{op.name}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium block truncate">{op.name}</span>
+                          {op.procoreUser && (
+                            <span
+                              title={`Sincronizado com Procore: ${op.procoreUser.name || op.procoreUser.email_address || op.procoreUser.id}`}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-gradient-to-r from-[#005EB8] to-[#0077d4] text-white uppercase tracking-wide shadow-sm"
+                            >
+                              <Link2 className="w-2.5 h-2.5" />
+                              Procore
+                            </span>
+                          )}
+                        </div>
                         {op.email && <span className="text-xs text-slate-500 dark:text-slate-400">{op.email}</span>}
                       </div>
                     </div>
@@ -622,18 +635,6 @@ const OperadoresView = () => {
         </Card>
       )}
 
-      {/* Role Legend */}
-      <Card>
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Legenda de Cargos</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {EMPLOYEE_ROLES.map(role => (
-            <div key={role.id} className="flex items-center gap-2">
-              <RoleBadge roleId={role.id} />
-              <span className="text-xs text-slate-500 dark:text-slate-400">({roleStats[role.id] || 0})</span>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       {/* Modal */}
       <Modal isOpen={showModal} onClose={handleCloseModal} title={editingOperator ? 'Editar Operador' : 'Novo Operador'} size="lg">

@@ -203,10 +203,14 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
 
 const QualidadeView = () => {
   const { activeView, sessions, machines, operators } = useStore();
-  const [activeTab, setActiveTab] = useState(
-    activeView === 'qualidade-alertas' ? 'fatigue' :
-    activeView === 'qualidade-historico' ? 'history' : 'pending'
-  );
+  // Map activeView to tab on initial render only
+  const initialTab = useMemo(() => {
+    if (activeView === 'qualidade-alertas') return 'fatigue';
+    if (activeView === 'qualidade-historico') return 'history';
+    return 'pending';
+  }, [activeView]);
+
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
     if (activeView === 'qualidade-alertas') setActiveTab('fatigue');

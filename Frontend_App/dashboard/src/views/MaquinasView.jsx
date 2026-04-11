@@ -22,7 +22,7 @@ import { getCategoryName, getLocationName, getCategoryId } from '../utils/safeRe
 import { formatHours, formatConsumption } from '../utils/formatters';
 
 // Card de máquina
-const MachineCard = ({ machine, onEdit, onDelete: _onDelete, selected, onSelect, selectionMode }) => {
+const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode }) => {
   const hoursProgress = Math.min(100, ((machine.partialHours || 0) / 150) * 100);
   const needsMaintenance = hoursProgress >= 80;
 
@@ -311,10 +311,11 @@ const MaquinasView = () => {
   const [editingMachine, setEditingMachine] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
-  const [selectionMode, setSelectionMode] = useState(activeView === 'maquinas-localizacao');
+  const isLocationView = activeView === 'maquinas-localizacao';
+  const [selectionMode, setSelectionMode] = useState(isLocationView);
   const [selectedMachines, setSelectedMachines] = useState([]);
 
-  // Sincronizar modo de seleção com o submenu lateral
+  // Sync selection mode with sidebar submenu
   useEffect(() => {
     if (activeView === 'maquinas-localizacao') {
       setSelectionMode(true);

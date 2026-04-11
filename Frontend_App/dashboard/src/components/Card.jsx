@@ -15,7 +15,7 @@ const Card = forwardRef(({
   loading = false,
   noPadding = false,
   onClick,
-  as: Component = 'div',
+  as: AsComponent = 'div',
   ...props
 }, ref) => {
   const baseClasses = 'bg-white rounded-xl transition-all duration-300';
@@ -53,7 +53,7 @@ const Card = forwardRef(({
   }
 
   return (
-    <Component
+    <AsComponent
       ref={ref}
       className={`
         ${baseClasses}
@@ -97,7 +97,7 @@ const Card = forwardRef(({
           )}
         </div>
       )}
-    </Component>
+    </AsComponent>
   );
 });
 

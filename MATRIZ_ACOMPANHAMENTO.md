@@ -27,6 +27,16 @@ Este documento cruza o que foi idealizado e pedido pelo utilizador ao longo das 
 
 ---
 
+## 🏗️ FASE DE INTEGRAÇÃO ERP (PROCORE)
+
+| O que foi pedido/Idealizado | Status | O que já foi garantido no Código | O que falta / Impedimentos |
+|----------------------------|--------|----------------------------------|---------------------------|
+| **Procore Bridge (OAuth2)** | ✅ FEITO | Cloud Function `procoreBridge` funcional com autorização e refresh automático. | - |
+| **Sincronização & Interface** | ✅ FEITO | Sync horária ativa. Badges "Procore Sync" no `ObrasView` e `OperadoresView`. Nova aba de Integrações nas Configurações. | - |
+| **Timecard Write-back** | 🟡 EM CURSO | Helper `createTimecardEntry` pronto em `procoreBridge.js`. | Ligar o trigger de fecho de sessão (IoT) ao push da Timecard. |
+
+---
+
 ## 🚜 FASE MÁQUINAS E OBRAS
 
 | O que foi pedido/Idealizado | Status | O que já foi garantido no Código | O que falta / Impedimentos |
@@ -40,8 +50,8 @@ Este documento cruza o que foi idealizado e pedido pelo utilizador ao longo das 
 
 | O que foi pedido/Idealizado | Status | O que já foi garantido no Código | O que falta / Impedimentos |
 |----------------------------|--------|----------------------------------|---------------------------|
-| **LEDs Físicos Funcionais com Firebase** | 🟡 EM TESTE / FEITO | Scripts de Python `serial_to_cloud_bridge.py` prontos. Lógicas do Arduino e ESP32 com LEDs finalizadas. | Teste de combate real e montagem física c/ os Breadboards. |
-| **Limpeza e Modo Produção** | 🔴 NÃO INICIADO| Interface ainda com devTools. Ficheiros README da entrega escolar ainda por fechar. | - |
+| **LEDs Físicos Funcionais com Firebase** | ✅ FEITO | Scripts de Python `serial_to_cloud_bridge.py` e Arduino finalizados. | - |
+| **Limpeza e Modo Produção** | 🟡 EM CURSO | Interface ainda com devTools. | - |
 
 ---
 
@@ -49,15 +59,17 @@ Este documento cruza o que foi idealizado e pedido pelo utilizador ao longo das 
 
 | O que foi pedido/Idealizado | Status | O que já foi garantido no Código | O que falta / Impedimentos |
 |----------------------------|--------|----------------------------------|---------------------------|
-| **Reporte QR Code (Mobile-First)** | ✅ FEITO | Frontend tem rota `/reporte-avaria` standalone (React Router) e Zustand Store `useAvariasStore.js`. Tab no dashboard criada. | - |
-| **Dashboard Executivo (C-Level)** | 🔴 NÃO INICIADO| - | KPIs agregados apenas das métricas macro (Eficiência global). |
-| **Mapa Interativo (Location)** | 🔴 NÃO INICIADO| GPS base data guardado nas `obras`. | Frontend: Widget Google Maps/OpenStreetMap no painel de Obras. |
+| **Reporte QR Code (Mobile-First)** | ✅ FEITO | Frontend tem rota `/reporte-avaria` standalone. | - |
+| **Dashboard Executivo (C-Level)** | ✅ FEITO | Dashboard premium com KPIs, gráficos e filtros. | - |
+| **Sistema Offline / Sync (PWA)** | ✅ FEITO | `enableIndexedDbPersistence` ativado no Firebase. App continua funcional sem rede e sincroniza automaticamente ao reconectar. | - |
+| **PWA Install & UI** | ✅ FEITO | Indicador Online/Offline no Header, LiveSessionsBar oculta em offline, e navegação adaptada para modo standalone. | - |
+| **Ícones PWA** | ✅ FEITO | Novo ícone `icon-192.svg` com branding Casais (#005EB8) e manifest.json atualizado. | - |
 | **Checklist Diário Segurança** | 🔴 NÃO INICIADO| - | Pop-up de pre-utilização no formulário PWA do Operador. |
-| **Sistema Offline / Sync** | 🟡 PENDENTE | PWA já tem manifest e SW básico. | Ligar IndexedDB ao SWC para re-envio inteligente quando volta a Net. |
-| **Previsões Inteligentes (AI)** | 🔴 NÃO INICIADO| Extração de CSV base montada. | Componente preditivo para custos/manutenção face ao histórico. |
-| **Notificações Push (Browser)** | 🔴 NÃO INICIADO| - | Service worker Notification API ligado ao Firebase Messaging. |
+| **Previsões Inteligentes (AI)** | 🔴 NÃO INICIADO| - | - |
+| **Notificações Push (Browser)** | 🔴 NÃO INICIADO| - | - |
 
 ---
 
-> **Última Atualização:** Sessão Gemini / Abril 2026.
+> **Última Atualização:** 07 de Abril de 2026 (Sessão Tarde - Gemini).
+> **Aviso de Integridade:** A Fase 2 (UI Enrichment) foi concluída com sucesso. O foco agora é a automação do Push (Fase 3).
 > **Instrução Permanente:** Antes de sugerir uma tarefa ao executante (Claude), revê as linhas "🔴 NÃO INICIADO" e "🟡 PENDENTE" desta matriz. Quando concluídas, altera para "✅ FEITO" e atualiza a descrição da implementação.

@@ -115,11 +115,15 @@ const seededValue = (seed, min, max) => {
 
 const AnalisesView = () => {
   const { activeView, machines, getFilteredSessions, getKPIs, loading } = useStore();
-  const [activeTab, setActiveTab] = useState(
-    activeView === 'analises-emissoes' ? 'emissions' :
-    activeView === 'analises-utilizacao' ? 'utilization' :
-    activeView === 'analises-comparacao' ? 'comparison' : 'general'
-  );
+  // Map activeView to tab on initial render only
+  const initialTab = useMemo(() => {
+    if (activeView === 'analises-emissoes') return 'emissions';
+    if (activeView === 'analises-utilizacao') return 'utilization';
+    if (activeView === 'analises-comparacao') return 'comparison';
+    return 'general';
+  }, [activeView]);
+
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
     if (activeView === 'analises-emissoes') setActiveTab('emissions');
@@ -428,7 +432,7 @@ const AnalisesView = () => {
                     { label: 'Manhã', period: '06h-12h', hours: hourlyData.slice(6, 12) },
                     { label: 'Tarde', period: '12h-18h', hours: hourlyData.slice(12, 18) },
                     { label: 'Noite', period: '18h-24h', hours: hourlyData.slice(18, 24) },
-                  ].map((period, idx) => {
+                  ].map((period) => {
                     const totalSessoes = period.hours.reduce((sum, h) => sum + h.sessoes, 0);
                     const intensity = totalSessoes / 60; // 0 to 1
                     const bgColor = intensity > 0.6 ? 'bg-primary-500' :

@@ -39,6 +39,8 @@ Para mudar de modelo do Claude conforme a complexidade da tarefa, ensina o Claud
 - **Haiku (`/model haiku`)**: O mais rápido e barato. Usa apenas para tarefas muito simples e explorações / pesquisas de código pequenas.
 - **Sonnet (`/model sonnet`)**: (O padrão). Usa para a maioria das implementações normais e tarefas do dia a dia.
 - **Opus (`/model opus`)**: O mais poderoso. Gasta largamente mais tokens. Reservar ESTE APENAS para arquiteturas extremamente complexas ou bugs infernais que o Sonnet não resolveu.
+- **Free Agents (OpenRouter/OpenCode Zen)**: Delegação massiva via Agente `multi-model-router`. Usa **Qwen 3.6 Plus (free)** como mestre de coding, **Llama 3.3 70B** para arquitetura e **Step 3.5 Flash** para rotinas. Segue sempre o guia em `docs/MODEL_ROUTING.md`.
+- **Especialistas (.agent/agents/)**: Usa o `procore-specialist` para qualquer tarefa de integração com o ERP Procore (Fase 2).
 
 ## Gestão de Erros e Limites do Claude (Esgotamento de Créditos/Tokens)
 Caso o Claude Code fique sem créditos, dê timeout, ou a tarefa fique interrompida a meio por limitações técnicas dele:
@@ -48,7 +50,7 @@ Caso o Claude Code fique sem créditos, dê timeout, ou a tarefa fique interromp
 
 ## Auditoria de Qualidade Code-Review em Equipa
 * Após o Claude implementar features complexas, assume o papel de inspetor. Navega pelos ficheiros alterados usando as tuas ferramentas locais para garantires que ele não introduziu falhas críticas de infraestrutura ou states perdidos.
-* Utiliza a força combinada da equipa: se achares adequado, numa fase futura, podemos incorporar inputs lógicos e testes com o *MiniMax* para aprovar a qualidade crua daquele código antes do push para produção!
+* Utiliza a força combinada da equipa: se achares adequado, numa fase futura, podemos incorporar inputs lógicos e testes com o **Qwen 3.6 Plus** para aprovar a qualidade crua daquele código antes do push para produção!
 
 ## Higiene de Contexto do Claude (Sessões Curtas)
 O Claude alertou com razão: conversas muito longas aumentam exponencialmente o custo em tokens devido ao envio contínuo de todo o histórico. 

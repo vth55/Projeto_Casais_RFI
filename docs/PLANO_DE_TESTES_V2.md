@@ -9,11 +9,10 @@
 
 | Passo | Ação | Resultado Esperado |
 | :--- | :--- | :--- |
-| 1 | Desligar Wi-Fi/4G do telemóvel da empresa. | App fica em modo `Offline`. |
-| 2 | Efetuar scan RFID no ESP32 da máquina. | O ESP32 guarda o scan e começa a transmitir via BLE. |
-| 3 | Aproximar o telemóvel (offline) da máquina. | O PWA recolhe o dado e guarda em `IndexedDB` (Persistent Storage). |
-| 4 | Ligar Wi-Fi/4G no telemóvel. | O Service Worker deteta rede e envia o scan para o Firebase. |
-| 5 | Verificar Dashboard. | A sessão aparece com o timestamp original correto. |
+| 1 | Desligar Wi-Fi/4G do telemóvel da empresa (Mobile Hub). | App fica em modo `Offline`. |
+| 2 | Simular registo de sessão sem rede. | O PWA recolhe o dado e guarda em `IndexedDB` (Persistent Storage). |
+| 3 | Ligar Wi-Fi/4G no telemóvel. | O Service Worker deteta rede e envia o scan para o Firebase. |
+| 4 | Verificar Dashboard Online. | A sessão aparece com o timestamp original correto. |
 
 ---
 

@@ -13,7 +13,7 @@
  * - Navegação rápida
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Wrench,
   X,
@@ -104,16 +104,19 @@ const QRCodeTab = () => {
     { id: 'admin', label: 'Administrador', desc: 'Acesso total (demo)' },
   ];
 
-  // Gerar URL de acesso com token de role (usando useMemo para estabilidade)
-  const baseUrl = window.location.origin;
-  const accessUrl = useMemo(() => {
+  // Generate access URL with role token
+  const [accessUrl, setAccessUrl] = useState('');
+
+  useEffect(() => {
+    const baseUrl = window.location.origin;
+    const expDate = Date.now() + 24 * 60 * 60 * 1000; // 24h from now
     const accessToken = btoa(JSON.stringify({
       role: selectedRole,
       type: 'demo_access',
-      exp: Date.now() + 24 * 60 * 60 * 1000, // 24h
+      exp: expDate,
     }));
-    return `${baseUrl}?access=${accessToken}`;
-  }, [selectedRole, baseUrl]);
+    setAccessUrl(`${baseUrl}?access=${accessToken}`);
+  }, [selectedRole]);
 
   const copyUrl = () => {
     navigator.clipboard.writeText(accessUrl);

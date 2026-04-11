@@ -337,11 +337,6 @@ service cloud.firestore {
 - ✅ Funciona offline (modo leitura)
 - ✅ Sincroniza quando volta conexão
 
-### **ESP32 Offline:**
-- ✅ Guarda dados localmente se WiFi falhar
-- ✅ Sincroniza quando volta conexão
-- ✅ Não perde dados
-
 ---
 
 ## 🎯 VANTAGENS DO FIRESTORE

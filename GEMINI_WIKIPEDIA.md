@@ -9,9 +9,8 @@
 ## 🏗️ 1. CORE ARCHITECTURE & ROOT DOCS
 *Os documentos genéricos que ditam o rumo do projeto.*
 - **`MEMORIA.md`**: O "state of the union" atual. É o log contínuo das tarefas da sessão e o resumo técnico ativo. (Ficheiro único de contexto root).
-- **`DOCUMENTACAO_PROJETO.md`**: A base completa do sistema, a hierarquia de Hardware (Arduino/ESP32 vs Python vs Cloud). Regras cruciais como o "Auto-Fill" de cartões.
-- **`FLUXO_SISTEMA.txt`**: Os 6 fluxos práticos cruciais do sistema em texto/diagrama de ponta a ponta (como o sistema reata quando a máquina lê um RFID).
-- **`CLAUDE.md` / `MINIMAX.md` / `GEMINI.md`**: As regras de Persona das várias IAs na equipa de desenvolvimento.
+- **`DOCUMENTACAO_PROJETO.md`**: A base completa do sistema, a hierarquia de Hardware (Arduino + PWA) vs Cloud. Regras cruciais como o "Auto-Fill" de cartões.
+- **`FLUXO_SISTEMA.md`**: Os 6 fluxos práticos cruciais do sistema em texto/diagrama de ponta a ponta.
 
 ## 📚 2. AS BÍBLIAS TÉCNICAS (Diretório `/docs`)
 *Se um pedido do utilizador tocar em algum destes temas específicos, abre OBRIGATORIAMENTE o MD correspondente antes de aconselhar.*
@@ -25,7 +24,6 @@
 | **Estatísticas Avançadas e Gráficos** | `SISTEMA_GRAFICOS_ANALISES.md` | Requisitos de dashboard, componentes Recharts e visualização de consumo L/h e métricas CO2. |
 | **Métricas Industriais Padrão** | `KPIS_PROFISSIONAIS_SETOR.md` | O que monitorizar profissionalmente na construção (TCO, taxa de ociosidade, etc). A base do "Enterprise Design". |
 | **Arquitetura V2 & Inovação** | `ESTRATEGIA_ARQUITETURA_V2.md` | Estratégia de Scale-up: BLE Harvesting, Human-Relay, Segurança IoT e BigQuery. |
-| **Simulação de Hardware (Braga)**| `SIMULADOR_WOKWI_GUIA.md` | Guia de uso do laboratório virtual Wokwi para testes remotos de ESP32. |
 | **Infraestrutura JSON e Schemas do Firebase** | `ARQUITETURA_DADOS.md` | Dicionários de dados completos (Collections, Docs, Sub-Collections) do projeto. |
 | **Tipologia de Equipamentos** | `TIPOS_EQUIPAMENTO_PROFISSIONAIS.md` | Classes e hierarquias reais usadas no construtor Casais. |
 | **Testes e CI/CD** | `TESTES_AUTOMATIZADOS.md` | Como efetuar testes E2E e unitários. |

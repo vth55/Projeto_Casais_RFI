@@ -8,7 +8,6 @@ import { persist } from 'zustand/middleware';
 import {
   DEFAULT_ROLES,
   ROLE_LEVELS,
-  getRolePermissions,
   hasPermission,
   canAccessMenu,
   canManageRole,
@@ -169,7 +168,7 @@ const useAuthStore = create(
 
       // Obter nível do utilizador atual
       getUserLevel: () => {
-        const { currentUser, customRoles } = get();
+        const { currentUser, customRoles = {} } = get();
         if (!currentUser) return ROLE_LEVELS.VISUALIZADOR;
         const role = get().getRole(currentUser.systemRole);
         return role?.level ?? ROLE_LEVELS.VISUALIZADOR;

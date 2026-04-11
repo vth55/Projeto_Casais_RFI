@@ -26,7 +26,7 @@
 - **O Conceito:** Funcionários atuam como "estafetas de dados". A App no telemóvel recolhe logs das máquinas via Bluetooth de forma passiva e entrega-os na Cloud assim que encontra Wi-Fi.
 - **Valor:** Custo zero em infraestrutura de rede e 100% de cobertura de dados.
 
-### 2.2 Rede Mesh Industrial (M2M / ESP-NOW)
+### 2.2 Rede Mesh Industrial (M2M / BLE)
 - **O Conceito:** Máquinas distantes comunicam entre si ("Gossip Protocol") até que uma delas, com sinal de internet, entregue o buffet de dados global.
 - **Valor:** Eficiência máxima em estaleiros transfronteiriços e túneis.
 

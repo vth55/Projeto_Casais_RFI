@@ -12,6 +12,21 @@ const SESSION_THRESHOLDS = {
 };
 
 // Store principal da aplicação
+const UI_FIELDS = [
+  'id', 'totalHours', 'sessionCount', 'isActive',
+  'assignedObraName', 'systemRoleName', 'systemRoleLevel',
+  'syncStatus', 'lastScannedCard', 'totalWorkHours'
+];
+
+const sanitizeData = (data) => {
+  const clean = { ...data };
+  UI_FIELDS.forEach(field => delete clean[field]);
+  // Remover qualquer outro campo que seja undefined
+  return Object.fromEntries(
+    Object.entries(clean).filter(([_, v]) => v !== undefined)
+  );
+};
+
 const useStore = create((set, get) => ({
   // Estado
   sessions: [],
@@ -20,6 +35,11 @@ const useStore = create((set, get) => ({
   obras: [],
   maintenanceRecords: [],
   locationCards: [], // Cartões RFID de localização
+  // Procore — subcoleções sincronizadas via runFullSync (read-only mirror)
+  // Path: artifacts/{projectId}/public/data/integrations/procore/{projects,directory,equipment}
+  procoreProjects: [],
+  procoreDirectory: [],
+  procoreEquipment: [],
   loading: true,
   error: null,
   activeView: 'dashboard',
@@ -37,7 +57,7 @@ const useStore = create((set, get) => ({
   initializeListeners: () => {
     if (!db) {
       set({ error: 'Firestore não inicializado', loading: false });
-      return () => {};
+      return () => { };
     }
 
     const unsubscribers = [];
@@ -112,7 +132,101 @@ const useStore = create((set, get) => ({
       )
     );
 
+    // ============================================
+    // PROCORE — subcoleções espelho (read-only)
+    // ============================================
+    // Dados escritos pelo backend (runFullSync em procoreBridge.js). Aqui só lemos
+    // para enriquecer as vistas locais com badges de sincronização. Qualquer erro
+    // (permissões, integração ainda não conectada) é silenciado para não quebrar
+    // a app quando o Procore ainda não foi autorizado.
+    const procoreBase = `${basePath}/integrations/procore`;
+    const procoreCollections = [
+      { name: 'projects', stateKey: 'procoreProjects' },
+      { name: 'directory', stateKey: 'procoreDirectory' },
+      { name: 'equipment', stateKey: 'procoreEquipment' },
+    ];
+    procoreCollections.forEach(({ name, stateKey }) => {
+      unsubscribers.push(
+        onSnapshot(
+          collection(db, `${procoreBase}/${name}`),
+          (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            set({ [stateKey]: data });
+          },
+          (error) => {
+            // Silencioso — é normal estar vazio enquanto a integração não está ligada
+            console.debug(`[procore:${name}] listener off:`, error?.code || error?.message);
+          }
+        )
+      );
+    });
+
     return () => unsubscribers.forEach(unsub => unsub());
+  },
+
+  // ============================================
+  // PROCORE — Helpers de matching (Fase 2)
+  // ============================================
+  // Matching por nome normalizado entre entidades locais e o mirror Procore.
+  // Não é merge: o registo local permanece fonte de verdade. Só devolve o
+  // registo Procore correspondente para uso em badges e tooltips.
+
+  // Encontra o projeto Procore correspondente a uma obra local (match por nome).
+  // Retorna { matched: boolean, procoreProject: object|null }
+  matchObraToProcore: (obra) => {
+    if (!obra?.name) return { matched: false, procoreProject: null };
+    const { procoreProjects } = get();
+    if (!procoreProjects.length) return { matched: false, procoreProject: null };
+
+    const normalize = (s) => String(s || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const target = normalize(obra.name);
+    if (!target) return { matched: false, procoreProject: null };
+
+    const hit = procoreProjects.find(p => {
+      const pName = normalize(p.name || p.display_name || p.project_number);
+      return pName && (pName === target || pName.includes(target) || target.includes(pName));
+    });
+
+    return { matched: !!hit, procoreProject: hit || null };
+  },
+
+  // Encontra o user Procore correspondente a um operador local.
+  // Match por email (primário) ou nome normalizado (fallback).
+  matchOperatorToProcore: (operator) => {
+    if (!operator) return { matched: false, procoreUser: null };
+    const { procoreDirectory } = get();
+    if (!procoreDirectory.length) return { matched: false, procoreUser: null };
+
+    // 1. Email é o identificador mais fiável
+    if (operator.email) {
+      const emailLower = operator.email.toLowerCase().trim();
+      const byEmail = procoreDirectory.find(
+        u => (u.email_address || u.email || '').toLowerCase().trim() === emailLower
+      );
+      if (byEmail) return { matched: true, procoreUser: byEmail };
+    }
+
+    // 2. Fallback por nome
+    if (operator.name) {
+      const normalize = (s) => String(s || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+      const target = normalize(operator.name);
+      const byName = procoreDirectory.find(u => {
+        const full = normalize(u.name || `${u.first_name || ''} ${u.last_name || ''}`);
+        return full && full === target;
+      });
+      if (byName) return { matched: true, procoreUser: byName };
+    }
+
+    return { matched: false, procoreUser: null };
   },
 
   // ============================================
@@ -129,7 +243,8 @@ const useStore = create((set, get) => ({
         ? cardId.toUpperCase()
         : `LOC_${cardId.toUpperCase()}`;
 
-      const card = {
+      const card = sanitizeData({
+        ...cardData,
         id: normalizedId,
         obraId: cardData.obraId,
         obraName: cardData.obraName,
@@ -137,7 +252,7 @@ const useStore = create((set, get) => ({
         description: cardData.description || '',
         createdAt: Timestamp.now(),
         active: true,
-      };
+      });
 
       await setDoc(doc(db, `${basePath}/location_cards`, normalizedId), card);
       return { success: true, id: normalizedId };
@@ -152,8 +267,10 @@ const useStore = create((set, get) => ({
     if (!db) return { success: false, error: 'DB não inicializado' };
 
     try {
+      const cleanUpdates = sanitizeData(updates);
+
       await updateDoc(doc(db, `${basePath}/location_cards`, cardId), {
-        ...updates,
+        ...cleanUpdates,
         updatedAt: Timestamp.now(),
       });
       return { success: true };
@@ -250,10 +367,11 @@ const useStore = create((set, get) => ({
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      case 'quarter':
+      case 'quarter': {
         const quarter = Math.floor(now.getMonth() / 3);
         startDate = new Date(now.getFullYear(), quarter * 3, 1);
         break;
+      }
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
@@ -348,7 +466,7 @@ const useStore = create((set, get) => ({
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
       const id = machineData.id || `machine_${Date.now()}`;
-      await setDoc(doc(db, `${basePath}/machines`, id), {
+      const cleanMachine = sanitizeData({
         ...machineData,
         id,
         createdAt: Timestamp.now(),
@@ -356,6 +474,8 @@ const useStore = create((set, get) => ({
         partialHours: 0,
         status: 'IDLE',
       });
+
+      await setDoc(doc(db, `${basePath}/machines`, id), cleanMachine);
       return { success: true, id };
     } catch (error) {
       return { success: false, error: error.message };
@@ -365,7 +485,8 @@ const useStore = create((set, get) => ({
   updateMachine: async (id, data) => {
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
-      await updateDoc(doc(db, `${basePath}/machines`, id), data);
+      const cleanData = sanitizeData(data);
+      await updateDoc(doc(db, `${basePath}/machines`, id), cleanData);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -387,10 +508,12 @@ const useStore = create((set, get) => ({
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
       const id = operatorData.cardId || `op_${Date.now()}`;
-      await setDoc(doc(db, `${basePath}/operators`, id), {
+      const cleanOperator = sanitizeData({
         ...operatorData,
         registeredAt: Timestamp.now(),
       });
+
+      await setDoc(doc(db, `${basePath}/operators`, id), cleanOperator);
       return { success: true, id };
     } catch (error) {
       return { success: false, error: error.message };
@@ -410,8 +533,10 @@ const useStore = create((set, get) => ({
   updateOperator: async (id, data) => {
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
+      const cleanData = sanitizeData(data);
+
       await updateDoc(doc(db, `${basePath}/operators`, id), {
-        ...data,
+        ...cleanData,
         updatedAt: Timestamp.now(),
       });
       return { success: true };
@@ -560,8 +685,10 @@ const useStore = create((set, get) => ({
   updateObra: async (id, data) => {
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
+      const cleanData = sanitizeData(data);
+
       await updateDoc(doc(db, `${basePath}/obras`, id), {
-        ...data,
+        ...cleanData,
         updatedAt: Timestamp.now(),
       });
       return { success: true };
@@ -791,7 +918,7 @@ const useStore = create((set, get) => ({
       const hoursOpen = (now - startDate) / (1000 * 60 * 60);
 
       return hoursOpen >= SESSION_THRESHOLDS.FATIGUE_HOURS &&
-             hoursOpen < SESSION_THRESHOLDS.AUTO_CLOSE_HOURS;
+        hoursOpen < SESSION_THRESHOLDS.AUTO_CLOSE_HOURS;
     });
   },
 

@@ -30,6 +30,10 @@
         "function": "resendAlertEmail"
       },
       {
+        "source": "/api/procore/**",
+        "function": "procoreBridge"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

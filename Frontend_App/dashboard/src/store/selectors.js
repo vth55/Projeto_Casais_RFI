@@ -10,7 +10,7 @@
  * const activeMachines = useStore(selectActiveMachines);
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { shallow } from 'zustand/shallow';
 
 // ============================================

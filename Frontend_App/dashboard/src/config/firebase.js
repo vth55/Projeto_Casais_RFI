@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
@@ -13,9 +13,19 @@ const firebaseConfig = {
 };
 
 let app, db, auth, storage;
+
 try {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
+  
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Offline persistence: múltiplas abas abertas');
+    } else if (err.code === 'unimplemented') {
+      console.warn('Offline persistence: não suportado neste navegador');
+    }
+  });
+  
   auth = getAuth(app);
   storage = getStorage(app);
 } catch (e) {

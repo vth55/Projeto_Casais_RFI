@@ -83,14 +83,13 @@ O **Casais Fleet Intelligence** é um sistema completo de gestão de frotas indu
 │                    MÁQUINAS NO TERRENO                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  TIPO A: Arduino Uno + PC                                  │
-│  ├─ Arduino lê RFID (MFRC-522)                             │
-│  ├─ Envia via Serial para Python                           │
-│  └─ Python → Cloud Functions (HTTP)                        │
+│  Móvel: PWA (NFC Nativo)                                    │
+│  ├─ Smartphone lê TAG NFC                                   │
+│  └─ Envia via API → Cloud Functions                         │
 │                                                             │
-│  TIPO B: ESP32 (Autónomo)                                  │
-│  ├─ ESP32 lê RFID (MFRC-522)                               │
-│  └─ Envia direto via Wi-Fi → Cloud Functions              │
+│  Fixo: Arduino Uno + PC (Retrofit)                          │
+│  ├─ Arduino lê RFID (MFRC-522)                              │
+│  └─ Ponte Serial → Cloud Functions                          │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
                           │
@@ -136,8 +135,7 @@ O **Casais Fleet Intelligence** é um sistema completo de gestão de frotas indu
 - **Firebase Admin SDK** - Operações administrativas
 
 ### **Hardware**
-- **Arduino Uno/Nano** - Leitor RFID (Tipo A)
-- **ESP32** - Leitor RFID autónomo (Tipo B)
+- **Arduino Uno/Nano** - Leitor RFID (Retrofit)
 - **MFRC-522** - Módulo RFID
 - **LEDs** - Feedback visual (Verde/Amarelo/Vermelho)
 
@@ -165,9 +163,8 @@ Projeto_Casais_RFI/
 │       └── index.js                  # Lógica principal
 │
 ├── 🤖 Hardware/
-│   ├── arduino_rfid_simple/          # Código Arduino (Tipo A)
-│   ├── Hardware_ESP32/                # Código ESP32 (Tipo B)
-│   └── Hardware_Bridge_PC/            # Ponte Python (Tipo A)
+│   ├── arduino_rfid_simple/          # Código Arduino
+│   └── Hardware_Bridge_PC/            # Ponte Python
 │
 └── 📚 Documentação/
     ├── DOCUMENTACAO_PROJETO.md        # Manual técnico completo
@@ -247,19 +244,13 @@ Configurar `Backend_Cloud/.firebaserc`:
 }
 ```
 
-### **3. Hardware - Arduino (Tipo A)**
+### **3. Hardware - Arduino**
 1. Abrir `arduino_rfid_simple/arduino_rfid_led.ino`
 2. Verificar pinos (SS_PIN, RST_PIN, LEDs)
 3. Carregar no Arduino
 4. **IMPORTANTE:** Fechar Monitor Serial antes de usar Python bridge
 
-### **4. Hardware - ESP32 (Tipo B)**
-1. Abrir `Hardware_ESP32/fleet_rfid_hardware_led.cpp`
-2. Editar linhas 7-8 (Wi-Fi SSID e password)
-3. Editar `MACHINE_ID` (linha 11)
-4. Carregar no ESP32
-
-### **5. Python Bridge (Tipo A)**
+### **4. Python Bridge**
 Editar `Hardware_Bridge_PC/serial_to_cloud_bridge.py`:
 - Linha 7: Porta COM do Arduino (ex: `COM4`)
 - Linha 8: URL da Cloud Function

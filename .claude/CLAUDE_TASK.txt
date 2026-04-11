@@ -1,0 +1,9 @@
+OPEN: Backend_Cloud/functions/index.js
+OPEN: Frontend_App/dashboard/src/store/useStore.js
+OPEN: Frontend_App/dashboard/src/views/FinanceiroView.jsx
+
+TASK: Implementar Versionamento de Tarifários Financeiros da FASE 1. Revê o documento docs/SISTEMA_TARIFARIOS.md para retirar o esquema lógico de banco de dados e as fórmulas de cálculo.
+1. Em index.js (backend), injeta a lógica de custos ("calculateSessionCost") durante o "handleSessionTrigger" de STOP de sessão, indo procurar quer era o tarifário ativo na máquina e guardando o custo total dentro da session.
+2. No frontend, atualiza a useStore e a FinanceiroView para manipular as sub-camadas currentTariff e tariffHistory de cada Machine e injeta um componente gráfico Premium e limpo para essas tabelas de edição.
+Mantém o estilo "Estudante Universitário Mestre": usar 2-3 console.logs puros ocasionais de feedback, manter variáveis legíveis (sem enterprise overkill), evitar arquitetura boilerplate massiva de multinacionais, mantendo tudo super limpo, direto e visualmente incrível seguindo a formatação original da Dashboard Casais.
+Quando terminares de gravar os ficheiros fecha o terminal com sucesso.

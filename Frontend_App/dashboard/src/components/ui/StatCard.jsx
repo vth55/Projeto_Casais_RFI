@@ -119,7 +119,7 @@ const StatCard = ({
 
   if (loading) {
     return (
-      <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 ${className}`}>
+      <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 md:p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-xl" />
@@ -134,8 +134,9 @@ const StatCard = ({
 
   // Variant: Gradient - card with colored gradient background
   if (variant === 'gradient') {
+    const isCasaisPrimary = color === 'primary';
     return (
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${scheme.gradient} p-6 shadow-lg ${className}`}>
+      <div className={`relative overflow-hidden rounded-2xl ${isCasaisPrimary ? 'casais-gradient' : `bg-gradient-to-br ${scheme.gradient}`} p-3 sm:p-4 md:p-6 shadow-lg ${className}`}>
         {/* Background pattern */}
         <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8">
           <div className="absolute inset-0 bg-white/10 rounded-full" />
@@ -162,11 +163,11 @@ const StatCard = ({
           </div>
 
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold text-white tabular-nums">
+            <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tabular-nums">
               {formatValue(displayValue)}
             </span>
             {unit && (
-              <span className="text-lg font-medium text-white/70">{unit}</span>
+              <span className="text-sm sm:text-base md:text-lg font-medium text-white/70">{unit}</span>
             )}
           </div>
 
@@ -182,12 +183,12 @@ const StatCard = ({
   // Variant: Outline - card with colored left border
   if (variant === 'outline') {
     return (
-      <div className={`bg-white dark:bg-slate-800 rounded-2xl border-l-4 ${scheme.border} border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow duration-300 ${className}`}>
+      <div className={`bg-white dark:bg-slate-800 rounded-2xl border-l-4 ${scheme.border} border border-slate-200 dark:border-slate-700 p-3 sm:p-4 md:p-6 hover:shadow-lg transition-shadow duration-300 ${className}`}>
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500 mb-2">{title}</p>
             <div className="flex items-baseline gap-1.5">
-              <span className={`text-3xl font-bold ${scheme.text} tabular-nums`}>
+              <span className={`text-xl sm:text-2xl md:text-3xl font-bold ${scheme.text} tabular-nums`}>
                 {formatValue(displayValue)}
               </span>
               {unit && (
@@ -220,7 +221,7 @@ const StatCard = ({
 
   // Default variant - clean card with icon
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 ${className}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 md:p-6 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-300 ${className}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
@@ -233,7 +234,7 @@ const StatCard = ({
           </div>
 
           <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+            <span className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
               {formatValue(displayValue)}
             </span>
             {unit && (

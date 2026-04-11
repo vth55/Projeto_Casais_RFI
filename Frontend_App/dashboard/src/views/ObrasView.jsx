@@ -22,6 +22,7 @@ import {
   Wifi,
   ShieldAlert,
   AlertTriangle,
+  Link2,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
@@ -35,7 +36,7 @@ const OBRA_STATUS = {
 };
 
 // Card de Obra
-const ObraCard = ({ obra, machines, operators, onViewDetails, onEdit, onOpenMap }) => {
+const ObraCard = ({ obra, machines, operators, procoreProject, onViewDetails, onEdit, onOpenMap }) => {
   const machinesInObra = machines.filter(m =>
     (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
   );
@@ -43,10 +44,20 @@ const ObraCard = ({ obra, machines, operators, onViewDetails, onEdit, onOpenMap 
 
   const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
   const StatusIcon = status.icon;
+  const hasProcoreLink = !!procoreProject;
 
   return (
     <Card hover onClick={() => onViewDetails(obra)} className="relative">
-      <div className="absolute top-3 right-3">
+      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+        {hasProcoreLink && (
+          <span
+            title={`Sincronizado com Procore: ${procoreProject.name || procoreProject.display_name || procoreProject.project_number || procoreProject.id}`}
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gradient-to-r from-[#005EB8] to-[#0077d4] text-white uppercase tracking-wide shadow-sm"
+          >
+            <Link2 className="w-2.5 h-2.5" />
+            Procore
+          </span>
+        )}
         <Badge variant={status.color} size="sm">
           <StatusIcon className="w-3 h-3 mr-1" />
           {status.label}
@@ -795,7 +806,7 @@ const VIEW_TO_FILTER = {
 };
 
 const ObrasView = () => {
-  const { activeView, setActiveView, obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard } = useStore();
+  const { activeView, setActiveView, obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard, matchObraToProcore } = useStore();
   const { isAdmin } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
@@ -1053,6 +1064,7 @@ const ObrasView = () => {
                 obra={obra}
                 machines={machines}
                 operators={operators}
+                procoreProject={matchObraToProcore(obra).procoreProject}
                 onViewDetails={handleViewDetails}
                 onEdit={handleEdit}
                 onOpenMap={handleOpenMap}

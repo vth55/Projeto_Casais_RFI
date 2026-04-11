@@ -9,7 +9,8 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 leading-relaxed;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
@@ -58,16 +59,6 @@
   }
 }
 
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 94, 184, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(0, 94, 184, 0);
-  }
-}
-
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
 }
@@ -87,22 +78,7 @@
   background-size: 1000px 100%;
 }
 
-/* Glassmorphism effect */
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.glass-dark {
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Gradient text */
+/* Gradient text - Casais brand */
 .gradient-text {
   background: linear-gradient(135deg, #005eb8 0%, #0ea5e9 100%);
   -webkit-background-clip: text;
@@ -134,50 +110,6 @@ html {
   background: #94a3b8;
 }
 
-/* Animação de spin lento */
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin-slow {
-  animation: spin-slow 20s linear infinite;
-}
-
-/* Animação de bounce suave */
-@keyframes bounce-soft {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-.animate-bounce-soft {
-  animation: bounce-soft 2s ease-in-out infinite;
-}
-
-/* Animação de scale in */
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-scale-in {
-  animation: scale-in 0.3s ease-out;
-}
-
 /* Stagger animation helper */
 .stagger-1 { animation-delay: 0.1s; }
 .stagger-2 { animation-delay: 0.2s; }
@@ -188,11 +120,6 @@ html {
 /* Focus visible para acessibilidade */
 .focus-ring {
   @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
-}
-
-/* Hover card effect */
-.hover-lift {
-  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
 }
 
 /* Tabular nums para números alinhados */
@@ -208,4 +135,76 @@ html {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* ============================================================
+   CASAIS — Brand utilities (azul #005EB8)
+   Enterprise: clean, legível, sem decoração excessiva
+   ============================================================ */
+
+:root {
+  --casais-h: 211;
+  --casais-s: 100%;
+  --casais-l: 36%;
+  --casais-blue: hsl(var(--casais-h) var(--casais-s) var(--casais-l));
+  --casais-blue-deep: hsl(var(--casais-h) 100% 22%);
+  --casais-blue-bright: hsl(var(--casais-h) 90% 52%);
+}
+
+@layer utilities {
+  /* ---------- Casais gradient (KPIs, botões primários) ---------- */
+  .casais-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--casais-h) 100% 22%) 0%,
+      hsl(var(--casais-h) 100% 36%) 50%,
+      hsl(var(--casais-h) 90% 52%) 100%
+    );
+  }
+
+  .casais-gradient-soft {
+    background: linear-gradient(
+      135deg,
+      hsla(var(--casais-h), 100%, 36%, 0.08) 0%,
+      hsla(199, 92%, 56%, 0.04) 100%
+    );
+  }
+
+  .casais-gradient-text {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--casais-h) 100% 28%) 0%,
+      hsl(var(--casais-h) 95% 45%) 60%,
+      hsl(199 92% 56%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* ---------- Enterprise card hover (subtle) ---------- */
+  .hover-enterprise {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .hover-enterprise:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 94, 184, 0.2);
+  }
+
+  .dark .hover-enterprise:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: rgba(0, 94, 184, 0.3);
+  }
+
+  /* ---------- Sync indicator (discreto, só durante sync) ---------- */
+  @keyframes casais-sync-ring {
+    0%, 100% { box-shadow: 0 0 0 0 hsla(var(--casais-h), 100%, 50%, 0.3); }
+    50% { box-shadow: 0 0 0 6px hsla(var(--casais-h), 100%, 50%, 0); }
+  }
+
+  .animate-casais-sync {
+    animation: casais-sync-ring 2s ease-in-out infinite;
+  }
 }
