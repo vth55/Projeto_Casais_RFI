@@ -146,6 +146,39 @@ const useProcoreStatus = () => {
   return { status, loading, error, refetch: fetchStatus };
 };
 
+const useProcoreRecon = () => {
+  const { sessions } = useStore();
+  return useMemo(() => {
+    const closed = sessions.filter(s => s.status === 'CLOSED' || s.status === 'AUTO_CLOSED');
+    const exported = closed.filter(s => s.procoreExport?.exported === true);
+    const pendingRetry = closed.filter(s =>
+      s.procoreExport?.exported === false &&
+      s.procoreExport?.nextRetryAfter &&
+      !s.procoreExport?.gaveUp
+    );
+    const failed = closed.filter(s =>
+      s.procoreExport?.exported === false &&
+      (s.procoreExport?.gaveUp || (!s.procoreExport?.nextRetryAfter && s.procoreExport?.retryCount > 0))
+    );
+
+    const localHours = closed.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+    const exportedHours = exported.reduce((sum, s) => sum + (s.procoreExport?.hours || s.durationHours || 0), 0);
+    const syncRate = closed.length > 0 ? (exported.length / closed.length) * 100 : 0;
+
+    return {
+      totalClosed: closed.length,
+      exportedCount: exported.length,
+      pendingCount: pendingRetry.length,
+      failedCount: failed.length,
+      localHours: Math.round(localHours * 10) / 10,
+      exportedHours: Math.round(exportedHours * 10) / 10,
+      syncRate,
+      gapHours: Math.round((localHours - exportedHours) * 10) / 10,
+      gapPercent: localHours > 0 ? Math.round(((localHours - exportedHours) / localHours) * 1000) / 10 : 0,
+    };
+  }, [sessions]);
+};
+
 const ProcoreSyncCard = ({ compact = false }) => {
   const { status, loading, error, refetch } = useProcoreStatus();
   const [syncing, setSyncing] = useState(false);
@@ -338,43 +371,14 @@ const SyncRateRing = ({ rate, size = 128, strokeWidth = 10 }) => {
 };
 
 const ProcoreReconciliationPanel = () => {
-  const { sessions } = useStore();
+  const { isDesktop } = useDeviceType();
+  const recon = useProcoreRecon();
   const { status, loading, error, refetch } = useProcoreStatus();
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
-
-  const recon = useMemo(() => {
-    const closed = sessions.filter(s => s.status === 'CLOSED' || s.status === 'AUTO_CLOSED');
-    const exported = closed.filter(s => s.procoreExport?.exported === true);
-    const pendingRetry = closed.filter(s =>
-      s.procoreExport?.exported === false &&
-      s.procoreExport?.nextRetryAfter &&
-      !s.procoreExport?.gaveUp
-    );
-    const failed = closed.filter(s =>
-      s.procoreExport?.exported === false &&
-      (s.procoreExport?.gaveUp || (!s.procoreExport?.nextRetryAfter && s.procoreExport?.retryCount > 0))
-    );
-
-    const localHours = closed.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-    const exportedHours = exported.reduce((sum, s) => sum + (s.procoreExport?.hours || s.durationHours || 0), 0);
-    const syncRate = closed.length > 0 ? (exported.length / closed.length) * 100 : 0;
-
-    return {
-      totalClosed: closed.length,
-      exportedCount: exported.length,
-      pendingCount: pendingRetry.length,
-      failedCount: failed.length,
-      localHours: Math.round(localHours * 10) / 10,
-      exportedHours: Math.round(exportedHours * 10) / 10,
-      syncRate,
-      gapHours: Math.round((localHours - exportedHours) * 10) / 10,
-      gapPercent: localHours > 0 ? Math.round(((localHours - exportedHours) / localHours) * 1000) / 10 : 0,
-    };
-  }, [sessions]);
 
   const handleSync = async () => {
     if (syncing) return;
@@ -441,14 +445,14 @@ const ProcoreReconciliationPanel = () => {
   return (
     <div className="rounded-lg overflow-hidden border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-900/5 dark:shadow-black/20 animate-fade-in">
       {/* ── Gradient Header ─────────────────────────────────────────── */}
-      <div className="casais-gradient px-6 py-4 flex items-center justify-between">
+      <div className="casais-gradient px-4 lg:px-6 py-3 lg:py-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
             <Building2 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">Procore Reconciliation</h3>
-            <p className="text-xs text-white/60">
+            <h3 className="text-sm lg:text-base font-bold text-white tracking-tight">Procore Reconciliation</h3>
+            <p className="text-[11px] lg:text-xs text-white/60">
               Sync {lastSyncLabel}
               {status?.last_sync_trigger && (
                 <span className="ml-1">· {status.last_sync_trigger === 'cron' ? 'automática' : 'manual'}</span>
@@ -456,10 +460,10 @@ const ProcoreReconciliationPanel = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3">
           <Badge
             variant={hasSyncErrors ? 'warning' : 'success'}
-            className="text-[10px] uppercase tracking-wider border border-white/20"
+            className="text-[10px] uppercase tracking-wider border border-white/20 hidden sm:inline-flex"
           >
             {hasSyncErrors ? 'parcial' : 'operacional'}
           </Badge>
@@ -467,7 +471,7 @@ const ProcoreReconciliationPanel = () => {
             onClick={handleSync}
             disabled={syncing}
             aria-label="Sincronizar agora com o Procore"
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-primary-700 bg-white hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.97]"
+            className="flex items-center gap-2 px-3 lg:px-4 py-2 text-xs font-bold text-primary-700 bg-white hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.97]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'A sincronizar...' : 'Sincronizar'}
@@ -476,18 +480,18 @@ const ProcoreReconciliationPanel = () => {
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 p-6">
-        <div className="flex gap-8 items-start">
-          {/* LEFT — Sync Rate Ring */}
-          <div className="flex flex-col items-center gap-2 pt-1">
-            <SyncRateRing rate={recon.syncRate} />
+      <div className="bg-white dark:bg-slate-800 p-4 lg:p-6">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center lg:items-start">
+          {/* RING — centrado no tablet, esquerda no desktop */}
+          <div className="flex flex-col items-center gap-2 lg:pt-1">
+            <SyncRateRing rate={recon.syncRate} size={isDesktop ? 128 : 104} />
             <p className="text-xs text-slate-400 font-medium text-center mt-1">
               {recon.exportedCount} de {recon.totalClosed} sessões
             </p>
           </div>
 
-          {/* RIGHT — Pipeline + Hours */}
-          <div className="flex-1 space-y-6 min-w-0">
+          {/* PIPELINE + HOURS — full width tablet, flex-1 desktop */}
+          <div className="flex-1 w-full lg:w-auto space-y-6 min-w-0">
             {/* Export Pipeline */}
             <div>
               <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em] mb-3">
@@ -589,7 +593,7 @@ const ProcoreReconciliationPanel = () => {
         {/* ── Footer — Procore Catalog Summary ─────────────────────── */}
         <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 lg:gap-6 flex-wrap">
               {[
                 { label: 'Obras', value: counts.projects, error: status?.last_sync_errors?.projects },
                 { label: 'Equipamentos', value: counts.equipment, error: status?.last_sync_errors?.equipment },
