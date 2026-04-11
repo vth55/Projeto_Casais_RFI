@@ -137,6 +137,29 @@ html {
   display: none;
 }
 
+/* Sticky first column para tabelas com scroll horizontal no mobile */
+.table-sticky-first th:first-child,
+.table-sticky-first td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: inherit;
+}
+.table-sticky-first thead th:first-child {
+  background: rgb(248 250 252); /* slate-50 */
+}
+.table-sticky-first tbody td:first-child {
+  background: white;
+}
+@media (prefers-color-scheme: dark) {
+  .table-sticky-first thead th:first-child {
+    background: rgb(15 23 42 / 0.5); /* slate-800/50 */
+  }
+  .table-sticky-first tbody td:first-child {
+    background: rgb(30 41 59); /* slate-800 */
+  }
+}
+
 /* ============================================================
    CASAIS — Brand utilities (azul #005EB8)
    Enterprise: clean, legível, sem decoração excessiva

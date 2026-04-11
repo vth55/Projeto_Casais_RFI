@@ -1,13 +1,69 @@
-import React from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 
-const Table = ({ children, className = '' }) => (
-  <div className={`overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}>
-    <table className="w-full text-sm">
-      {children}
-    </table>
-  </div>
-);
+/**
+ * Table — responsive data table com scroll horizontal nativo no mobile.
+ *
+ * No mobile (<768px):
+ *  - A tabela não encolhe abaixo de `minWidth` (default 640px)
+ *  - Scroll horizontal com indicadores de sombra nas bordas
+ *  - Touch scroll suave (momentum-based)
+ *  - Primeira coluna pode ficar sticky via `stickyFirst` prop
+ *
+ * No desktop:
+ *  - Tabela ocupa 100% da largura como habitual
+ */
+
+const Table = ({ children, className = '', stickyFirst = false, minWidth = 640 }) => {
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      ro.disconnect();
+    };
+  }, [checkScroll]);
+
+  return (
+    <div className={`relative rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}>
+      {/* Scroll shadow indicators — só visíveis quando há overflow */}
+      {canScrollLeft && (
+        <div className="absolute left-0 top-0 bottom-0 w-6 z-10 pointer-events-none rounded-l-lg bg-gradient-to-r from-slate-100/80 dark:from-slate-800/80 to-transparent" />
+      )}
+      {canScrollRight && (
+        <div className="absolute right-0 top-0 bottom-0 w-6 z-10 pointer-events-none rounded-r-lg bg-gradient-to-l from-slate-100/80 dark:from-slate-800/80 to-transparent" />
+      )}
+
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto overscroll-x-contain"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <table
+          className={`w-full text-sm ${stickyFirst ? 'table-sticky-first' : ''}`}
+          style={{ minWidth: `${minWidth}px` }}
+        >
+          {children}
+        </table>
+      </div>
+    </div>
+  );
+};
 
 Table.Head = ({ children }) => (
   <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
@@ -24,7 +80,7 @@ Table.Body = ({ children }) => (
 Table.Row = ({ children, onClick, className = '' }) => (
   <tr
     className={`
-      ${onClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}
+      ${onClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 active:bg-slate-100 dark:active:bg-slate-700/50' : ''}
       transition-colors
       ${className}
     `}
