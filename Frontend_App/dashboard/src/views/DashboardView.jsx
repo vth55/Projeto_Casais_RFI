@@ -623,6 +623,172 @@ const ProcoreReconciliationPanel = () => {
 };
 
 // ============================================================
+// MOBILE PROCORE CARD — Versão touch-native com reconciliação
+// ============================================================
+
+const MobileProcoreCard = () => {
+  const recon = useProcoreRecon();
+  const { status, loading, error, refetch } = useProcoreStatus();
+  const [syncing, setSyncing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
+
+  const handleSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(PROCORE_SYNC_URL, { method: 'POST' });
+      if (!res.ok && res.status !== 207) throw new Error('Sync falhou');
+      await refetch();
+    } catch (_) { /* silently handled */ }
+    finally { setSyncing(false); }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
+        <Skeleton.Stat />
+      </div>
+    );
+  }
+
+  if (error || !status?.connected) {
+    return (
+      <div
+        className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700"
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+      >
+        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0">
+          <Link2 className="w-5 h-5 text-slate-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-slate-900 dark:text-white">Procore</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            {error ? 'Erro de ligação' : 'Não conectado'}
+          </p>
+        </div>
+        <a
+          href="/api/procore/authorize"
+          className="text-xs font-bold text-white casais-gradient px-3 py-2 rounded-xl active:scale-[0.96] transition-transform"
+        >
+          Ligar
+        </a>
+      </div>
+    );
+  }
+
+  const counts = status?.last_sync_counts || { projects: 0, equipment: 0, directory: 0 };
+  const lastSyncLabel = formatRelativeTime(status?.last_sync_at);
+  const syncRateColor = recon.syncRate >= 85 ? 'text-emerald-400 bg-emerald-400/15'
+    : recon.syncRate >= 60 ? 'text-amber-400 bg-amber-400/15'
+    : 'text-red-400 bg-red-400/15';
+  const maxBar = recon.localHours || 1;
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm animate-fade-in"
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+    >
+      {/* ── Header fino com gradient ──────────────────────────────── */}
+      <div className="casais-gradient px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-white" />
+          <span className="text-sm font-bold text-white">Procore</span>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${syncRateColor}`}>
+            {Math.round(recon.syncRate)}% sync
+          </span>
+        </div>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          aria-label="Sincronizar Procore"
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/15 active:bg-white/25 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 text-white ${syncing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* ── Body ─────────────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-800 p-4 space-y-3.5">
+
+        {/* Pipeline — 3 counters em grid horizontal */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Exportadas', count: recon.exportedCount, Icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+            { label: 'Em Retry',   count: recon.pendingCount,  Icon: RefreshCw,    color: 'text-amber-500',   bg: 'bg-amber-50 dark:bg-amber-900/20' },
+            { label: 'Falharam',   count: recon.failedCount,   Icon: XCircle,      color: 'text-red-500',     bg: 'bg-red-50 dark:bg-red-900/20' },
+          ].map(({ label, count, Icon, color, bg }) => (
+            <div key={label} className={`${bg} rounded-xl p-2.5 text-center`}>
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <Icon className={`w-3.5 h-3.5 ${color}`} />
+                <span className="text-lg font-black tabular-nums text-slate-900 dark:text-white">{count}</span>
+              </div>
+              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Horas — barras empilhadas */}
+        <div className="space-y-2">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Horas Locais</span>
+              <span className="text-xs font-black tabular-nums text-slate-900 dark:text-white">
+                {recon.localHours.toLocaleString('pt-PT')}h
+              </span>
+            </div>
+            <div className="h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full casais-gradient"
+                style={{
+                  width: mounted ? '100%' : '0%',
+                  transition: 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Horas Procore</span>
+              <span className="text-xs font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                {recon.exportedHours.toLocaleString('pt-PT')}h
+              </span>
+            </div>
+            <div className="h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-emerald-500"
+                style={{
+                  width: mounted ? `${maxBar > 0 ? (recon.exportedHours / maxBar) * 100 : 0}%` : '0%',
+                  transition: 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.15s',
+                }}
+              />
+            </div>
+          </div>
+          {recon.gapHours > 0 && (
+            <p className="text-[10px] text-slate-400 text-right tabular-nums">
+              Gap: {recon.gapHours.toLocaleString('pt-PT')}h ({recon.gapPercent}%)
+            </p>
+          )}
+        </div>
+
+        {/* Footer — catálogo + last sync */}
+        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+            <span className="font-semibold text-slate-600 dark:text-slate-300">{counts.projects}</span> obras
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="font-semibold text-slate-600 dark:text-slate-300">{counts.equipment}</span> equip.
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="font-semibold text-slate-600 dark:text-slate-300">{counts.directory}</span> pessoas
+          </div>
+          <span className="text-[10px] text-slate-400">{lastSyncLabel}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // MOBILE DASHBOARD — Layout Field Mode
 // ============================================================
 
@@ -728,8 +894,8 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanc
         </div>
       )}
 
-      {/* Procore — sincronização */}
-      <ProcoreSyncCard compact />
+      {/* Procore — reconciliação mobile-native */}
+      <MobileProcoreCard />
 
       {/* Mini gráfico de atividade */}
       <Card className="p-4 hover-enterprise">
