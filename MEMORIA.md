@@ -193,6 +193,13 @@ Hardware:     arduino_rfid_simple/
 
 ## NOTAS DE SESSÃO
 
+**12 Abril 2026 (Fix Crítico do Web NFC & Layout PWA - Gemini & Claude):**
+- **Estado**: ✅ CONCLUÍDO e DEPLOYED.
+- [x] **Web NFC Engine**: Refatoração profunda na lógica de leitura RFID nativa do browser em `OperadoresView`. Remoção de `AbortController` bloqueadores, padronização idêntica ao `MobileHubView` (event listeners explícitos e referências corretas à `window.NDEFReader`).
+- [x] **Tratamento de Permissões**: Componente passa a renderizar os erros localizados (`nfcError`) caso o acesso seja negado nativamente pelo browser / SO Android.
+- [x] **Vite PWA SPA Fix**: Descoberto e resolvido bug letal no Service Worker. O `navigateFallback` no `vite.config.js` estava calibrado para o ecrã `offline.html`, capturando e bloqueando todo o routing de deep-links em standalone (ex: `/mobile-hub`). Redirecionado com sucesso para o `index.html`.
+- **Próximo Passo**: Iniciar elaboração do sistema de controlo de Anomalias (rota `/validar/:token`) ou sistema de histórico de tarifários.
+
 **07 Abril 2026 (Fix Crítico de Persistência & PWA Navigation - Gemini):**
 - **Estado**: ✅ DEPLOYED & ESTÁVEL.
 - [x] **PWA Navigation History**: Sincronização da `activeView` com a History API do browser, permitindo utilização do botão "voltar" físico do telemóvel e novo botão visual no Header.

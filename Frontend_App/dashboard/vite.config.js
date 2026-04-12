@@ -37,39 +37,48 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Cache de páginas para navegação offline
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // Estratégia de cache para navegação
-        navigateFallback: 'offline.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/validar/],
-        // Runtime caching
+        // Ativa o novo SW imediatamente sem esperar tabs antigas fecharem
+        skipWaiting: true,
+        clientsClaim: true,
+        // Cache apenas de assets estáticos com hash (são imutáveis)
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
+        // SEM navigateFallback — o SW vai à rede para qualquer
+        // pedido de navegação que não tenha em cache (evita o offline.html)
         runtimeCaching: [
           {
-            // Cache de assets estáticos
+            // index.html sempre fresh da rede (nunca cache)
+            urlPattern: /^https:\/\/casais-rfid\.web\.app\/(index\.html)?$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            // Assets estáticos com hash — CacheFirst é seguro
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dias
+                maxAgeSeconds: 30 * 24 * 60 * 60,
               },
             },
           },
           {
-            // Cache de fontes
             urlPattern: /\.(?:woff|woff2|ttf|eot)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'fonts-cache',
               expiration: {
                 maxEntries: 20,
-                maxAgeSeconds: 60 * 24 * 60 * 60, // 60 dias
+                maxAgeSeconds: 60 * 24 * 60 * 60,
               },
             },
           },
           {
-            // Firebase API - Network first com fallback
+            // Firebase Firestore — Network first com fallback de 10s
             urlPattern: /^https:\/\/firestore\.googleapis\.com/,
             handler: 'NetworkFirst',
             options: {
@@ -77,7 +86,7 @@ export default defineConfig({
               networkTimeoutSeconds: 10,
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 24 * 60 * 60, // 1 dia
+                maxAgeSeconds: 24 * 60 * 60,
               },
             },
           },
@@ -85,7 +94,6 @@ export default defineConfig({
       },
       devOptions: {
         enabled: false,
-        navigateFallback: '/',
       },
       manifest: false,
     }),

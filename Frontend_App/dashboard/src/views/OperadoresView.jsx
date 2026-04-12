@@ -73,11 +73,11 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
   const [rfidDetected, setRfidDetected] = useState(false);
   const [rfidSource, setRfidSource] = useState(null); // 'sensor' | 'nfc'
   const [nfcScanning, setNfcScanning] = useState(false);
+  const [nfcError, setNfcError] = useState(null);
   const activatedAtRef = useRef(Date.now());
-  const nfcAbortRef = useRef(null);
+  const nfcReaderRef = useRef(null);
 
   const isCreating = !operator;
-  const nfcAvailable = isCreating && typeof window !== 'undefined' && 'NDEFReader' in window;
 
   // Watch scan_buffer for new card scans (sensor de obra)
   useEffect(() => {
@@ -90,17 +90,27 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
     }
   }, [latestScanBuffer, isCreating, rfidDetected]);
 
-  // Web NFC — read card directly from phone hardware
+  // Web NFC — espelha exatamente o padrão do MobileHubView (que funciona a 100%)
+  // Diferenças críticas vs versão anterior:
+  //   1. window.NDEFReader (explícito)
+  //   2. reader.scan() SEM AbortController (o signal causava abort prematuro)
+  //   3. addEventListener em vez de property assignment
+  //   4. Check de disponibilidade DENTRO do handler, não no render
   const startNfcScan = useCallback(async () => {
-    if (!nfcAvailable) return;
+    if (!('NDEFReader' in window)) {
+      setNfcError('NFC não disponível. Use Chrome no Android.');
+      return;
+    }
+
     try {
-      nfcAbortRef.current = new AbortController();
-      const reader = new NDEFReader();
-      await reader.scan({ signal: nfcAbortRef.current.signal });
+      const reader = new window.NDEFReader();
+      await reader.scan();
+      nfcReaderRef.current = reader;
       setNfcScanning(true);
+      setNfcError(null);
       if (navigator.vibrate) navigator.vibrate(50);
 
-      reader.onreading = ({ serialNumber }) => {
+      reader.addEventListener('reading', ({ serialNumber }) => {
         const cardId = serialNumber
           ? serialNumber.replace(/:/g, '').toUpperCase()
           : `NFC_${Date.now()}`;
@@ -108,24 +118,25 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
         setRfidDetected(true);
         setRfidSource('nfc');
         setNfcScanning(false);
-        nfcAbortRef.current?.abort();
         if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 100]);
-      };
+      });
 
-      reader.onreadingerror = () => {
+      reader.addEventListener('readingerror', () => {
         if (navigator.vibrate) navigator.vibrate([200]);
-      };
-    } catch {
+      });
+    } catch (err) {
       setNfcScanning(false);
+      if (err.name === 'NotAllowedError') {
+        setNfcError('Permissão NFC negada. Verifique as permissões do browser.');
+      } else {
+        setNfcError('NFC não disponível neste dispositivo.');
+      }
     }
-  }, [nfcAvailable]);
-
-  const cancelNfc = useCallback(() => {
-    nfcAbortRef.current?.abort();
-    setNfcScanning(false);
   }, []);
 
-  useEffect(() => () => nfcAbortRef.current?.abort(), []);
+  const cancelNfc = useCallback(() => {
+    setNfcScanning(false);
+  }, []);
 
   const clearDetectedCard = () => {
     setFormData(prev => ({ ...prev, cardId: '' }));
@@ -273,16 +284,21 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
                       Passe um cartão no leitor RFID ou digite manualmente
                     </p>
                   </div>
-                  {nfcAvailable && (
-                    <button
-                      type="button"
-                      onClick={startNfcScan}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 rounded-xl shadow-md shadow-violet-500/20 transition-all hover:shadow-lg hover:shadow-violet-500/30 active:scale-95 flex-shrink-0"
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      Ler NFC
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={startNfcScan}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 rounded-xl shadow-md shadow-violet-500/20 transition-all hover:shadow-lg hover:shadow-violet-500/30 active:scale-95 flex-shrink-0"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    Ler NFC
+                  </button>
+                </div>
+              )}
+
+              {/* NFC error message */}
+              {nfcError && !rfidDetected && (
+                <div className="mt-3 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                  <p className="text-xs text-amber-700 dark:text-amber-400">{nfcError}</p>
                 </div>
               )}
 
