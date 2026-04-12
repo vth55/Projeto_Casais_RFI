@@ -197,8 +197,13 @@ Hardware:     arduino_rfid_simple/
 - **Estado**: ✅ CONCLUÍDO e DEPLOYED.
 - [x] **Web NFC Engine**: Refatoração profunda na lógica de leitura RFID nativa do browser em `OperadoresView`. Remoção de `AbortController` bloqueadores, padronização idêntica ao `MobileHubView` (event listeners explícitos e referências corretas à `window.NDEFReader`).
 - [x] **Tratamento de Permissões**: Componente passa a renderizar os erros localizados (`nfcError`) caso o acesso seja negado nativamente pelo browser / SO Android.
-- [x] **Vite PWA SPA Fix**: Descoberto e resolvido bug letal no Service Worker. O `navigateFallback` no `vite.config.js` estava calibrado para o ecrã `offline.html`, capturando e bloqueando todo o routing de deep-links em standalone (ex: `/mobile-hub`). Redirecionado com sucesso para o `index.html`.
+- [x] **Vite PWA SPA Fix (Bug de Navigation)**: Resolvido bug crítico onde o Service Worker servia `offline.html` para todas as navegações em vez da app real (`index.html`).
+  - Corrigido `navigateFallback: 'index.html'` no `vite.config.js`.
+  - Atualizado `globPatterns` para incluir `.html` no precache.
+  - Implementado `navigateFallbackDenylist` para `/api` e `/validar`.
+- [x] **Build & Sync**: Rebuild manual via `vite.js` e sincronização total de assets (novos hashes) para `Backend_Cloud/public/`.
 - **Próximo Passo**: Iniciar elaboração do sistema de controlo de Anomalias (rota `/validar/:token`) ou sistema de histórico de tarifários.
+
 
 **07 Abril 2026 (Fix Crítico de Persistência & PWA Navigation - Gemini):**
 - **Estado**: ✅ DEPLOYED & ESTÁVEL.

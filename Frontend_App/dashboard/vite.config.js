@@ -37,23 +37,13 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Ativa o novo SW imediatamente sem esperar tabs antigas fecharem
         skipWaiting: true,
         clientsClaim: true,
-        // Cache apenas de assets estáticos com hash (são imutáveis)
-        globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
-        // SEM navigateFallback — o SW vai à rede para qualquer
-        // pedido de navegação que não tenha em cache (evita o offline.html)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // SPA: todas as navegações servem index.html do cache (React Router trata o routing)
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/validar/],
         runtimeCaching: [
-          {
-            // index.html sempre fresh da rede (nunca cache)
-            urlPattern: /^https:\/\/casais-rfid\.web\.app\/(index\.html)?$/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-cache',
-              networkTimeoutSeconds: 5,
-            },
-          },
           {
             // Assets estáticos com hash — CacheFirst é seguro
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,

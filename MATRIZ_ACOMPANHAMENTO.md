@@ -13,7 +13,8 @@ Este documento cruza o que foi idealizado e pedido pelo utilizador ao longo das 
 | **Vigilante/Deteção > 5 Horas** | ✅ FEITO | Backend `checkLongSessions` cria docs de alerta/emails passadas as horas estabelecidas. Frontend exibe crachás `amber-600`. | - |
 | **Auto-Close / Fecho Compulsivo > 14 Horas** | ✅ FEITO | Backend já faz trigger de Fecho. Frontend apresenta na tab de validações pendentes. | - |
 | **Menu de Resolução UI das Validações** | 🟡 PENDENTE | Modal inicial em `SessoesView` já propõe edição de data/hora (A UI básica). | Faltam ligações robustas de estado de "PENDING" para "RESOLVED". Confirmar se guarda "Original" + "Corrigidas" como dita a bíblia `FLUXO_GESTAO_SESSOES.md`. |
-| **Emails Tokenizados de Validação** | 🟡 PENDENTE | Backend tem função `generateValidationLink`/`sendValidationEmail` preparada no papel. | Confirmação Firebase Auth/SMTP local; e criação da Rota `/validate?token=XXX` isolada no Frontend. |
+| **Emails Tokenizados de Validação** | ✅ FEITO | Backend tem função `generateValidationLink`/`sendValidationEmail` preparada. Rota `/validar/:token` implementada no Frontend. | Testar com SMTP real em produção. |
+
 
 ---
 
@@ -61,7 +62,8 @@ Este documento cruza o que foi idealizado e pedido pelo utilizador ao longo das 
 |----------------------------|--------|----------------------------------|---------------------------|
 | **Reporte QR Code (Mobile-First)** | ✅ FEITO | Frontend tem rota `/reporte-avaria` standalone. | - |
 | **Dashboard Executivo (C-Level)** | ✅ FEITO | Dashboard premium com KPIs, gráficos e filtros. | - |
-| **Sistema Offline / Sync (PWA)** | ✅ FEITO | `enableIndexedDbPersistence` ativado no Firebase. App continua funcional sem rede e sincroniza automaticamente ao reconectar. | - |
+| **Sistema Offline / Sync (PWA)** | ✅ FEITO | `enableIndexedDbPersistence` ativado. SW corrigido para servir `index.html` em navegações (SPA Fix). | - |
+
 | **PWA Install & UI** | ✅ FEITO | Indicador Online/Offline no Header, LiveSessionsBar oculta em offline, e navegação adaptada para modo standalone. | - |
 | **Ícones PWA** | ✅ FEITO | Novo ícone `icon-192.svg` com branding Casais (#005EB8) e manifest.json atualizado. | - |
 | **Checklist Diário Segurança** | 🔴 NÃO INICIADO| - | Pop-up de pre-utilização no formulário PWA do Operador. |
@@ -70,6 +72,7 @@ Este documento cruza o que foi idealizado e pedido pelo utilizador ao longo das 
 
 ---
 
-> **Última Atualização:** 07 de Abril de 2026 (Sessão Tarde - Gemini).
+> **Última Atualização:** 12 de Abril de 2026 (Fix Crítico SW - Gemini).
+
 > **Aviso de Integridade:** A Fase 2 (UI Enrichment) foi concluída com sucesso. O foco agora é a automação do Push (Fase 3).
 > **Instrução Permanente:** Antes de sugerir uma tarefa ao executante (Claude), revê as linhas "🔴 NÃO INICIADO" e "🟡 PENDENTE" desta matriz. Quando concluídas, altera para "✅ FEITO" e atualiza a descrição da implementação.
