@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Truck, Award, Link2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Truck, Award, Link2, Smartphone, Radio } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
@@ -54,10 +54,12 @@ const RoleBadge = ({ roleId }) => {
   );
 };
 
-const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assignableRoles, canAssignRoles }) => {
+const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canAssignRoles }) => {
+  const latestScanBuffer = useStore(s => s.latestScanBuffer);
+
   const [formData, setFormData] = useState({
     name: '',
-    cardId: lastScannedCard || '',
+    cardId: '',
     phone: '',
     role: 'operador',
     systemRole: null,
@@ -67,21 +69,83 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
     ...(operator || {}),
   });
 
+  // ─── RFID Provisioning State ───────────────────────────────────────────
+  const [rfidDetected, setRfidDetected] = useState(false);
+  const [rfidSource, setRfidSource] = useState(null); // 'sensor' | 'nfc'
+  const [nfcScanning, setNfcScanning] = useState(false);
+  const activatedAtRef = useRef(Date.now());
+  const nfcAbortRef = useRef(null);
+
+  const isCreating = !operator;
+  const nfcAvailable = isCreating && typeof window !== 'undefined' && 'NDEFReader' in window;
+
+  // Watch scan_buffer for new card scans (sensor de obra)
+  useEffect(() => {
+    if (!isCreating || !latestScanBuffer || rfidDetected) return;
+    if (latestScanBuffer.timestamp > activatedAtRef.current) {
+      setFormData(prev => ({ ...prev, cardId: latestScanBuffer.cardId }));
+      setRfidDetected(true);
+      setRfidSource('sensor');
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    }
+  }, [latestScanBuffer, isCreating, rfidDetected]);
+
+  // Web NFC — read card directly from phone hardware
+  const startNfcScan = useCallback(async () => {
+    if (!nfcAvailable) return;
+    try {
+      nfcAbortRef.current = new AbortController();
+      const reader = new NDEFReader();
+      await reader.scan({ signal: nfcAbortRef.current.signal });
+      setNfcScanning(true);
+      if (navigator.vibrate) navigator.vibrate(50);
+
+      reader.onreading = ({ serialNumber }) => {
+        const cardId = serialNumber
+          ? serialNumber.replace(/:/g, '').toUpperCase()
+          : `NFC_${Date.now()}`;
+        setFormData(prev => ({ ...prev, cardId }));
+        setRfidDetected(true);
+        setRfidSource('nfc');
+        setNfcScanning(false);
+        nfcAbortRef.current?.abort();
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 100]);
+      };
+
+      reader.onreadingerror = () => {
+        if (navigator.vibrate) navigator.vibrate([200]);
+      };
+    } catch {
+      setNfcScanning(false);
+    }
+  }, [nfcAvailable]);
+
+  const cancelNfc = useCallback(() => {
+    nfcAbortRef.current?.abort();
+    setNfcScanning(false);
+  }, []);
+
+  useEffect(() => () => nfcAbortRef.current?.abort(), []);
+
+  const clearDetectedCard = () => {
+    setFormData(prev => ({ ...prev, cardId: '' }));
+    setRfidDetected(false);
+    setRfidSource(null);
+    activatedAtRef.current = Date.now();
+  };
+
+  // ─── Form Logic ────────────────────────────────────────────────────────
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
   };
 
-  // Quando muda o cargo de trabalho, sugerir perfil de sistema correspondente
   const handleJobRoleChange = (newRole) => {
     const roleInfo = getRoleInfo(newRole);
-    // null significa que o funcionário não precisa de acesso ao PWA (ex: operadores de máquinas)
     const suggestedSystemRole = roleInfo.suggestedSystemRole;
-
     setFormData({
       ...formData,
       role: newRole,
-      // Só atualiza systemRole se é novo operador (para existentes mantém o que já tem)
       systemRole: !operator ? suggestedSystemRole : formData.systemRole,
     });
   };
@@ -90,33 +154,161 @@ const OperatorForm = ({ operator, lastScannedCard, obras, onSave, onCancel, assi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {lastScannedCard && !operator && (
-        <div className="flex items-center gap-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
-          <CreditCard className="w-5 h-5 text-primary-500" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-primary-700">Cartão detectado</p>
-            <p className="text-xs text-primary-600">ID: {lastScannedCard}</p>
-          </div>
-          <Badge variant="primary">Auto-fill</Badge>
-        </div>
-      )}
+      <Input
+        label="Nome Completo"
+        value={formData.name}
+        onChange={e => setFormData({ ...formData, name: e.target.value })}
+        placeholder="Ex: João Silva"
+        required
+      />
 
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Nome Completo"
-          value={formData.name}
-          onChange={e => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Ex: João Silva"
-          required
-        />
-        <Input
-          label="ID Cartão RFID"
-          value={formData.cardId}
-          onChange={e => setFormData({ ...formData, cardId: e.target.value })}
-          icon={CreditCard}
-          required
-          disabled={!!lastScannedCard && !operator}
-        />
+      {/* ─── RFID Card Provisioning Zone ─── */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+          <div className="flex items-center gap-1.5">
+            <CreditCard className="w-4 h-4" />
+            ID Cartão RFID
+          </div>
+        </label>
+
+        {isCreating ? (
+          <div
+            className={`relative rounded-xl border-2 transition-all duration-700 overflow-hidden ${
+              rfidDetected
+                ? 'border-emerald-400 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/30 dark:to-emerald-800/20 shadow-lg shadow-emerald-500/10'
+                : nfcScanning
+                  ? 'border-violet-400 bg-gradient-to-br from-violet-50 to-violet-100/50 dark:from-violet-900/20 dark:to-violet-800/10'
+                  : 'border-dashed border-slate-300 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-600'
+            }`}
+          >
+            {/* Shimmer scan effect */}
+            {!rfidDetected && !nfcScanning && (
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-primary-100/40 dark:via-primary-500/5 to-transparent"
+                  style={{ animation: 'rfidShimmer 3s ease-in-out infinite' }}
+                />
+              </div>
+            )}
+
+            {/* NFC scanning rings */}
+            {nfcScanning && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <div className="absolute w-24 h-24 rounded-full border-2 border-violet-300/40 animate-ping" />
+                <div className="absolute w-36 h-36 rounded-full border border-violet-200/20 animate-ping" style={{ animationDelay: '0.5s' }} />
+              </div>
+            )}
+
+            <div className="relative p-5">
+              {rfidDetected ? (
+                /* ── DETECTED — Card captured ── */
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 flex-shrink-0"
+                    style={{ animation: 'rfidBounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1)' }}
+                  >
+                    <Check className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                      Cartão capturado!
+                    </p>
+                    <p className="text-xl font-mono font-black tracking-wider text-slate-900 dark:text-white truncate">
+                      {formData.cardId}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+                      {rfidSource === 'nfc' ? (
+                        <><Smartphone className="w-3 h-3" /> via NFC do telemóvel</>
+                      ) : (
+                        <><Radio className="w-3 h-3" /> via sensor de obra</>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearDetectedCard}
+                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-white/60 dark:hover:bg-slate-700/60 transition flex-shrink-0"
+                    title="Limpar e ler outro cartão"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : nfcScanning ? (
+                /* ── NFC SCANNING — Waiting for tap ── */
+                <div className="flex flex-col items-center gap-3 py-3">
+                  <div className="w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                    <Smartphone className="w-8 h-8 text-violet-600 animate-pulse" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-violet-700 dark:text-violet-400">
+                      Aproxime o cartão do telemóvel...
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Segure o cartão RFID junto ao sensor NFC do dispositivo
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={cancelNfc}
+                    className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2"
+                  >
+                    Cancelar leitura
+                  </button>
+                </div>
+              ) : (
+                /* ── IDLE — Listening for sensors ── */
+                <div className="flex items-center gap-4">
+                  <div className="relative w-14 h-14 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-7 h-7 text-primary-600" />
+                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-primary-500" />
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                      A escutar sensores de obra...
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Passe um cartão no leitor RFID ou digite manualmente
+                    </p>
+                  </div>
+                  {nfcAvailable && (
+                    <button
+                      type="button"
+                      onClick={startNfcScan}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 rounded-xl shadow-md shadow-violet-500/20 transition-all hover:shadow-lg hover:shadow-violet-500/30 active:scale-95 flex-shrink-0"
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      Ler NFC
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Manual fallback input */}
+              {!rfidDetected && !nfcScanning && (
+                <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <input
+                    type="text"
+                    value={formData.cardId}
+                    onChange={e => setFormData(prev => ({ ...prev, cardId: e.target.value.toUpperCase() }))}
+                    placeholder="Ou digite o ID manualmente... (ex: AB12CD34)"
+                    className="w-full px-3 py-2 text-sm font-mono border border-slate-200 dark:border-slate-700 rounded-lg bg-white/80 dark:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 dark:focus:border-primary-500 placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Edit mode — simple disabled display */
+          <Input
+            value={formData.cardId}
+            icon={CreditCard}
+            disabled
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -318,7 +510,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
 };
 
 const OperadoresView = () => {
-  const { operators, sessions, obras, machines, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory } = useStore();
+  const { operators, sessions, obras, machines, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
   const { can, getAssignableRoles, getAllRoles } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
@@ -326,6 +518,14 @@ const OperadoresView = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [obraFilter, setObraFilter] = useState('all');
   const [dismissedSuggestions, setDismissedSuggestions] = useState([]);
+
+  // RFID Setup Mode — subscribe to scan_buffer while creating a new operator
+  useEffect(() => {
+    if (showModal && !editingOperator) {
+      const unsubscribe = subscribeScanBuffer();
+      return unsubscribe;
+    }
+  }, [showModal, editingOperator, subscribeScanBuffer]);
 
   // Permissões
   const canAssignRoles = can(PERMISSIONS.OPERATORS_ASSIGN_ROLE);
@@ -635,6 +835,19 @@ const OperadoresView = () => {
         </Card>
       )}
 
+
+      {/* Keyframes for RFID provisioning animations */}
+      <style>{`
+        @keyframes rfidShimmer {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes rfidBounceIn {
+          0%   { transform: scale(0); opacity: 0; }
+          60%  { transform: scale(1.15); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
 
       {/* Modal */}
       <Modal isOpen={showModal} onClose={handleCloseModal} title={editingOperator ? 'Editar Operador' : 'Novo Operador'} size="lg">

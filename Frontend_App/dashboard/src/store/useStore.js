@@ -45,6 +45,7 @@ const useStore = create((set, get) => ({
   activeView: 'dashboard',
   sidebarOpen: false,
   dateFilter: 'month',
+  latestScanBuffer: null,
 
   // Setters simples
   setActiveView: (view) => set({ activeView: view }),
@@ -227,6 +228,35 @@ const useStore = create((set, get) => ({
     }
 
     return { matched: false, procoreUser: null };
+  },
+
+  // ============================================
+  // RFID PROVISIONING — scan_buffer listener
+  // ============================================
+  // On-demand Firestore listener for the scan_buffer/latest document.
+  // Activated by the operator creation modal to capture card scans in real-time.
+  // Returns an unsubscribe function — the caller controls the lifecycle.
+  subscribeScanBuffer: () => {
+    if (!db) return () => {};
+    const scanRef = doc(db, `${basePath}/scan_buffer`, 'latest');
+    const unsub = onSnapshot(scanRef,
+      (snap) => {
+        if (!snap.exists()) return;
+        const d = snap.data();
+        set({
+          latestScanBuffer: {
+            cardId: d.cardId,
+            machineId: d.machineId || null,
+            timestamp: d.timestamp?.toMillis?.() || (d.timestamp?.seconds ? d.timestamp.seconds * 1000 : Date.now()),
+          },
+        });
+      },
+      () => {} // silent — scan_buffer may not exist yet
+    );
+    return () => {
+      unsub();
+      set({ latestScanBuffer: null });
+    };
   },
 
   // ============================================
