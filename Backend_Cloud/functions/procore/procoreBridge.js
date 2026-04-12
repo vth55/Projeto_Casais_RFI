@@ -367,17 +367,12 @@ async function createTimecardEntry({ project_id, date, hours, description, login
         payload.equipment_id = opts.equipment_id;
     }
 
-    console.log(
-        `[procoreBridge] createTimecardEntry → POST ${endpoint} | ` +
-        `date=${date}, hours=${hours}, operator=${login_information_id}`
-    );
-
     const result = await procoreFetch(endpoint, {
         method: 'POST',
         body: payload,
     });
 
-    console.log(`[procoreBridge] createTimecardEntry → success, id=${result.data?.id}`);
+    console.log(`[procoreBridge] timecard created id=${result.data?.id} | ${date} | ${hours}h`);
     return result.data;
 }
 
@@ -396,7 +391,6 @@ function handleAuthorize(req, res) {
         // state opcional para CSRF — para já não usamos pois é um flow manual de admin
     });
     const url = `${PROCORE_AUTH_URL}?${params.toString()}`;
-    console.log('[procoreBridge] /authorize → redirecionando para Procore');
     res.redirect(302, url);
 }
 
@@ -418,10 +412,9 @@ async function handleCallback(req, res) {
     }
 
     try {
-        console.log('[procoreBridge] /callback → a trocar code por token');
         const tokenJson = await exchangeCodeForToken(code);
         await persistTokenResponse(tokenJson);
-        console.log('[procoreBridge] /callback → tokens persistidos com sucesso');
+        console.log('[procoreBridge] OAuth callback — tokens persisted');
 
         // Página simples de sucesso. Mais à frente o ConfiguracoesView fará polling /status.
         res.status(200).send(`
@@ -574,7 +567,6 @@ async function runFullSync({ trigger = 'manual' } = {}) {
 
     // Cada recurso é independente — falha de um não bloqueia os outros.
     try {
-        console.log(`[procoreSync:${trigger}] → projects`);
         const projects = await fetchProjects();
         summary.projects = await persistCollection('projects', projects);
     } catch (err) {
@@ -583,7 +575,6 @@ async function runFullSync({ trigger = 'manual' } = {}) {
     }
 
     try {
-        console.log(`[procoreSync:${trigger}] → equipment`);
         const equipment = await fetchEquipment();
         summary.equipment = await persistCollection('equipment', equipment);
     } catch (err) {
@@ -592,7 +583,6 @@ async function runFullSync({ trigger = 'manual' } = {}) {
     }
 
     try {
-        console.log(`[procoreSync:${trigger}] → directory`);
         const directory = await fetchDirectory();
         summary.directory = await persistCollection('directory', directory);
     } catch (err) {
@@ -651,7 +641,6 @@ async function handleSync(req, res) {
 async function handleDisconnect(req, res) {
     try {
         await integrationDoc().delete();
-        console.log('[procoreBridge] /disconnect → tokens apagados');
         return res.json({ disconnected: true });
     } catch (err) {
         console.error('[procoreBridge] /disconnect exception:', err);
@@ -702,8 +691,6 @@ async function handleWriteback(req, res) {
             });
         }
 
-        console.log('[procoreBridge] /writeback → creating timecard entry');
-
         const result = await createTimecardEntry(
             { project_id, date, hours, description, login_information_id },
             { notes, equipment_id }
@@ -734,8 +721,6 @@ const procoreBridge = onRequest(
         // Normalizamos extraindo apenas a última parte significativa.
         const path = (req.path || '').replace(/\/+$/, '');
         const action = path.split('/').pop() || '';
-
-        console.log(`[procoreBridge] ${req.method} ${req.path} → action="${action}"`);
 
         try {
             if (req.method === 'GET' && action === 'authorize') {

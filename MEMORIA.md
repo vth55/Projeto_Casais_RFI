@@ -208,6 +208,13 @@ Hardware:     arduino_rfid_simple/
 - [x] **UI Dinâmica**: `LiveSessionsBar` agora oculta-se automaticamente em modo offline para evitar discrepâncias de timers.
 - [x] **Assets PWA**: Novo ícone `icon-192.svg` com branding oficial Casais (#005EB8), atualização do `manifest.json` e remoção do botão de "voltar" em modo standalone.
 
+**12 Abril 2026 (Polimento Técnico e JSDoc Fase 5 - Claude Code):**
+- **Estado**: ✅ CONCLUÍDO (Higienização de Código Backend/Frontend).
+- [x] **Triggers Simplificados**: Em `index.js`, redução maciça de "ruído" (apenas `.catch` fatais se mantêm logados no Procore Push associado a fechamentos).
+- [x] **JSDoc Enterprise**: Todas as funções-mestra em `procoreSessionExporter.js` receberam cabeçalhos de documentação detalhados e os logs de debug inúteis foram apagados.
+- [x] **Cleanup**: Componente fantasma (`ProcoreSyncCard`) foi apagado e ficheiro de dependências locais temporário (`TAREFAS_PENDENTES.txt`) foi consumido pelo Claude.
+- **Conclusão Formal**: O módulo Procore RFI entra agora em estado 'Code Freeze'. Fica apenas a faltar a demonstração real ao cliente Casais.
+
 **11 Abril 2026 (UI/UX Refactoring Procore Fase 4 - Claude & Gemini):**
 - **Estado**: ✅ CONCLUÍDO (Frontend Dashboard).
 - [x] **Comando Central**: Fiel às guidelines da equipa (`frontend-design`, `frontend-specialist`), foi implementado o `ProcoreReconciliationPanel` no `DashboardView` para desktop, substituindo o anterior `ProcoreSyncCard`.

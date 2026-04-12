@@ -405,15 +405,9 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                 ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
             });
 
-            // Exportar sessão terminada para o Procore (fire-and-forget — persiste resultado internamente)
-            procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').then((result) => {
-                if (result.exported) {
-                    console.log(`[Procore] Sessão exportada (end): timecardId=${result.timecardId}`);
-                } else {
-                    console.log(`[Procore] Export (end) adiado/ignorado: ${result.reason}`);
-                }
-            }).catch((err) => {
-                console.error('[Procore] Export sessão (end) falhou:', err.message);
+            // Exportar sessão terminada para o Procore (fire-and-forget)
+            procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').catch((err) => {
+                console.error('[Procore] export end failed:', err.message);
             });
 
             await db.runTransaction(async (t) => {
@@ -440,15 +434,9 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
             const sessionRef = await db.collection(SESSIONS_PATH).add(newSession);
 
-            // Exportar sessão iniciada para o Procore — marca presença (fire-and-forget)
-            procoreSessionExporter.exportSessionToProcore(sessionRef.id, 'start').then((result) => {
-                if (result.exported) {
-                    console.log(`[Procore] Sessão exportada (start): timecardId=${result.timecardId}`);
-                } else {
-                    console.log(`[Procore] Export (start) adiado/ignorado: ${result.reason}`);
-                }
-            }).catch((err) => {
-                console.error('[Procore] Export sessão (start) falhou:', err.message);
+            // Exportar sessão iniciada para o Procore (fire-and-forget)
+            procoreSessionExporter.exportSessionToProcore(sessionRef.id, 'start').catch((err) => {
+                console.error('[Procore] export start failed:', err.message);
             });
 
             await machineRef.set({
@@ -649,14 +637,8 @@ exports.autoCloseStuckSessions = onSchedule(
                     });
 
                     // Exportar sessão auto-fechada para o Procore (fire-and-forget)
-                    procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').then((result) => {
-                        if (result.exported) {
-                            console.log(`[Procore] AUTO_CLOSED exportada: timecardId=${result.timecardId}`);
-                        } else {
-                            console.log(`[Procore] AUTO_CLOSED export adiado/ignorado: ${result.reason}`);
-                        }
-                    }).catch((err) => {
-                        console.error('[Procore] AUTO_CLOSED export falhou:', err.message);
+                    procoreSessionExporter.exportSessionToProcore(sessionDoc.id, 'end').catch((err) => {
+                        console.error('[Procore] auto-close export failed:', err.message);
                     });
 
                     // Atualizar máquina
@@ -1146,14 +1128,11 @@ exports.procoreExportRetry = onSchedule(
         timeZone: 'Europe/Lisbon',
     },
     async () => {
-        console.log('[procoreExportRetry] iniciando run de retry...');
         try {
             const { retryFailedExports } = require('./procore/procoreSessionExporter');
-            const stats = await retryFailedExports();
-            console.log(`[procoreExportRetry] concluído: retried=${stats.retried} succeeded=${stats.succeeded}`);
-            return stats;
+            return await retryFailedExports();
         } catch (err) {
-            console.error('[procoreExportRetry] erro crítico:', err.message);
+            console.error('[procoreExportRetry] critical:', err.message);
             throw err;
         }
     }

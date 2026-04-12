@@ -37,6 +37,14 @@ const RETRY_BACKOFF_MINUTES = [5, 20, 60];
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
+/**
+ * Normalise a string for fuzzy entity matching.
+ * Strips diacritics, lowercases, and collapses non-alphanumeric runs into
+ * single spaces so that "Escavadoras Hidráulicas" matches "escavadoras hidraulicas".
+ *
+ * @param {string} str - Raw input string (name, email, identifier, etc.)
+ * @returns {string} Normalised lowercase string suitable for comparison.
+ */
 function normalizeForMatching(str) {
     if (!str) return '';
     return String(str)
@@ -46,6 +54,14 @@ function normalizeForMatching(str) {
         .trim();
 }
 
+/**
+ * Calculate the next retry timestamp using exponential backoff.
+ * Returns `null` when the maximum number of retry attempts has been exhausted,
+ * signalling that the export should be marked as permanently failed.
+ *
+ * @param {number} attemptsDone - Number of retry attempts already executed (0-indexed).
+ * @returns {FirebaseFirestore.Timestamp|null} Firestore Timestamp for the next retry window, or null.
+ */
 function buildNextRetryTimestamp(attemptsDone) {
     if (attemptsDone >= MAX_RETRY_ATTEMPTS) return null;
     const delayMs = (RETRY_BACKOFF_MINUTES[attemptsDone] || 60) * 60_000;
@@ -119,6 +135,10 @@ async function procoreFetch(endpoint, options = {}) {
 
 // ─── Integration check ───────────────────────────────────────────────────────
 
+/**
+ * Check whether the Procore integration has valid OAuth credentials stored.
+ * @returns {Promise<boolean>} `true` if both access and refresh tokens exist.
+ */
 async function isProcoreConnected() {
     const snap = await admin.firestore().doc(PROCORE_INTEGRATION_PATH).get();
     if (!snap.exists) return false;
@@ -128,6 +148,14 @@ async function isProcoreConnected() {
 
 // ─── Entity matching (fuzzy, normalised) ─────────────────────────────────────
 
+/**
+ * Search the cached Procore projects collection for a project whose name
+ * fuzzy-matches the given obra name. Uses substring inclusion in both
+ * directions to accommodate partial names.
+ *
+ * @param {string} obraName - Work site name from the Casais system.
+ * @returns {Promise<{id: number, name: string}|null>} Matched project or null.
+ */
 async function findProcoreProject(obraName) {
     if (!obraName) return null;
     const snap = await admin.firestore().collection(PROJECTS_COLLECTION).limit(200).get();
@@ -136,14 +164,19 @@ async function findProcoreProject(obraName) {
         const p = doc.data();
         const name = normalizeForMatching(p.name || p.display_name || p.project_number);
         if (name && (name === target || name.includes(target) || target.includes(name))) {
-            console.log(`[procoreSessionExporter] matched project: ${p.name} (id:${p.id})`);
             return { id: p.id, name: p.name };
         }
     }
-    console.log(`[procoreSessionExporter] no project match for: "${obraName}"`);
+    console.warn(`[procoreSessionExporter] no project match for: "${obraName}"`);
     return null;
 }
 
+/**
+ * Find a Procore directory user by exact email match.
+ *
+ * @param {string} operatorEmail - Operator email from the Casais system.
+ * @returns {Promise<{id: number, name: string}|null>} Matched user or null.
+ */
 async function findProcoreUser(operatorEmail) {
     if (!operatorEmail) return null;
     const snap = await admin.firestore().collection(DIRECTORY_COLLECTION).limit(200).get();
@@ -152,14 +185,19 @@ async function findProcoreUser(operatorEmail) {
         const u = doc.data();
         const uEmail = (u.email_address || u.email || '').toLowerCase().trim();
         if (uEmail === emailLower) {
-            console.log(`[procoreSessionExporter] matched user: ${u.name} (id:${u.id})`);
             return { id: u.id, name: u.name };
         }
     }
-    console.log(`[procoreSessionExporter] no user match for: "${operatorEmail}"`);
+    console.warn(`[procoreSessionExporter] no user match for: "${operatorEmail}"`);
     return null;
 }
 
+/**
+ * Find a Procore equipment entry by fuzzy name/number match.
+ *
+ * @param {string} identifier - Machine name or ID from the Casais system.
+ * @returns {Promise<{id: number, name: string}|null>} Matched equipment or null.
+ */
 async function findProcoreEquipment(identifier) {
     if (!identifier) return null;
     const snap = await admin.firestore().collection(EQUIPMENT_COLLECTION).limit(200).get();
@@ -168,7 +206,6 @@ async function findProcoreEquipment(identifier) {
         const e = doc.data();
         const name = normalizeForMatching(e.name || e.equipment_number || e.number);
         if (name && (name === target || name.includes(target) || target.includes(name))) {
-            console.log(`[procoreSessionExporter] matched equipment: ${e.name} (id:${e.id})`);
             return { id: e.id, name: e.name };
         }
     }
@@ -177,18 +214,21 @@ async function findProcoreEquipment(identifier) {
 
 // ─── Firestore loaders ───────────────────────────────────────────────────────
 
+/** @param {string} obraId @returns {Promise<object|null>} Obra document data. */
 async function getObraById(obraId) {
     if (!obraId) return null;
     const snap = await admin.firestore().doc(`${OBRAS_PATH}/${obraId}`).get();
     return snap.exists ? snap.data() : null;
 }
 
+/** @param {string} operatorId @returns {Promise<object|null>} Operator document data. */
 async function getOperatorById(operatorId) {
     if (!operatorId) return null;
     const snap = await admin.firestore().doc(`${OPERATORS_PATH}/${operatorId}`).get();
     return snap.exists ? snap.data() : null;
 }
 
+/** @param {string} machineId @returns {Promise<object|null>} Machine document data. */
 async function getMachineById(machineId) {
     if (!machineId) return null;
     const snap = await admin.firestore().doc(`${MACHINES_PATH}/${machineId}`).get();
@@ -197,6 +237,19 @@ async function getMachineById(machineId) {
 
 // ─── Timecard creation ───────────────────────────────────────────────────────
 
+/**
+ * Create a Timecard Entry on Procore for a given project.
+ *
+ * @param {number} projectId - Procore project ID.
+ * @param {object} params
+ * @param {string} params.date - Entry date (YYYY-MM-DD).
+ * @param {number} params.hours - Duration in decimal hours.
+ * @param {string} params.description - Human-readable session summary.
+ * @param {number} params.loginInfoId - Procore user (login_information) ID.
+ * @param {number} [params.equipmentId] - Optional Procore equipment ID.
+ * @param {string} [params.notes] - Optional freeform notes.
+ * @returns {Promise<object>} Procore API response (created timecard).
+ */
 async function createTimecardEntry(projectId, { date, hours, description, loginInfoId, equipmentId, notes }) {
     const payload = {
         date,
@@ -207,12 +260,11 @@ async function createTimecardEntry(projectId, { date, hours, description, loginI
     if (notes)       payload.notes        = notes;
     if (equipmentId) payload.equipment_id = equipmentId;
 
-    console.log(`[procoreSessionExporter] POST /projects/${projectId}/timecard_entries | ${date} | ${hours.toFixed(2)}h`);
     const result = await procoreFetch(`/projects/${projectId}/timecard_entries`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
-    console.log(`[procoreSessionExporter] timecard created id=${result.id}`);
+    console.log(`[procoreSessionExporter] timecard created id=${result.id} | ${date} | ${hours.toFixed(2)}h`);
     return result;
 }
 
@@ -231,6 +283,10 @@ async function resolveEntities(machineData, operatorData, obraData) {
     return { project, user, equipment };
 }
 
+/**
+ * Build and POST a clock-in (hours: 0) timecard entry to Procore.
+ * @returns {Promise<object>} Export result with `exported: true/false`.
+ */
 async function _doExportStart(sessionData, machineData, operatorData, obraData) {
     const { project, user, equipment } = await resolveEntities(machineData, operatorData, obraData);
 
@@ -259,6 +315,10 @@ async function _doExportStart(sessionData, machineData, operatorData, obraData) 
     };
 }
 
+/**
+ * Build and POST a session-end timecard entry to Procore with real hours.
+ * @returns {Promise<object>} Export result with `exported: true/false`.
+ */
 async function _doExportEnd(sessionData, machineData, operatorData, obraData) {
     const { project, user, equipment } = await resolveEntities(machineData, operatorData, obraData);
 
@@ -316,13 +376,11 @@ async function exportSessionToProcore(sessionId, eventType) {
     // ── Idempotency guard ────────────────────────────────────────────────────
     const existing = sessionData.procoreExport;
     if (existing?.exported === true && existing?.type === eventType) {
-        console.log(`[procoreSessionExporter] session ${sessionId} already exported (${eventType}) — skipping`);
         return existing;
     }
 
     // ── Check integration is active ──────────────────────────────────────────
     if (!(await isProcoreConnected())) {
-        console.log('[procoreSessionExporter] Procore not connected — skipping');
         return { exported: false, reason: 'not_connected' };
     }
 
@@ -377,7 +435,7 @@ async function exportSessionToProcore(sessionId, eventType) {
             },
         }, { merge: true });
 
-        console.log(`[procoreSessionExporter] session ${sessionId} queued for retry (attempt ${prevAttempts + 1}/${MAX_RETRY_ATTEMPTS})`);
+        console.warn(`[procoreSessionExporter] session ${sessionId} queued for retry (attempt ${prevAttempts + 1}/${MAX_RETRY_ATTEMPTS})`);
     }
 
     return result;
@@ -389,7 +447,6 @@ async function exportSessionToProcore(sessionId, eventType) {
  */
 async function retryFailedExports() {
     if (!(await isProcoreConnected())) {
-        console.log('[procoreSessionExporter] Procore not connected — retry run skipped');
         return { retried: 0, succeeded: 0 };
     }
 
@@ -403,7 +460,6 @@ async function retryFailedExports() {
         .get();
 
     if (failedSnap.empty) {
-        console.log('[procoreSessionExporter] no failed exports ready for retry');
         return { retried: 0, succeeded: 0 };
     }
 
@@ -415,7 +471,7 @@ async function retryFailedExports() {
         const retryCount = session.procoreExport?.retryCount || 0;
 
         if (retryCount >= MAX_RETRY_ATTEMPTS) {
-            console.log(`[procoreSessionExporter] session ${doc.id} — max retries reached, marking as given up`);
+            console.warn(`[procoreSessionExporter] session ${doc.id} — max retries reached, giving up`);
             await doc.ref.set({
                 procoreExport: {
                     ...session.procoreExport,
@@ -427,15 +483,11 @@ async function retryFailedExports() {
             continue;
         }
 
-        console.log(`[procoreSessionExporter] retrying session ${doc.id} (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}, type=${eventType})`);
         retried++;
 
         try {
             const result = await exportSessionToProcore(doc.id, eventType);
-            if (result.exported) {
-                succeeded++;
-                console.log(`[procoreSessionExporter] retry succeeded for ${doc.id} — timecardId=${result.timecardId}`);
-            }
+            if (result.exported) succeeded++;
         } catch (err) {
             console.error(`[procoreSessionExporter] retry threw for ${doc.id}:`, err.message);
         }
@@ -447,6 +499,9 @@ async function retryFailedExports() {
 
 // ─── Legacy compat (kept for backwards compat with any direct callers) ────────
 
+/**
+ * @deprecated Use {@link exportSessionToProcore} instead. Kept for backwards compatibility.
+ */
 async function exportSessionStart(sessionData, machineData, operatorData, obraData) {
     if (!(await isProcoreConnected())) return { exported: false, reason: 'not_connected' };
     try {
@@ -457,6 +512,9 @@ async function exportSessionStart(sessionData, machineData, operatorData, obraDa
     }
 }
 
+/**
+ * @deprecated Use {@link exportSessionToProcore} instead. Kept for backwards compatibility.
+ */
 async function exportSessionEnd(sessionData, machineData, operatorData, obraData) {
     if (!(await isProcoreConnected())) return { exported: false, reason: 'not_connected' };
     try {
