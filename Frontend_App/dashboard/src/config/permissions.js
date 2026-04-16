@@ -90,7 +90,6 @@ export const ROLE_LEVELS = {
   GESTOR: 1,       // Gestores de área (frota, financeiro, sustentabilidade)
   SUPERVISOR: 2,   // Encarregados / Supervisores de obra / Técnicos manutenção
   OPERADOR: 3,     // Operador de campo (Mobile Hub, reportar avarias, validar anomalias)
-  VISUALIZADOR: 4, // Apenas consulta de dados (sem edição)
 };
 
 // Perfis de acesso predefinidos
@@ -195,6 +194,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.REPORTS_VIEW,
       PERMISSIONS.REPORTS_GENERATE,
       PERMISSIONS.SETTINGS_VIEW,
+      PERMISSIONS.SETTINGS_GENERAL,    // Validar/ajustar fator CO₂ para relatórios ESG
     ],
     isSystem: true,
     canCreateRolesBelow: false, // Focado em ESG, não gere pessoas
@@ -218,6 +218,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.SESSIONS_VIEW,
       PERMISSIONS.MAINTENANCE_VIEW,
       PERMISSIONS.MAINTENANCE_CREATE,
+      PERMISSIONS.MAINTENANCE_SCHEDULE, // Coordena paragens de máquinas na sua obra
       PERMISSIONS.QUALITY_VIEW,
       PERMISSIONS.SETTINGS_VIEW,
       PERMISSIONS.SETTINGS_ROLES, // Pode criar perfis customizados para sua equipa
@@ -225,25 +226,6 @@ export const DEFAULT_ROLES = {
     isSystem: true,
     restrictedToOwnObra: true, // Flag especial - só vê a sua obra
     canCreateRolesBelow: true, // Pode criar perfis de operadores customizados
-  },
-
-  visualizador: {
-    id: 'visualizador',
-    name: 'Visualizador',
-    description: 'Acesso apenas de leitura para consulta de dados',
-    color: 'slate',
-    icon: 'Eye',
-    level: ROLE_LEVELS.VISUALIZADOR,
-    permissions: [
-      PERMISSIONS.DASHBOARD_VIEW,
-      PERMISSIONS.OBRAS_VIEW,
-      PERMISSIONS.MACHINES_VIEW,
-      PERMISSIONS.SESSIONS_VIEW,
-      PERMISSIONS.MAINTENANCE_VIEW,
-    ],
-    isSystem: true,
-    restrictedToOwnObra: true,
-    canCreateRolesBelow: false, // Não pode criar perfis
   },
 
   // === NOVOS PERFIS (Abril 2026) ===
@@ -284,6 +266,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.QUALITY_VIEW,
       PERMISSIONS.QUALITY_VALIDATE,
       PERMISSIONS.SETTINGS_VIEW,
+      PERMISSIONS.SETTINGS_GENERAL,    // Definir intervalos e custos das máquinas
     ],
     isSystem: true,
     restrictedToOwnObra: false, // Técnico vai a várias obras
@@ -303,8 +286,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.MACHINES_VIEW,
       PERMISSIONS.SESSIONS_VIEW,         // Só as suas (filtrado)
-      PERMISSIONS.MAINTENANCE_VIEW,      // Ver estado da máquina que opera
-      PERMISSIONS.MAINTENANCE_CREATE,    // Reportar avaria
+      PERMISSIONS.MAINTENANCE_VIEW,      // Ver estado e calendário da máquina que opera
       PERMISSIONS.QUALITY_VALIDATE,      // Validar anomalias próprias
     ],
     isSystem: true,
@@ -366,7 +348,7 @@ export const getRolePermissions = (roleId, customRoles = {}) => {
 // Obter nível de um role
 export const getRoleLevel = (roleId, customRoles = {}) => {
   const role = getRoleById(roleId, customRoles);
-  return role?.level ?? ROLE_LEVELS.VISUALIZADOR; // Default: nível mais baixo (só leitura)
+  return role?.level ?? ROLE_LEVELS.OPERADOR; // Default: nível mais baixo
 };
 
 // Verificar se um role pode gerir outro (baseado em hierarquia)
@@ -427,7 +409,6 @@ export const getLevelLabel = (level) => {
     [ROLE_LEVELS.GESTOR]: 'Gestão',
     [ROLE_LEVELS.SUPERVISOR]: 'Supervisão',
     [ROLE_LEVELS.OPERADOR]: 'Operador',
-    [ROLE_LEVELS.VISUALIZADOR]: 'Visualização',
   };
   return labels[level] || 'Desconhecido';
 };

@@ -50,7 +50,7 @@ const DashboardRouter = ({ DefaultDashboard }) => {
       // IT usa o dashboard global + extras (por enquanto, dashboard global)
       return <DefaultDashboard />;
     default:
-      // Admin, Gestores, Encarregado, Visualizador → dashboard global
+      // Admin, Gestores, Encarregado, Operador → dashboard global
       return <DefaultDashboard />;
   }
 };

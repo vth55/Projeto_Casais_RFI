@@ -28,7 +28,7 @@ const useAuthStore = create(
 
       // Simular login (em produção seria com Firebase Auth)
       login: (user) => {
-        const role = get().getRole(user.systemRole || 'visualizador');
+        const role = get().getRole(user.systemRole || 'operador');
         set({
           currentUser: {
             ...user,
@@ -198,9 +198,9 @@ const useAuthStore = create(
       // Obter nível do utilizador atual
       getUserLevel: () => {
         const { currentUser, customRoles = {} } = get();
-        if (!currentUser) return ROLE_LEVELS.VISUALIZADOR;
+        if (!currentUser) return ROLE_LEVELS.OPERADOR;
         const role = get().getRole(currentUser.systemRole);
-        return role?.level ?? ROLE_LEVELS.VISUALIZADOR;
+        return role?.level ?? ROLE_LEVELS.OPERADOR;
       },
 
       // Verificar se pode gerir um role específico

@@ -97,11 +97,11 @@ const TEST_DATA = {
 
 // Componente QR Code Tab
 const QRCodeTab = () => {
-  const [selectedRole, setSelectedRole] = useState('visualizador');
+  const [selectedRole, setSelectedRole] = useState('operador');
   const [copied, setCopied] = useState(false);
 
   const roles = [
-    { id: 'visualizador', label: 'Visualizador', desc: 'Apenas visualização de dados' },
+    { id: 'operador', label: 'Operador de Campo', desc: 'Mobile Hub, reportar avarias' },
     { id: 'juri', label: 'Júri / Avaliador', desc: 'Acesso completo para avaliação' },
     { id: 'admin', label: 'Administrador', desc: 'Acesso total (demo)' },
   ];

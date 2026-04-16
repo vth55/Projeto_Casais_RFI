@@ -308,7 +308,7 @@ const RoleCard = ({ role, onEdit, isCurrentUser, canManage }) => {
     [ROLE_LEVELS.ADMIN]: 'bg-red-50 text-red-600',
     [ROLE_LEVELS.GESTOR]: 'bg-blue-50 text-blue-600',
     [ROLE_LEVELS.SUPERVISOR]: 'bg-amber-50 text-amber-600',
-    [ROLE_LEVELS.VISUALIZADOR]: 'bg-slate-50 text-slate-600',
+    [ROLE_LEVELS.OPERADOR]: 'bg-slate-50 text-slate-600',
   };
 
   return (
@@ -336,7 +336,7 @@ const RoleCard = ({ role, onEdit, isCurrentUser, canManage }) => {
       <p className="text-xs text-slate-500 mb-3">{role.description}</p>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 text-xs rounded ${levelColors[role.level] || levelColors[ROLE_LEVELS.VISUALIZADOR]}`}>
+          <span className={`px-2 py-0.5 text-xs rounded ${levelColors[role.level] || levelColors[ROLE_LEVELS.OPERADOR]}`}>
             {getLevelLabel(role.level)}
           </span>
           <span className="text-xs text-slate-400">
@@ -360,7 +360,7 @@ const RoleEditModal = ({ role, onSave, onClose, onDelete, availableLevels, userL
     name: role?.name || '',
     description: role?.description || '',
     color: role?.color || 'blue',
-    level: role?.level ?? (availableLevels[0]?.level || ROLE_LEVELS.VISUALIZADOR),
+    level: role?.level ?? (availableLevels[0]?.level || ROLE_LEVELS.OPERADOR),
     permissions: role?.permissions || [],
   });
   const [expandedCategory, setExpandedCategory] = useState(null);
@@ -836,7 +836,7 @@ const ConfiguracoesView = () => {
       addCustomRole({
         ...roleData,
         id: newId,
-        level: roleData.level ?? ROLE_LEVELS.VISUALIZADOR,
+        level: roleData.level ?? ROLE_LEVELS.OPERADOR,
         canCreateRolesBelow: false, // Perfis customizados não criam outros perfis por default
       });
     }
@@ -1062,37 +1062,6 @@ const ConfiguracoesView = () => {
                     <p className="text-xs text-slate-500 dark:text-slate-400">Restrito à sua obra</p>
                   </div>
                   {currentUser?.systemRole === 'encarregado_obra' && (
-                    <Badge variant="success" className="ml-auto">Ativo</Badge>
-                  )}
-                </button>
-
-                {/* Visualizador */}
-                <button
-                  onClick={() => {
-                    useAuthStore.getState().setCurrentUser({
-                      id: 'demo_visualizador',
-                      name: 'Pedro Ferreira (Visualizador)',
-                      email: 'visualizador@casais.pt',
-                      systemRole: 'visualizador',
-                      assignedObraId: 'obra_porto_2025',
-                    });
-                    setMessage({ type: 'success', text: 'Perfil alterado para Visualizador' });
-                    setTimeout(() => setMessage(null), 3000);
-                  }}
-                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
-                    currentUser?.systemRole === 'visualizador'
-                      ? 'border-slate-500 bg-slate-50'
-                      : 'border-slate-200 hover:border-slate-400'
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-full bg-slate-500 flex items-center justify-center">
-                    <Eye className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-white">Visualizador</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Apenas leitura</p>
-                  </div>
-                  {currentUser?.systemRole === 'visualizador' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
                   )}
                 </button>

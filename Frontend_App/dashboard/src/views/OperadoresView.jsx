@@ -17,9 +17,9 @@ const EMPLOYEE_ROLES = [
   { id: 'operador', label: 'Operador de Máquinas', color: 'primary', description: 'Opera equipamentos pesados (usa apenas RFID)', suggestedSystemRole: null },
   { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra', suggestedSystemRole: 'encarregado_obra' },
   { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras', suggestedSystemRole: 'gestor_frota' },
-  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Manutenção de equipamentos', suggestedSystemRole: 'visualizador' },
+  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Manutenção de equipamentos', suggestedSystemRole: 'tecnico_manutencao' },
   { id: 'gestor_frota', label: 'Gestor de Frota', color: 'blue', description: 'Gestão geral da frota', suggestedSystemRole: 'gestor_frota' },
-  { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas', suggestedSystemRole: 'visualizador' },
+  { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas', suggestedSystemRole: 'operador' },
 ];
 
 const getRoleInfo = (roleId) => EMPLOYEE_ROLES.find(r => r.id === roleId) || EMPLOYEE_ROLES[0];
