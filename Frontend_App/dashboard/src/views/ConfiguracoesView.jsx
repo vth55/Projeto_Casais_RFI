@@ -776,6 +776,7 @@ const ConfiguracoesView = () => {
   } = useAuthStore();
 
   const canManageRoles = can(PERMISSIONS.SETTINGS_ROLES);
+  const canEditOperationalParams = can(PERMISSIONS.SETTINGS_GENERAL);
   const userLevel = getUserLevel();
   const availableLevels = getAvailableLevelsForCreation();
   const canCreateRoles = canCreateCustomRoles();
@@ -1324,7 +1325,7 @@ const ConfiguracoesView = () => {
       default: // general
         return (
           <div className="space-y-6">
-            <OperationalSettingsSection />
+            {canEditOperationalParams && <OperationalSettingsSection />}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ConfigSection icon={Settings} title="Limites de Sessão" description="Thresholds para alertas automáticos">

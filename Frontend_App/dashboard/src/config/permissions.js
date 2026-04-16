@@ -38,6 +38,7 @@ export const PERMISSIONS = {
   MAINTENANCE_VIEW: 'maintenance:view',
   MAINTENANCE_CREATE: 'maintenance:create',
   MAINTENANCE_EDIT: 'maintenance:edit',
+  MAINTENANCE_SCHEDULE: 'maintenance:schedule',
 
   // Financeiro
   FINANCIAL_VIEW: 'financial:view',
@@ -133,12 +134,14 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.MAINTENANCE_VIEW,
       PERMISSIONS.MAINTENANCE_CREATE,
       PERMISSIONS.MAINTENANCE_EDIT,
+      PERMISSIONS.MAINTENANCE_SCHEDULE,
       PERMISSIONS.ANALYTICS_VIEW,
       PERMISSIONS.ANALYTICS_EXPORT,
       PERMISSIONS.REPORTS_VIEW,
       PERMISSIONS.REPORTS_GENERATE,
       PERMISSIONS.AUDIT_VIEW,
       PERMISSIONS.SETTINGS_VIEW,
+      PERMISSIONS.SETTINGS_GENERAL,
       PERMISSIONS.SETTINGS_ROLES, // Pode gerir perfis (de níveis inferiores)
     ],
     isSystem: true,
@@ -166,6 +169,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.REPORTS_VIEW,
       PERMISSIONS.REPORTS_GENERATE,
       PERMISSIONS.SETTINGS_VIEW,
+      PERMISSIONS.SETTINGS_GENERAL,
     ],
     isSystem: true,
     canCreateRolesBelow: false, // Focado em finanças, não gere pessoas
@@ -276,6 +280,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.MAINTENANCE_VIEW,
       PERMISSIONS.MAINTENANCE_CREATE,   // Registar intervenções
       PERMISSIONS.MAINTENANCE_EDIT,     // Atualizar manutenções
+      PERMISSIONS.MAINTENANCE_SCHEDULE, // Agendar manutenções futuras
       PERMISSIONS.QUALITY_VIEW,
       PERMISSIONS.QUALITY_VALIDATE,
       PERMISSIONS.SETTINGS_VIEW,
@@ -479,6 +484,7 @@ export const PERMISSION_CATEGORIES = {
       { id: PERMISSIONS.MAINTENANCE_VIEW, label: 'Ver Manutenção' },
       { id: PERMISSIONS.MAINTENANCE_CREATE, label: 'Registar Manutenção' },
       { id: PERMISSIONS.MAINTENANCE_EDIT, label: 'Editar Manutenção' },
+      { id: PERMISSIONS.MAINTENANCE_SCHEDULE, label: 'Agendar Manutenção' },
     ],
   },
   financial: {

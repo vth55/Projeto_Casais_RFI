@@ -2,8 +2,10 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, Image, X, Upload, Eye, Trash2, Camera, ShieldAlert, CheckCircle2, Phone, MessageSquare, Send, User, ChevronRight, ChevronLeft, Brain, Sparkles, CalendarPlus } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAvariasStore from '../store/useAvariasStore';
+import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
 import { getCategoryName } from '../utils/safeRender';
+import { PERMISSIONS } from '../config/permissions';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
   <div className="flex border-b border-slate-200 dark:border-slate-700">
@@ -287,8 +289,8 @@ const MaintenanceCard = ({ machine, onSchedule, onComplete, prediction }) => {
         </div>
       </div>
       <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <Button variant="outline" size="sm" onClick={() => onSchedule(machine)}>Agendar</Button>
-        <Button size="sm" onClick={() => onComplete(machine)}>Registar Manutenção</Button>
+        {onSchedule && <Button variant="outline" size="sm" onClick={() => onSchedule(machine)}>Agendar</Button>}
+        {onComplete && <Button size="sm" onClick={() => onComplete(machine)}>Registar Manutenção</Button>}
       </div>
     </Card>
   );
@@ -991,6 +993,9 @@ const ManutencaoView = () => {
   } = useStore();
 
   const { avarias, resolverAvaria, addNota } = useAvariasStore();
+  const { can } = useAuthStore();
+  const canSchedule = can(PERMISSIONS.MAINTENANCE_SCHEDULE);
+  const canCreate = can(PERMISSIONS.MAINTENANCE_CREATE);
   const [selectedAvaria, setSelectedAvaria] = useState(null);
 
   // Derivar tab diretamente do activeView
@@ -1066,9 +1071,11 @@ const ManutencaoView = () => {
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Manutenção</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de manutenções preventivas</p>
         </div>
-        <Button icon={Plus} onClick={() => { setSelectedMachine(null); setShowNewModal(true); }}>
-          Registar Manutenção
-        </Button>
+        {canCreate && (
+          <Button icon={Plus} onClick={() => { setSelectedMachine(null); setShowNewModal(true); }}>
+            Registar Manutenção
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -1085,7 +1092,7 @@ const ManutencaoView = () => {
           {activeTab === 'alerts' && (
             alertMachines.length === 0
               ? <EmptyState icon={Check} title="Sem alertas" description="Todos os equipamentos estão dentro dos limites." />
-              : <div className="space-y-4">{alertMachines.map(m => <MaintenanceCard key={m.id} machine={m} onSchedule={(machine) => setShowScheduleModal(machine)} onComplete={handleComplete} prediction={getSmartMaintenancePrediction(m)} />)}</div>
+              : <div className="space-y-4">{alertMachines.map(m => <MaintenanceCard key={m.id} machine={m} onSchedule={canSchedule ? (machine) => setShowScheduleModal(machine) : null} onComplete={canCreate ? handleComplete : null} prediction={getSmartMaintenancePrediction(m)} />)}</div>
           )}
 
           {activeTab === 'calendar' && (
