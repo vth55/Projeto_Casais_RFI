@@ -25,6 +25,8 @@
 - [x] **Segurança & Roles (RBAC)**:
     - Adicionada permissão `maintenance:schedule` e protegidos botões de agendamento/registo.
     - Ativados guards em `ManutencaoView.jsx` e `ConfiguracoesView.jsx` para parâmetros sensíveis.
+    - **Refinamento**: Atribuído agendamento ao Encarregado, removido registo do Operador, e dado acesso ESG ao Gestor de Sustentabilidade.
+    - **Higiene**: Removido o role obsoleto `visualizador` para simplificar a arquitetura.
 - [x] **Build**: Compilação `vite build` realizada com sucesso (0 erros).
 - **Veredito**: Sistema robusto, seguro e orientado à Sede, pronto para demonstração.
 

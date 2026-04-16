@@ -26,10 +26,10 @@ Sistema de Gestão Inteligente de Frotas Industriais para o Grupo Casais. Focado
 - `docs/standards/CODE_PATTERNS.md`: MANDATORY for Code/UI style.
 
 ## Current Status
-- ✅ Procore Sync & Writeback (Phase 3) Operational.
-- ✅ Dynamic Operational Parameters (Diesel/CO2/Maintenance).
-- ✅ Machine-as-Hub (NFC Mobile) Operational.
-- 🟡 Manutenção Preditiva (Sede) - Atribuído ao Claude Code.
-- 🔴 Gemini: BLOQUEIO TOTAL DE CÓDIGO FONTE ATIVO.
+- ✅ Integração Procore & Writeback (Fase 3) Operacional.
+- ✅ Parâmetros Operacionais Dinâmicos (Diesel/CO2/Manutenção).
+- ✅ Machine-as-Hub (NFC Mobile).
+- ✅ Manutenção Preditiva Industrial (Sede) & Refinamento RBAC.
+- 🔴 Gemini: BLOQUEIO TOTAL DE CÓDIGO FONTE ATIVO (Protocolo Arqueólogo).
 
 > For deep technical logic, refer to `DOCS_ARCHITECTURE.md`.
