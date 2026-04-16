@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
+import useAvariasStore from './useAvariasStore';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
@@ -40,17 +41,27 @@ const useStore = create((set, get) => ({
   procoreProjects: [],
   procoreDirectory: [],
   procoreEquipment: [],
+  // Parâmetros operacionais do sistema (settings/system)
+  // Parâmetros operacionais do sistema (settings/system)
+  systemSettings: {
+    fuelPricePerLitre: 1.89,
+    co2FactorPerLitre: 2.68,
+    defaultMaintenanceInterval: 150,
+  },
+  maintenanceSchedules: [],
   loading: true,
   error: null,
   activeView: 'dashboard',
   sidebarOpen: false,
-  dateFilter: 'month',
+  dateFilter: 'month', // 'today' | 'week' | 'month' | 'custom'
+  customRange: null,   // { start: Date, end: Date } — usado quando dateFilter === 'custom'
   latestScanBuffer: null,
 
   // Setters simples
   setActiveView: (view) => set({ activeView: view }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setDateFilter: (filter) => set({ dateFilter: filter }),
+  setCustomRange: (range) => set({ customRange: range, dateFilter: 'custom' }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 
@@ -162,7 +173,134 @@ const useStore = create((set, get) => ({
       );
     });
 
+    // ============================================
+    // SYSTEM SETTINGS — parâmetros operacionais
+    // ============================================
+    unsubscribers.push(
+      onSnapshot(
+        doc(db, `${basePath}/settings/system`),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            set({
+              systemSettings: {
+                fuelPricePerLitre: data.fuelPricePerLitre ?? 1.89,
+                co2FactorPerLitre: data.co2FactorPerLitre ?? 2.68,
+                defaultMaintenanceInterval: data.defaultMaintenanceInterval ?? 150,
+              },
+            });
+          }
+        },
+        (error) => console.debug('[settings:system] listener off:', error?.code || error?.message)
+      )
+    );
+
+    // Maintenance Schedules listener
+    unsubscribers.push(
+      onSnapshot(
+        collection(db, `${basePath}/maintenance_schedules`),
+        (snapshot) => {
+          const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          set({ maintenanceSchedules: data });
+        },
+        (error) => console.debug('[maintenance_schedules] listener off:', error?.code || error?.message)
+      )
+    );
+
     return () => unsubscribers.forEach(unsub => unsub());
+  },
+
+  updateSystemSettings: async (newSettings) => {
+    const ref = doc(db, `${basePath}/settings/system`);
+    await setDoc(ref, {
+      ...newSettings,
+      updatedAt: Timestamp.now(),
+    }, { merge: true });
+  },
+
+  getMaintenanceInterval: (machine) => {
+    const { systemSettings } = get();
+    return machine?.maintenanceInterval || systemSettings.defaultMaintenanceInterval || 150;
+  },
+
+  getCo2Factor: (machine) => {
+    const { systemSettings } = get();
+    return machine?.co2Factor || systemSettings.co2FactorPerLitre || 2.68;
+  },
+
+  // ============================================
+  // MAINTENANCE SCHEDULES — agendamentos manuais
+  // ============================================
+
+  addMaintenanceSchedule: async (scheduleData) => {
+    const id = `sched_${Date.now()}`;
+    await setDoc(doc(db, `${basePath}/maintenance_schedules`, id), {
+      ...scheduleData,
+      createdAt: Timestamp.now(),
+      status: 'scheduled',
+    });
+  },
+
+  updateMaintenanceSchedule: async (id, data) => {
+    await updateDoc(doc(db, `${basePath}/maintenance_schedules`, id), data);
+  },
+
+  deleteMaintenanceSchedule: async (id) => {
+    await deleteDoc(doc(db, `${basePath}/maintenance_schedules`, id));
+  },
+
+  // ============================================
+  // IA PREDITIVA — projeção de manutenção
+  // ============================================
+
+  getSmartMaintenancePrediction: (machine) => {
+    const { sessions, systemSettings } = get();
+    const interval = machine?.maintenanceInterval || systemSettings.defaultMaintenanceInterval || 150;
+    const partial = machine?.partialHours || 0;
+    const remaining = interval - partial;
+
+    if (remaining <= 0) {
+      return { predictedDate: new Date(), daysLeft: 0, avgHoursPerDay: 0, remaining: 0, interval, confidence: 'overdue' };
+    }
+
+    const now = new Date();
+    const twoWeeksAgo = new Date(now);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    const recentSessions = sessions.filter(s => {
+      if (s.machineId !== machine?.id || s.status !== 'CLOSED') return false;
+      const end = s.endTime?.toDate?.() || new Date(s.endTime);
+      return end >= twoWeeksAgo;
+    });
+
+    let totalHoursLast14Days = 0;
+    recentSessions.forEach(s => {
+      totalHoursLast14Days += s.durationHours || 0;
+    });
+
+    // Dias úteis nos últimos 14 dias
+    let workDaysInWindow = 0;
+    for (let d = new Date(twoWeeksAgo); d <= now; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) workDaysInWindow++;
+    }
+
+    const avgHoursPerDay = workDaysInWindow > 0 ? totalHoursLast14Days / workDaysInWindow : 8;
+    const effectiveAvg = avgHoursPerDay > 0 ? avgHoursPerDay : 8;
+
+    const workDaysNeeded = Math.ceil(remaining / effectiveAvg);
+    const predictedDate = new Date();
+    let added = 0;
+    while (added < workDaysNeeded) {
+      predictedDate.setDate(predictedDate.getDate() + 1);
+      const dow = predictedDate.getDay();
+      if (dow !== 0 && dow !== 6) added++;
+    }
+
+    const daysLeft = Math.round((predictedDate - now) / (1000 * 60 * 60 * 24));
+    const confidence = recentSessions.length >= 5 ? 'high' : recentSessions.length >= 2 ? 'medium' : 'low';
+
+    return { predictedDate, daysLeft, avgHoursPerDay: Math.round(effectiveAvg * 10) / 10, remaining: Math.round(remaining), interval, confidence };
   },
 
   // ============================================
@@ -237,7 +375,7 @@ const useStore = create((set, get) => ({
   // Activated by the operator creation modal to capture card scans in real-time.
   // Returns an unsubscribe function — the caller controls the lifecycle.
   subscribeScanBuffer: () => {
-    if (!db) return () => {};
+    if (!db) return () => { };
     const scanRef = doc(db, `${basePath}/scan_buffer`, 'latest');
     const unsub = onSnapshot(scanRef,
       (snap) => {
@@ -251,7 +389,7 @@ const useStore = create((set, get) => ({
           },
         });
       },
-      () => {} // silent — scan_buffer may not exist yet
+      () => { } // silent — scan_buffer may not exist yet
     );
     return () => {
       unsub();
@@ -381,11 +519,12 @@ const useStore = create((set, get) => ({
 
   // Sessões filtradas por período
   getFilteredSessions: () => {
-    const { sessions, dateFilter } = get();
+    const { sessions, dateFilter, customRange } = get();
     if (!sessions.length) return [];
 
     const now = new Date();
     let startDate;
+    let endDate = now;
 
     switch (dateFilter) {
       case 'today':
@@ -397,13 +536,12 @@ const useStore = create((set, get) => ({
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      case 'quarter': {
-        const quarter = Math.floor(now.getMonth() / 3);
-        startDate = new Date(now.getFullYear(), quarter * 3, 1);
-        break;
-      }
-      case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1);
+      case 'custom':
+        if (!customRange?.start || !customRange?.end) return sessions;
+        startDate = new Date(customRange.start);
+        startDate.setHours(0, 0, 0, 0); // Início do primeiro dia
+        endDate = new Date(customRange.end);
+        endDate.setHours(23, 59, 59, 999); // Fim do último dia
         break;
       default:
         return sessions;
@@ -414,8 +552,47 @@ const useStore = create((set, get) => ({
       const sessionDate = session.startTime.toDate
         ? session.startTime.toDate()
         : new Date(session.startTime);
-      return sessionDate >= startDate;
+      return sessionDate >= startDate && sessionDate <= endDate;
     });
+  },
+
+  // Horas úteis disponíveis por máquina no período ativo
+  // Considera 8h/dia em dias úteis (seg-sex). Nunca retorna 0 para evitar divisão por zero.
+  getPeriodCapacityHours: () => {
+    const { dateFilter, customRange } = get();
+    const now = new Date();
+    let startDate;
+    let endDay = now;
+
+    switch (dateFilter) {
+      case 'today':
+        return 8;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'custom':
+        if (!customRange?.start || !customRange?.end) return 8;
+        startDate = new Date(customRange.start);
+        endDay = new Date(customRange.end);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    let businessDays = 0;
+    const cursor = new Date(startDate);
+    cursor.setHours(0, 0, 0, 0);
+    const endCursor = new Date(endDay);
+    endCursor.setHours(0, 0, 0, 0);
+    while (cursor <= endCursor) {
+      const day = cursor.getDay();
+      if (day !== 0 && day !== 6) businessDays += 1;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return Math.max(8, businessDays * 8);
   },
 
   // KPIs calculados
@@ -434,8 +611,18 @@ const useStore = create((set, get) => ({
     // Máquinas ativas vs total
     const activeMachines = machines.filter(m => m.status === 'ACTIVE').length;
     const totalMachines = machines.length;
-    const utilizationRate = totalMachines > 0
+
+    // activeNowRate — % de máquinas atualmente em estado ACTIVE (snapshot instantâneo)
+    const activeNowRate = totalMachines > 0
       ? Math.round((activeMachines / totalMachines) * 100)
+      : 0;
+
+    // utilizationRate — padrão da indústria (Volvo/CAT/Komatsu):
+    // horas realmente trabalhadas ÷ capacidade disponível no período
+    const capacityPerMachine = get().getPeriodCapacityHours();
+    const fleetCapacityHours = totalMachines * capacityPerMachine;
+    const utilizationRate = fleetCapacityHours > 0
+      ? Math.min(100, Math.round((totalHours / fleetCapacityHours) * 100))
       : 0;
 
     // Emissões CO₂ (fórmula: horas × consumo L/h × 2.68 kg/L)
@@ -458,22 +645,29 @@ const useStore = create((set, get) => ({
     }, 0);
 
     // Alertas de manutenção (>80% de 150h = 120h)
-    const maintenanceAlerts = machines.filter(m => {
-      const hours = m.partialHours || m.totalHours || 0;
+    // Usando apenas partialHours (horas desde a última revisão)
+    const maintenanceAlertsCount = machines.filter(m => {
+      const hours = m.partialHours || 0;
       return hours >= 120;
     }).length;
 
-    // MTBF simulado (será calculado com dados reais depois)
-    const mtbf = 45.5; // horas médias entre falhas
+    // MTBF Real — Mean Time Between Failures (standard industrial)
+    // Numerador: horas operacionais no período (totalHours)
+    // Denominador: nº de avarias RESOLVIDAS (operating time between failures)
+    // Se não houver falhas registadas, devolve null (UI mostra "—")
+    const { avarias } = useAvariasStore.getState();
+    const resolvedFailures = avarias.filter(a => a.status === 'resolvida').length;
+    const mtbf = resolvedFailures > 0
+      ? Math.round(totalHours / resolvedFailures)
+      : null;
 
     // Custo operacional estimado
     const costPerHour = 35; // €/hora média
     const totalCost = totalHours * costPerHour;
 
-    // Downtime (máquinas paradas vs total de horas possíveis)
-    const possibleHours = totalMachines * 8 * 5; // 8h/dia, 5 dias
-    const downtime = possibleHours > 0
-      ? Math.round(((possibleHours - totalHours) / possibleHours) * 100)
+    // Downtime — coerente com utilizationRate (complementar à capacidade do período)
+    const downtime = fleetCapacityHours > 0
+      ? Math.round(((fleetCapacityHours - totalHours) / fleetCapacityHours) * 100)
       : 0;
 
     return {
@@ -482,9 +676,11 @@ const useStore = create((set, get) => ({
       activeMachines,
       totalMachines,
       utilizationRate,
+      activeNowRate,
+      capacityPerMachine,
       totalCO2: Math.round(totalCO2),
       totalFuel: Math.round(totalFuel),
-      maintenanceAlerts,
+      maintenanceAlerts: maintenanceAlertsCount,
       mtbf,
       totalCost: Math.round(totalCost),
       downtime: Math.max(0, Math.min(100, downtime)),
@@ -979,6 +1175,57 @@ const useStore = create((set, get) => ({
         };
       })
       .sort((a, b) => b.hoursOpen - a.hoursOpen); // Mais longas primeiro
+  },
+
+  // Atualizar sessão genérica (para uso administrativo)
+  updateSession: async (sessionId, updates) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      await updateDoc(doc(db, `${basePath}/sessions`, sessionId), updates);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao atualizar sessão:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Resolver anomalia de sessão (admin dashboard — preserva original vs corrigido)
+  resolveSessionAnomaly: async (sessionId, { correctedStart, correctedEnd, notes, action }) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      const { sessions } = get();
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return { success: false, error: 'Sessão não encontrada' };
+
+      const updates = {
+        validationStatus: 'RESOLVED',
+        validatedAt: Timestamp.now(),
+        validationNotes: notes || '',
+      };
+
+      if (action === 'correct' && correctedStart && correctedEnd) {
+        const start = correctedStart instanceof Date ? correctedStart : new Date(correctedStart);
+        const end = correctedEnd instanceof Date ? correctedEnd : new Date(correctedEnd);
+        const durationHours = (end - start) / (1000 * 60 * 60);
+
+        // Preservar valores originais antes de sobrescrever
+        updates.originalStartTime = session.startTime;
+        updates.originalEndTime = session.endTime;
+        updates.originalDurationHours = session.durationHours;
+        // Aplicar correção
+        updates.startTime = Timestamp.fromDate(start);
+        updates.endTime = Timestamp.fromDate(end);
+        updates.durationHours = durationHours;
+        updates.correctedByAdmin = true;
+        updates.correctedAt = Timestamp.now();
+      }
+
+      await updateDoc(doc(db, `${basePath}/sessions`, sessionId), updates);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao resolver anomalia:', error);
+      return { success: false, error: error.message };
+    }
   },
 }));
 

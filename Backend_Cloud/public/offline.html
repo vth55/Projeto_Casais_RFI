@@ -121,5 +121,22 @@
       </ul>
     </div>
   </div>
+  <script>
+    // Auto-destruição: se o utilizador TEM internet mas está a ver esta página,
+    // é porque o Service Worker antigo está a servir lixo em cache.
+    // Mata todos os SWs, limpa caches, e recarrega para carregar a app real.
+    if (navigator.onLine) {
+      (async function nuke() {
+        // 1. Desregistar todos os Service Workers
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var r of regs) { await r.unregister(); }
+        // 2. Limpar todos os caches do Workbox/PWA
+        var keys = await caches.keys();
+        for (var k of keys) { await caches.delete(k); }
+        // 3. Recarregar — agora vai à rede buscar a app verdadeira
+        location.reload(true);
+      })();
+    }
+  </script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import useThemeStore from './store/useThemeStore';
 import { Layout } from './components/layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAPrompt from './components/PWAPrompt';
+import useAuthStore from './store/useAuthStore';
 
 // Loading fallback para lazy components
 const ViewLoader = () => (
@@ -45,9 +46,14 @@ const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
 const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
 const SessoesCorrigidasView = lazy(() => import('./views/SessoesCorrigidasView'));
 
+// Dashboard Router (perfis)
+import DashboardRouter from './views/dashboards/DashboardRouter';
+
 export default function App() {
   const { activeView, loading, setLoading, initializeListeners } = useStore();
   const { initTheme } = useThemeStore();
+  const { currentUser, getRole } = useAuthStore();
+  const currentRole = getRole(currentUser?.systemRole);
 
   // Verificar se é página de validação ou reporte avaria (standalone routes)
   const [validationToken, setValidationToken] = useState(null);
@@ -138,8 +144,8 @@ export default function App() {
     if (activeView.startsWith('analises')) return <AnalisesView />;
     if (activeView === 'relatorios') return <RelatoriosView />;
     if (activeView === 'configuracoes') return <ConfiguracoesView />;
-    return <DashboardView />;
-  }, [activeView]);
+    return <DashboardRouter DefaultDashboard={DashboardView} />;
+  }, [activeView, currentUser?.systemRole]);
 
   // Se é Mobile Hub, renderizar standalone (sem sidebar/header)
   // IMPORTANTE: Verificar ANTES do loading para não bloquear o operador móvel
@@ -194,7 +200,7 @@ export default function App() {
           {renderView()}
         </Suspense>
       </Layout>
-      {/* DevTools */}
+      {/* DevTools - temporariamente visível para todos para facilitar o teste de Perfis na fase QA/Demo */}
       <Suspense fallback={null}>
         <DevTools />
       </Suspense>

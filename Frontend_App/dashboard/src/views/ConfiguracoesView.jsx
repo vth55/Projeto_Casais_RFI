@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Settings, Database, Trash2, RefreshCw, Bell, Shield, Palette,
   Users, Plus, Edit2, Check, X, ChevronRight, Lock, Unlock,
   Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon,
-  Truck, Building2, Wallet, Leaf, Link2, Cloud, CloudOff, Activity
+  Truck, Building2, Wallet, Leaf, Link2, Cloud, CloudOff, Activity,
+  Fuel, Wrench, BarChart3
 } from 'lucide-react';
 import { createAllMockData } from '../utils/mockData';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -624,6 +625,134 @@ const AppearanceSection = () => {
   );
 };
 
+// ============================================================
+// OPERATIONAL SETTINGS SECTION — Parâmetros de Operação
+// ============================================================
+const OperationalSettingsSection = () => {
+  const { systemSettings, updateSystemSettings } = useStore();
+  const [form, setForm] = useState({
+    fuelPricePerLitre: '',
+    co2FactorPerLitre: '',
+    defaultMaintenanceInterval: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setForm({
+      fuelPricePerLitre: String(systemSettings.fuelPricePerLitre ?? ''),
+      co2FactorPerLitre: String(systemSettings.co2FactorPerLitre ?? ''),
+      defaultMaintenanceInterval: String(systemSettings.defaultMaintenanceInterval ?? ''),
+    });
+  }, [systemSettings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateSystemSettings({
+        fuelPricePerLitre: parseFloat(form.fuelPricePerLitre) || 1.89,
+        co2FactorPerLitre: parseFloat(form.co2FactorPerLitre) || 2.68,
+        defaultMaintenanceInterval: parseInt(form.defaultMaintenanceInterval, 10) || 150,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hasChanges =
+    String(systemSettings.fuelPricePerLitre) !== form.fuelPricePerLitre ||
+    String(systemSettings.co2FactorPerLitre) !== form.co2FactorPerLitre ||
+    String(systemSettings.defaultMaintenanceInterval) !== form.defaultMaintenanceInterval;
+
+  return (
+    <ConfigSection
+      icon={BarChart3}
+      title="Parâmetros de Operação"
+      description="Valores globais usados nos cálculos de custo, emissões e manutenção. Máquinas individuais podem ter overrides."
+      action={
+        <Button
+          size="sm"
+          icon={saved ? Check : Save}
+          onClick={handleSave}
+          loading={saving}
+          disabled={!hasChanges}
+          variant={saved ? 'ghost' : 'primary'}
+        >
+          {saved ? 'Guardado' : 'Guardar'}
+        </Button>
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Fuel className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Preço Diesel</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">€/litro</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.fuelPricePerLitre}
+            onChange={e => setForm({ ...form, fuelPricePerLitre: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <Leaf className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Fator CO₂</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">kg CO₂/litro diesel</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.co2FactorPerLitre}
+            onChange={e => setForm({ ...form, co2FactorPerLitre: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <Wrench className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Intervalo Manutenção</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Horas por defeito</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="1"
+            min="1"
+            value={form.defaultMaintenanceInterval}
+            onChange={e => setForm({ ...form, defaultMaintenanceInterval: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
+        Estes valores servem de base global. Para personalizar por máquina, edite a ficha individual em Equipamentos.
+      </p>
+    </ConfigSection>
+  );
+};
+
 // View principal
 const ConfiguracoesView = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -997,6 +1126,100 @@ const ConfiguracoesView = () => {
                     <Badge variant="success" className="ml-auto">Ativo</Badge>
                   )}
                 </button>
+
+                {/* IT / Sistemas */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_it',
+                      name: 'Carlos Oliveira (IT)',
+                      email: 'it@casais.pt',
+                      systemRole: 'it',
+                      assignedObraId: null,
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para IT / Sistemas' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'it'
+                      ? 'border-cyan-500 bg-cyan-50'
+                      : 'border-slate-200 hover:border-cyan-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center">
+                    <Database className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">IT / Sistemas</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Acesso total e integrações</p>
+                  </div>
+                  {currentUser?.systemRole === 'it' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Técnico de Manutenção */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_manutencao',
+                      name: 'Rui Silva (Manutenção)',
+                      email: 'manutencao@casais.pt',
+                      systemRole: 'tecnico_manutencao',
+                      assignedObraId: null,
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Técnico de Manutenção' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'tecnico_manutencao'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-slate-200 hover:border-orange-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
+                    <Wrench className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">Técnico Manutenção</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Saúde e avarias dos equipamentos</p>
+                  </div>
+                  {currentUser?.systemRole === 'tecnico_manutencao' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
+
+                {/* Operador de Campo */}
+                <button
+                  onClick={() => {
+                    useAuthStore.getState().setCurrentUser({
+                      id: 'demo_operador',
+                      name: 'Manuel Dias (Operador)',
+                      email: 'operador@casais.pt',
+                      systemRole: 'operador',
+                      assignedObraId: 'obra_porto_2025',
+                      cardId: 'OP_TEST_001',
+                    });
+                    setMessage({ type: 'success', text: 'Perfil alterado para Operador de Campo' });
+                    setTimeout(() => setMessage(null), 3000);
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left hover:shadow-md ${
+                    currentUser?.systemRole === 'operador'
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-slate-200 hover:border-teal-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">Operador de Campo</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Mobile Hub e reporte de avarias</p>
+                  </div>
+                  {currentUser?.systemRole === 'operador' && (
+                    <Badge variant="success" className="ml-auto">Ativo</Badge>
+                  )}
+                </button>
               </div>
 
               {/* Info sobre perfil atual */}
@@ -1100,63 +1323,53 @@ const ConfiguracoesView = () => {
 
       default: // general
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ConfigSection icon={Settings} title="Sistema" description="Configurações gerais do sistema">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Limite Manutenção</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Horas até manutenção preventiva</p>
-                  </div>
-                  <Badge>150h</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Anomalia de Duração</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Horas contínuas para disparar alerta</p>
-                  </div>
-                  <Badge>5h</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Fecho Sessão</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Fechar sessão automaticamente</p>
-                  </div>
-                  <Badge>14h</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Fator CO₂</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">kg CO₂ por litro de diesel</p>
-                  </div>
-                  <Badge>2.68</Badge>
-                </div>
-              </div>
-            </ConfigSection>
+          <div className="space-y-6">
+            <OperationalSettingsSection />
 
-            <ConfigSection icon={Users} title="Utilizador Atual" description="Informações da sua conta">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Nome</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.name || '-'}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ConfigSection icon={Settings} title="Limites de Sessão" description="Thresholds para alertas automáticos">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Anomalia de Duração</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Horas contínuas para disparar alerta</p>
+                    </div>
+                    <Badge>5h</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Fecho Sessão</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Fechar sessão automaticamente</p>
+                    </div>
+                    <Badge>14h</Badge>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Email</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email || '-'}</p>
+              </ConfigSection>
+
+              <ConfigSection icon={Users} title="Utilizador Atual" description="Informações da sua conta">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Nome</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.name || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Email</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Perfil</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{allRoles[currentUser?.systemRole]?.name || '-'}</p>
+                    </div>
+                    <Badge variant="primary">{currentUser?.systemRole}</Badge>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">Perfil</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{allRoles[currentUser?.systemRole]?.name || '-'}</p>
-                  </div>
-                  <Badge variant="primary">{currentUser?.systemRole}</Badge>
-                </div>
-              </div>
-            </ConfigSection>
+              </ConfigSection>
+            </div>
           </div>
         );
     }

@@ -46,6 +46,35 @@ const useAuthStore = create(
         });
       },
 
+      // Trocar perfil sem logout (DevTools / Demo)
+      switchRole: (roleId) => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+
+        const role = get().getRole(roleId);
+        if (!role) {
+          console.warn(`Role "${roleId}" não encontrado`);
+          return;
+        }
+
+        console.log(`🔄 Perfil alterado: ${currentUser.systemRole} → ${roleId}`);
+        set({
+          currentUser: {
+            ...currentUser,
+            systemRole: roleId,
+            permissions: role.permissions || [],
+          },
+        });
+      },
+
+      // Obter dashboard default para o perfil atual
+      getDefaultDashboard: () => {
+        const { currentUser } = get();
+        if (!currentUser) return 'dashboard';
+        const role = get().getRole(currentUser.systemRole);
+        return role?.defaultDashboard || 'dashboard';
+      },
+
       // Definir utilizador atual (usado na inicialização)
       setCurrentUser: (user) => {
         if (!user) {
@@ -249,6 +278,7 @@ if (typeof window !== 'undefined') {
       email: 'vitor@casais.pt',
       systemRole: 'admin',
       assignedObraId: null,
+      cardId: 'OP_TEST_001',
     });
   }
 }

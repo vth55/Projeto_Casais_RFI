@@ -377,6 +377,95 @@ async function createTimecardEntry({ project_id, date, hours, description, login
 }
 
 // ============================================
+// PROCORE WRITE-BACK — Daily Logs (Phase 3)
+// ============================================
+
+/**
+ * Cria um Daily Log no Procore para um projeto numa data específica.
+ *
+ * @param {object} params
+ * @param {string} params.project_id        ID da obra no Procore
+ * @param {string} params.date              Data no formato YYYY-MM-DD
+ * @param {string} params.description       Resumo do dia (ex: "3 máquinas activas, 12.5h totais")
+ * @param {object} [opts]
+ * @param {string} [opts.weather]           Condições meteorológicas (ex: "Limpo, 22°C")
+ * @param {number} [opts.headcount]         Nº de operadores activos nesse dia
+ * @param {string} [opts.notes]             Notas adicionais (detalhe por máquina/operador)
+ * @returns {Promise<object>} Resposta JSON do Procore
+ */
+async function createDailyLog({ project_id, date, description }, opts = {}) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${project_id}/daily_logs`;
+
+    const payload = {
+        log_date: date,
+        description,
+    };
+
+    if (opts.weather)   payload.weather_conditions = opts.weather;
+    if (opts.headcount) payload.headcount = opts.headcount;
+    if (opts.notes)     payload.notes = opts.notes;
+
+    const result = await procoreFetch(endpoint, {
+        method: 'POST',
+        body: payload,
+    });
+
+    console.log(`[procoreBridge] daily_log created id=${result.data?.id} | ${date} | ${description.slice(0, 60)}`);
+    return result.data;
+}
+
+// ============================================
+// PROCORE WRITE-BACK — Cost Entries (Phase 3)
+// ============================================
+
+/**
+ * Cria uma entrada de custo directo no Procore.
+ * Usado para registar custos de combustível, horas de equipamento, etc.
+ *
+ * @param {object} params
+ * @param {string} params.project_id           ID da obra no Procore
+ * @param {string} params.date                 Data no formato YYYY-MM-DD
+ * @param {string} params.description          Descrição do custo
+ * @param {number} params.amount               Valor monetário (EUR)
+ * @param {object} [opts]
+ * @param {string} [opts.cost_type]            Tipo: 'equipment'|'fuel'|'labor' (default: 'equipment')
+ * @param {number} [opts.quantity]             Quantidade (ex: litros, horas)
+ * @param {number} [opts.unit_cost]            Custo unitário
+ * @param {string} [opts.unit]                 Unidade (ex: 'L', 'h', '€')
+ * @param {number} [opts.equipment_id]         ID do equipamento no Procore
+ * @returns {Promise<object>} Resposta JSON do Procore
+ */
+async function createCostEntry({ project_id, date, description, amount }, opts = {}) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${project_id}/direct_costs`;
+
+    const payload = {
+        direct_cost: {
+            invoice_date: date,
+            description,
+            status: 'approved',
+        },
+    };
+
+    const lineItem = {
+        description,
+        amount: amount || 0,
+    };
+    if (opts.quantity)  lineItem.quantity  = opts.quantity;
+    if (opts.unit_cost) lineItem.unit_cost = opts.unit_cost;
+    if (opts.unit)      lineItem.uom       = opts.unit;
+
+    payload.direct_cost.line_items = [lineItem];
+
+    const result = await procoreFetch(endpoint, {
+        method: 'POST',
+        body: payload,
+    });
+
+    console.log(`[procoreBridge] cost_entry created id=${result.data?.id} | ${date} | €${amount}`);
+    return result.data;
+}
+
+// ============================================
 // HANDLERS POR ROTA
 // ============================================
 
@@ -777,8 +866,10 @@ module.exports = {
     fetchDirectory,
     persistCollection,
     runFullSync, // ← consumido pelo procoreScheduler (Chunk 1C)
-    // Write-back (Phase 2)
+    // Write-back (Phase 2 + 3)
     createTimecardEntry,
+    createDailyLog,
+    createCostEntry,
     // Re-exportar os secrets para que index.js os possa associar a outras functions:
     PROCORE_CLIENT_ID,
     PROCORE_CLIENT_SECRET,

@@ -1,16 +1,51 @@
-# React + Vite
+# 🎨 Frontend_App - PWA Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface principal de gestão e visualização de dados do *Casais Fleet Intelligence*. Desenvolvida como uma Progressive Web Application (PWA) de alto desempenho.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🛠️ Tecnologias
+- **React 19** + **Vite**
+- **Tailwind CSS** (Styling)
+- **Zustand** (Estado Global)
+- **Lucide React** (Ícones)
+- **Firebase SDK** (Sync em tempo real)
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📂 Estrutura de Pastas
+- `src/components/`: Componentes UI reutilizáveis (Card, StatCard, Button).
+- `src/store/`: Gestão de estado centralizada.
+  - `useStore.js`: Estado principal de máquinas, sessões e obras.
+  - `useAuthStore.js`: Sistema de autenticação e RBAC.
+- `src/views/`: Páginas completas da aplicação.
+  - `DashboardView.jsx`: Painel de controlo principal.
+  - `MaquinasView.jsx`: Gestão de equipamentos e custos.
+- `src/config/`: Configurações de permissões e Firebase.
+- `public/`: Assets estáticos e `manifest.json`.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🔐 Segurança (RBAC)
+O sistema utiliza um modelo de **Role-Based Access Control** com 5 perfis:
+1. **Admin**: Acesso total.
+2. **IT/Sistemas**: Gestão técnica e integrações.
+3. **Gestor (Frota/Financeiro)**: Operação e custos.
+4. **Supervisor**: Focado em obras e manutenção.
+5. **Operador**: Mobile Hub (NFC) e reporte de avarias.
+
+---
+
+## 📶 Modo Offline
+Graças ao `enableIndexedDbPersistence` do Firebase e ao Service Worker configurado no `vite.config.js`, a app pode ser utilizada sem rede, sincronizando os dados automaticamente assim que a ligação for restabelecida.
+
+---
+
+## 🚀 Como Correr
+```bash
+npm install
+npm run dev
+```
+
+---
+> **Style Guide**: Seguimos os padrões oficiais da Casais (#005EB8). Evitar o uso de cores roxas/violetas conforme as regras de design do projeto.

@@ -79,15 +79,17 @@ export const PERMISSIONS = {
  * Níveis hierárquicos de acesso ao PWA (menor = mais privilégios)
  *
  * NOTA IMPORTANTE:
- * Os operadores de máquinas NÃO acedem ao PWA.
- * Eles apenas fazem login/logout nas máquinas via cartão RFID.
- * O PWA é usado por gestores, supervisores e pessoal de escritório.
+ * Os operadores de máquinas NÃO acedem ao PWA desktop.
+ * Eles usam o Mobile Hub (scan RFID/NFC) e reportam avarias.
+ * O PWA desktop é usado por gestores, supervisores, técnicos e IT.
  */
 export const ROLE_LEVELS = {
   ADMIN: 0,        // Acesso total - Administração de sistemas
+  IT: 0,           // Acesso total + DevTools, integrações, logs
   GESTOR: 1,       // Gestores de área (frota, financeiro, sustentabilidade)
-  SUPERVISOR: 2,   // Encarregados / Supervisores de obra
-  VISUALIZADOR: 3, // Apenas consulta de dados (sem edição)
+  SUPERVISOR: 2,   // Encarregados / Supervisores de obra / Técnicos manutenção
+  OPERADOR: 3,     // Operador de campo (Mobile Hub, reportar avarias, validar anomalias)
+  VISUALIZADOR: 4, // Apenas consulta de dados (sem edição)
 };
 
 // Perfis de acesso predefinidos
@@ -239,6 +241,73 @@ export const DEFAULT_ROLES = {
     restrictedToOwnObra: true,
     canCreateRolesBelow: false, // Não pode criar perfis
   },
+
+  // === NOVOS PERFIS (Abril 2026) ===
+
+  it: {
+    id: 'it',
+    name: 'IT / Sistemas',
+    description: 'Acesso total + DevTools, integrações (Procore, SAP), logs e gestão técnica',
+    color: 'cyan',
+    icon: 'Monitor',
+    level: ROLE_LEVELS.IT,
+    permissions: Object.values(PERMISSIONS), // Acesso total (como admin)
+    isSystem: true,
+    canCreateRolesBelow: true,
+    // Flag especial — DevTools visível
+    showDevTools: true,
+    // Dashboard: painel de integrações, status APIs, logs
+    defaultDashboard: 'it',
+  },
+
+  tecnico_manutencao: {
+    id: 'tecnico_manutencao',
+    name: 'Técnico de Manutenção',
+    description: 'Gestão de manutenções, avarias e saúde dos equipamentos',
+    color: 'orange',
+    icon: 'Wrench',
+    level: ROLE_LEVELS.SUPERVISOR,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.MACHINES_VIEW,
+      PERMISSIONS.MACHINES_EDIT,        // Pode atualizar estado da máquina
+      PERMISSIONS.SESSIONS_VIEW,
+      PERMISSIONS.SESSIONS_VIEW_ALL,
+      PERMISSIONS.MAINTENANCE_VIEW,
+      PERMISSIONS.MAINTENANCE_CREATE,   // Registar intervenções
+      PERMISSIONS.MAINTENANCE_EDIT,     // Atualizar manutenções
+      PERMISSIONS.QUALITY_VIEW,
+      PERMISSIONS.QUALITY_VALIDATE,
+      PERMISSIONS.SETTINGS_VIEW,
+    ],
+    isSystem: true,
+    restrictedToOwnObra: false, // Técnico vai a várias obras
+    canCreateRolesBelow: false,
+    // Dashboard: painel de saúde de equipamentos, avarias abertas, preventivas
+    defaultDashboard: 'manutencao',
+  },
+
+  operador: {
+    id: 'operador',
+    name: 'Operador de Campo',
+    description: 'Mobile Hub, scan RFID/NFC, reportar avarias e validar sessões próprias',
+    color: 'teal',
+    icon: 'Smartphone',
+    level: ROLE_LEVELS.OPERADOR,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.MACHINES_VIEW,
+      PERMISSIONS.SESSIONS_VIEW,         // Só as suas (filtrado)
+      PERMISSIONS.MAINTENANCE_VIEW,      // Ver estado da máquina que opera
+      PERMISSIONS.MAINTENANCE_CREATE,    // Reportar avaria
+      PERMISSIONS.QUALITY_VALIDATE,      // Validar anomalias próprias
+    ],
+    isSystem: true,
+    restrictedToOwnObra: true,
+    canCreateRolesBelow: false,
+    // Dashboard: Mobile Hub (scan, "minha máquina", reportar avaria)
+    defaultDashboard: 'operador',
+  },
 };
 
 // Mapeamento de menus para permissões
@@ -349,8 +418,10 @@ export const getAssignableRoles = (userRoleId, customRoles = {}) => {
 export const getLevelLabel = (level) => {
   const labels = {
     [ROLE_LEVELS.ADMIN]: 'Administração',
+    [ROLE_LEVELS.IT]: 'IT / Sistemas',
     [ROLE_LEVELS.GESTOR]: 'Gestão',
     [ROLE_LEVELS.SUPERVISOR]: 'Supervisão',
+    [ROLE_LEVELS.OPERADOR]: 'Operador',
     [ROLE_LEVELS.VISUALIZADOR]: 'Visualização',
   };
   return labels[level] || 'Desconhecido';

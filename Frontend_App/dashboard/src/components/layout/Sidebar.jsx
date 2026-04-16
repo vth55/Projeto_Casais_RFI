@@ -66,7 +66,7 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
     }
   }, [activeView]);
 
-  const filteredNavigation = useMemo(() => navigation.filter(item => canAccess(item.id)), [canAccess]);
+  const filteredNavigation = useMemo(() => navigation.filter(item => canAccess(item.id)), [canAccess, currentUser?.permissions, currentUser?.systemRole]);
   const currentRole = useMemo(() => getRole(currentUser?.systemRole), [currentUser, getRole]);
 
   const toggleMenu = (menuId) => {

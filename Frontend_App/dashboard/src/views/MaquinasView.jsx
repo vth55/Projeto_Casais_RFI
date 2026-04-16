@@ -22,8 +22,9 @@ import { getCategoryName, getLocationName, getCategoryId } from '../utils/safeRe
 import { formatHours, formatConsumption } from '../utils/formatters';
 
 // Card de máquina
-const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode }) => {
-  const hoursProgress = Math.min(100, ((machine.partialHours || 0) / 150) * 100);
+const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode, maintenanceInterval }) => {
+  const interval = machine.maintenanceInterval || maintenanceInterval || 150;
+  const hoursProgress = Math.min(100, ((machine.partialHours || 0) / interval) * 100);
   const needsMaintenance = hoursProgress >= 80;
 
   return (
@@ -83,7 +84,7 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
         <div className="flex items-center justify-between text-xs mb-1">
           <span className="text-slate-500 dark:text-slate-400">Próxima manutenção</span>
           <span className={`font-medium ${needsMaintenance ? 'text-amber-600' : 'text-slate-700 dark:text-slate-200'}`}>
-            {formatHours(machine.partialHours).replace('h', '')} / 150h
+            {formatHours(machine.partialHours).replace('h', '')} / {interval}h
           </span>
         </div>
         <div className="h-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
@@ -110,20 +111,23 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
 };
 
 // Formulário de máquina
-const MachineForm = ({ machine, onSave, onCancel }) => {
-  // Extrair valores primitivos dos objetos quando machine existe
+const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
   const initialData = machine ? {
     name: machine.name || '',
     category: getCategoryId(machine.category),
     consumptionRate: machine.consumptionRate || '',
     location: getLocationName(machine.location),
     serialNumber: machine.serialNumber || '',
+    co2Factor: machine.co2Factor || '',
+    maintenanceInterval: machine.maintenanceInterval || '',
   } : {
     name: '',
     category: '',
     consumptionRate: '',
     location: '',
     serialNumber: '',
+    co2Factor: '',
+    maintenanceInterval: '',
   };
   const [formData, setFormData] = useState(initialData);
 
@@ -140,10 +144,13 @@ const MachineForm = ({ machine, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({
+    const saveData = {
       ...formData,
       consumptionRate: parseFloat(formData.consumptionRate) || 0,
-    });
+    };
+    if (formData.co2Factor !== '') saveData.co2Factor = parseFloat(formData.co2Factor);
+    if (formData.maintenanceInterval !== '') saveData.maintenanceInterval = parseInt(formData.maintenanceInterval, 10);
+    onSave(saveData);
   };
 
   return (
@@ -186,6 +193,25 @@ const MachineForm = ({ machine, onSave, onCancel }) => {
           value={formData.serialNumber}
           onChange={e => setFormData({ ...formData, serialNumber: e.target.value })}
           placeholder="CAT-320-2024-001"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label={`Fator CO₂ (kg/L) — Padrão: ${systemSettings?.co2FactorPerLitre ?? 2.68}`}
+          type="number"
+          step="0.01"
+          value={formData.co2Factor}
+          onChange={e => setFormData({ ...formData, co2Factor: e.target.value })}
+          placeholder={`${systemSettings?.co2FactorPerLitre ?? 2.68}`}
+        />
+        <Input
+          label={`Intervalo Manutenção (h) — Padrão: ${systemSettings?.defaultMaintenanceInterval ?? 150}`}
+          type="number"
+          step="1"
+          value={formData.maintenanceInterval}
+          onChange={e => setFormData({ ...formData, maintenanceInterval: e.target.value })}
+          placeholder={`${systemSettings?.defaultMaintenanceInterval ?? 150}`}
         />
       </div>
 
@@ -305,7 +331,7 @@ const BulkLocationModal = ({ isOpen, onClose, selectedMachines, machines, obras,
 };
 
 const MaquinasView = () => {
-  const { activeView, machines, obras, loading, addMachine, updateMachine, deleteMachine, moveMachinesToObra } = useStore();
+  const { activeView, machines, obras, loading, addMachine, updateMachine, deleteMachine, moveMachinesToObra, systemSettings } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
@@ -521,6 +547,7 @@ const MaquinasView = () => {
               selected={selectedMachines.includes(machine.id)}
               onSelect={toggleSelection}
               selectionMode={selectionMode}
+              maintenanceInterval={systemSettings.defaultMaintenanceInterval}
             />
           ))}
         </div>
@@ -597,7 +624,7 @@ const MaquinasView = () => {
         title={editingMachine ? 'Editar Equipamento' : 'Novo Equipamento'}
         size="md"
       >
-        <MachineForm machine={editingMachine} onSave={handleSave} onCancel={() => { setShowModal(false); setEditingMachine(null); }} />
+        <MachineForm machine={editingMachine} onSave={handleSave} onCancel={() => { setShowModal(false); setEditingMachine(null); }} systemSettings={systemSettings} />
       </Modal>
 
       {/* Modal de Mudança de Localização em Bulk */}

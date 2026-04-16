@@ -48,7 +48,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import { db, projectId } from '../config/firebase';
 import { doc, setDoc, collection, Timestamp, deleteDoc, getDocs, query, where } from 'firebase/firestore';
 import useStore from '../store/useStore';
+import useAuthStore from '../store/useAuthStore';
 import { ALERT_STATUS } from '../store/useAlertsStore';
+import { DEFAULT_ROLES } from '../config/permissions';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
@@ -1032,6 +1034,99 @@ const EmailPreviewModal = ({ alert, onClose }) => {
   );
 };
 
+// Componente Role Switcher Tab - Troca de perfil instantâneo
+const RoleSwitcherTab = ({ showMessage }) => {
+  const { currentUser, switchRole } = useAuthStore();
+  const { setActiveView } = useStore();
+  const currentRoleId = currentUser?.systemRole || 'admin';
+
+  // Cores mapeadas para Tailwind
+  const colorMap = {
+    red: 'bg-red-100 border-red-300 text-red-800',
+    blue: 'bg-blue-100 border-blue-300 text-blue-800',
+    emerald: 'bg-emerald-100 border-emerald-300 text-emerald-800',
+    green: 'bg-green-100 border-green-300 text-green-800',
+    amber: 'bg-amber-100 border-amber-300 text-amber-800',
+    slate: 'bg-slate-100 border-slate-300 text-slate-800',
+    cyan: 'bg-cyan-100 border-cyan-300 text-cyan-800',
+    orange: 'bg-orange-100 border-orange-300 text-orange-800',
+    teal: 'bg-teal-100 border-teal-300 text-teal-800',
+  };
+
+  const handleSwitch = (roleId) => {
+    switchRole(roleId);
+    const role = DEFAULT_ROLES[roleId];
+    showMessage(`Perfil: ${role.name}`);
+    // Navegar para o dashboard adequado ao perfil
+    if (role.defaultDashboard) {
+      setActiveView('dashboard');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        Trocar perfil de acesso (afeta menus e dashboard)
+      </p>
+
+      <div className="space-y-2">
+        {Object.values(DEFAULT_ROLES).map(role => {
+          const isActive = currentRoleId === role.id;
+          const colors = colorMap[role.color] || colorMap.slate;
+
+          return (
+            <button
+              key={role.id}
+              onClick={() => handleSwitch(role.id)}
+              className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                isActive
+                  ? `${colors} ring-2 ring-offset-1 ring-purple-400 shadow-sm`
+                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {/* Indicador ativo */}
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                isActive ? 'bg-purple-500 animate-pulse' : 'bg-slate-300'
+              }`} />
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className={`text-sm font-semibold ${isActive ? '' : 'text-slate-900'}`}>
+                    {role.name}
+                  </p>
+                  {isActive && (
+                    <span className="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-medium">
+                      ATIVO
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-500 truncate">{role.description}</p>
+              </div>
+
+              {/* Badge de nível */}
+              <span className={`text-[10px] px-2 py-1 rounded font-medium flex-shrink-0 ${
+                isActive ? 'bg-white/60 text-slate-700' : 'bg-slate-100 text-slate-500'
+              }`}>
+                Lv.{role.level}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Info */}
+      <div className="p-2 bg-purple-50 border border-purple-100 rounded-lg text-[10px] text-purple-700">
+        <p className="font-medium">Como funciona:</p>
+        <ul className="list-disc list-inside space-y-0.5 mt-1">
+          <li>Cada perfil vê menus e dashboard diferentes</li>
+          <li>Perfil ativo persiste entre reloads</li>
+          <li>Em produção será controlado por Firebase Auth</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 const DevTools = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('alerts');
@@ -1325,6 +1420,7 @@ const DevTools = () => {
         {/* Tabs */}
         <div className="flex border-b border-slate-200 overflow-x-auto">
           {[
+            { id: 'roles', label: 'Perfis', icon: Settings },
             { id: 'alerts', label: 'Alertas', icon: AlertTriangle },
             { id: 'sendEmail', label: 'Email', icon: Send },
             { id: 'demo', label: 'Demo', icon: FastForward },
@@ -1535,6 +1631,11 @@ const DevTools = () => {
                 </button>
               ))}
             </div>
+          )}
+
+          {/* Roles Tab */}
+          {activeTab === 'roles' && (
+            <RoleSwitcherTab showMessage={showMessage} />
           )}
         </div>
 

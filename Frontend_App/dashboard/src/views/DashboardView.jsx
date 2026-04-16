@@ -6,42 +6,126 @@ import {
 import {
   Activity, Truck, Clock, Fuel, Leaf, AlertTriangle,
   Wrench, TrendingUp, ArrowRight, Play, User, Zap, ChevronRight,
-  RefreshCw, Building2, CheckCircle2, XCircle, Link2,
+  RefreshCw, Building2, CheckCircle2, XCircle, Link2, CalendarDays, X,
+  Sparkles, Brain, ShieldAlert,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
 import MachineStoryRings from '../components/ui/MachineStoryRings';
 import LiveTimer from '../components/ui/LiveTimer';
 import useDeviceType from '../hooks/useDeviceType';
 
-// Filtros de período
+// Filtros de período — 3 presets + calendário personalizado
+const toIsoDate = (d) => {
+  if (!d) return '';
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt)) return '';
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 const DateFilters = () => {
-  const { dateFilter, setDateFilter } = useStore();
-  const filters = [
+  const { dateFilter, setDateFilter, customRange, setCustomRange } = useStore();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [startInput, setStartInput] = useState(toIsoDate(customRange?.start) || toIsoDate(new Date()));
+  const [endInput, setEndInput] = useState(toIsoDate(customRange?.end) || toIsoDate(new Date()));
+
+  const presets = [
     { id: 'today', label: 'Hoje' },
     { id: 'week', label: '7 dias' },
     { id: 'month', label: 'Mês' },
-    { id: 'quarter', label: 'Trimestre' },
-    { id: 'year', label: 'Ano' },
   ];
 
+  const isCustom = dateFilter === 'custom';
+
+  const applyCustom = () => {
+    if (!startInput || !endInput) return;
+    const start = new Date(startInput);
+    const end = new Date(endInput);
+    if (isNaN(start) || isNaN(end) || end < start) return;
+    setCustomRange({ start, end });
+    setPopoverOpen(false);
+  };
+
+  const customLabel = isCustom && customRange?.start && customRange?.end
+    ? `${new Date(customRange.start).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} – ${new Date(customRange.end).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}`
+    : 'Personalizado';
+
   return (
-    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl shadow-sm" role="group" aria-label="Filtros de período">
-      {filters.map(filter => (
+    <div className="relative">
+      <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl shadow-sm" role="group" aria-label="Filtros de período">
+        {presets.map(filter => (
+          <button
+            key={filter.id}
+            onClick={() => { setDateFilter(filter.id); setPopoverOpen(false); }}
+            aria-pressed={dateFilter === filter.id}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${dateFilter === filter.id
+                ? 'bg-primary-500 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+              }`}
+          >
+            {filter.label}
+          </button>
+        ))}
         <button
-          key={filter.id}
-          onClick={() => setDateFilter(filter.id)}
-          aria-label={`Filtrar por ${filter.label}`}
-          aria-pressed={dateFilter === filter.id}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-            dateFilter === filter.id
+          onClick={() => setPopoverOpen(v => !v)}
+          aria-pressed={isCustom}
+          aria-expanded={popoverOpen}
+          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${isCustom
               ? 'bg-primary-500 text-white shadow-md'
-              : 'text-slate-600 hover:bg-slate-100 dark:bg-slate-700/50'
-          }`}
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+            }`}
         >
-          {filter.label}
+          <CalendarDays className="w-4 h-4" />
+          <span className="hidden sm:inline">{customLabel}</span>
         </button>
-      ))}
+      </div>
+
+      {popoverOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setPopoverOpen(false)} />
+          <div className="absolute right-0 mt-2 z-50 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Período personalizado</h4>
+              <button onClick={() => setPopoverOpen(false)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">De</label>
+                <input
+                  type="date"
+                  value={startInput}
+                  onChange={(e) => setStartInput(e.target.value)}
+                  max={endInput || undefined}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Até</label>
+                <input
+                  type="date"
+                  value={endInput}
+                  onChange={(e) => setEndInput(e.target.value)}
+                  min={startInput || undefined}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <button
+                onClick={applyCustom}
+                disabled={!startInput || !endInput || new Date(endInput) < new Date(startInput)}
+                className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg shadow transition-all"
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -49,19 +133,13 @@ const DateFilters = () => {
 // Card de Sessão Ativa
 const ActiveSessionCard = ({ session, machine, operator }) => {
   const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
-  const now = new Date();
-  const durationMs = now - startTime;
-  const hours = Math.floor(durationMs / (1000 * 60 * 60));
-  const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-  const isLong = hours >= 5;
+  const isLong = Date.now() - startTime.getTime() >= 5 * 60 * 60 * 1000;
 
   return (
-    <div className={`flex items-center gap-4 p-4 rounded-xl border-2 ${
-      isLong ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
-    }`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-        isLong ? 'bg-amber-500' : 'bg-emerald-500'
+    <div className={`flex items-center gap-4 p-4 rounded-xl border-2 ${isLong ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
       }`}>
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isLong ? 'bg-amber-500' : 'bg-emerald-500'
+        }`}>
         <Play className="w-6 h-6 text-white" />
       </div>
       <div className="flex-1 min-w-0">
@@ -74,9 +152,11 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
         </div>
       </div>
       <div className="text-right">
-        <div className={`text-2xl font-bold tabular-nums ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}>
-          {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}
-        </div>
+        <LiveTimer
+          startTime={startTime}
+          tickMs={1000}
+          className={`text-2xl ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}
+        />
         <p className="text-xs text-slate-500 dark:text-slate-400">em curso</p>
       </div>
     </div>
@@ -289,8 +369,8 @@ const ProcoreReconciliationPanel = () => {
 
   const pipelineSteps = [
     { label: 'Exportadas', count: recon.exportedCount, icon: CheckCircle2, bg: 'bg-emerald-500', },
-    { label: 'Em Retry',   count: recon.pendingCount,  icon: RefreshCw,    bg: 'bg-amber-500',   },
-    { label: 'Falharam',   count: recon.failedCount,   icon: XCircle,      bg: 'bg-red-500',     },
+    { label: 'Em Retry', count: recon.pendingCount, icon: RefreshCw, bg: 'bg-amber-500', },
+    { label: 'Falharam', count: recon.failedCount, icon: XCircle, bg: 'bg-red-500', },
   ];
 
   return (
@@ -533,7 +613,7 @@ const MobileProcoreCard = () => {
   const lastSyncLabel = formatRelativeTime(status?.last_sync_at);
   const syncRateColor = recon.syncRate >= 85 ? 'text-emerald-400 bg-emerald-400/15'
     : recon.syncRate >= 60 ? 'text-amber-400 bg-amber-400/15'
-    : 'text-red-400 bg-red-400/15';
+      : 'text-red-400 bg-red-400/15';
   const maxBar = recon.localHours || 1;
 
   return (
@@ -567,8 +647,8 @@ const MobileProcoreCard = () => {
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: 'Exportadas', count: recon.exportedCount, Icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-            { label: 'Em Retry',   count: recon.pendingCount,  Icon: RefreshCw,    color: 'text-amber-500',   bg: 'bg-amber-50 dark:bg-amber-900/20' },
-            { label: 'Falharam',   count: recon.failedCount,   Icon: XCircle,      color: 'text-red-500',     bg: 'bg-red-50 dark:bg-red-900/20' },
+            { label: 'Em Retry', count: recon.pendingCount, Icon: RefreshCw, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+            { label: 'Falharam', count: recon.failedCount, Icon: XCircle, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' },
           ].map(({ label, count, Icon, color, bg }) => (
             <div key={label} className={`${bg} rounded-xl p-2.5 text-center`}>
               <div className="flex items-center justify-center gap-1 mb-0.5">
@@ -718,9 +798,9 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanc
       {/* KPI Grid 2x2 */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon={Activity} title="Horas" value={kpis.totalHours} unit="h" color="primary" variant="gradient" className="animate-fade-in stagger-1" />
-        <StatCard icon={Truck}    title="Utilização" value={kpis.utilizationRate} unit="%" color="emerald" variant="gradient" className="animate-fade-in stagger-2" />
-        <StatCard icon={Play}     title="Ativas" value={kpis.activeSessions} color={kpis.activeSessions > 0 ? 'emerald' : 'slate'} className="animate-fade-in stagger-3" />
-        <StatCard icon={Wrench}   title="Alertas" value={maintenanceAlerts.length} color={maintenanceAlerts.length > 0 ? 'red' : 'slate'} className="animate-fade-in stagger-4" />
+        <StatCard icon={Truck} title="Utilização" value={kpis.utilizationRate} unit="%" color="emerald" variant="gradient" className="animate-fade-in stagger-2" />
+        <StatCard icon={Play} title="Ativas" value={kpis.activeSessions} color={kpis.activeSessions > 0 ? 'emerald' : 'slate'} className="animate-fade-in stagger-3" />
+        <StatCard icon={Wrench} title="Alertas" value={maintenanceAlerts.length} color={maintenanceAlerts.length > 0 ? 'red' : 'slate'} className="animate-fade-in stagger-4" />
       </div>
 
       {/* Sessões ativas */}
@@ -780,11 +860,102 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanc
 };
 
 // ============================================================
+// WORK FOCUS — painel de atenção prioritária (Sede)
+// ============================================================
+const WorkFocusPanel = ({ machines, avarias }) => {
+  const { getSmartMaintenancePrediction, setActiveView } = useStore();
+
+  const predictions = useMemo(() => {
+    return machines
+      .filter(m => (m.partialHours || 0) >= 50)
+      .map(m => ({ machine: m, prediction: getSmartMaintenancePrediction(m) }))
+      .filter(p => p.prediction.daysLeft <= 30)
+      .sort((a, b) => a.prediction.daysLeft - b.prediction.daysLeft)
+      .slice(0, 3);
+  }, [machines, getSmartMaintenancePrediction]);
+
+  const recentAvarias = useMemo(() => {
+    return (avarias || [])
+      .filter(a => a.status === 'pendente')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 2);
+  }, [avarias]);
+
+  if (predictions.length === 0 && recentAvarias.length === 0) return null;
+
+  return (
+    <Card className="border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-white to-amber-50/50 dark:from-slate-800 dark:to-amber-900/10">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+          <Brain className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Work Focus</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Atenção prioritária sugerida pela IA</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Top máquinas iminentes */}
+        {predictions.map(({ machine, prediction }) => (
+          <button
+            key={machine.id}
+            onClick={() => setActiveView('manutencao')}
+            className="flex items-center gap-3 p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800 hover:shadow-md transition-all text-left"
+          >
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+              prediction.daysLeft <= 3 ? 'bg-red-100 dark:bg-red-900/30' :
+                prediction.daysLeft <= 7 ? 'bg-amber-100 dark:bg-amber-900/30' :
+                  'bg-blue-100 dark:bg-blue-900/30'
+            }`}>
+              <Sparkles className={`w-4 h-4 ${
+                prediction.daysLeft <= 3 ? 'text-red-600' :
+                  prediction.daysLeft <= 7 ? 'text-amber-600' : 'text-blue-600'
+              }`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{machine.name}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Manutenção prevista em <span className={`font-bold ${prediction.daysLeft <= 3 ? 'text-red-600' : prediction.daysLeft <= 7 ? 'text-amber-600' : 'text-blue-600'}`}>
+                  {prediction.daysLeft} dias
+                </span> • {prediction.remaining}h restantes
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          </button>
+        ))}
+
+        {/* Últimas avarias pendentes */}
+        {recentAvarias.map(a => (
+          <button
+            key={a.id}
+            onClick={() => setActiveView('manutencao-avarias')}
+            className="flex items-center gap-3 p-3 rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 hover:shadow-md transition-all text-left"
+          >
+            <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <ShieldAlert className="w-4 h-4 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">Avaria: {a.machineId}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{a.descricao}</p>
+            </div>
+            {a.maquinaParada && (
+              <span className="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded flex-shrink-0">PARADA</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
+// ============================================================
 // DASHBOARD VIEW — renderiza Field Mode ou Office Mode
 // ============================================================
 
 const DashboardView = () => {
   const { machines, operators, sessions, getFilteredSessions, getKPIs, loading } = useStore();
+  const { avarias } = useAvariasStore();
   const { isMobile } = useDeviceType();
   const filteredSessions = getFilteredSessions();
   const kpis = getKPIs();
@@ -792,7 +963,7 @@ const DashboardView = () => {
   // Sessões ativas
   const activeSessions = useMemo(() =>
     sessions.filter(s => s.status === 'OPEN').slice(0, 4),
-  [sessions]);
+    [sessions]);
 
   // Dados para gráficos
   const chartData = useMemo(() => {
@@ -832,29 +1003,27 @@ const DashboardView = () => {
     }));
   }, [filteredSessions, machines]);
 
-  // Dados utilização
+  // Dados utilização — top 5 máquinas por horas trabalhadas no período
+  // value = horas trabalhadas / capacidade disponível no período selecionado × 100
   const utilizationData = useMemo(() => {
-    if (!machines.length) {
-      return [
-        { name: 'Escavadora 01', value: 85, status: 'active' },
-        { name: 'Grua 02', value: 72, status: 'active' },
-        { name: 'Retroescavadora', value: 64, status: 'idle' },
-        { name: 'Betoneira 01', value: 45, status: 'idle' },
-        { name: 'Compactador', value: 38, status: 'maintenance' },
-      ];
-    }
+    if (!machines.length) return [];
 
-    return machines.slice(0, 5).map(machine => {
-      const machineSessions = filteredSessions.filter(s => s.machineId === machine.id && s.status === 'CLOSED');
-      const hours = machineSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-      const maxHours = 176;
-      return {
-        name: machine.name || machine.id,
-        value: Math.min(100, Math.round((hours / maxHours) * 100)),
-        status: machine.status?.toLowerCase() || 'idle',
-      };
-    });
-  }, [machines, filteredSessions]);
+    const maxHours = kpis.capacityPerMachine || 176;
+
+    return machines
+      .map(machine => {
+        const machineSessions = filteredSessions.filter(s => s.machineId === machine.id && s.status === 'CLOSED');
+        const hours = machineSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+        return {
+          name: machine.name || machine.id,
+          hours: Math.round(hours * 10) / 10,
+          value: Math.min(100, Math.round((hours / maxHours) * 100)),
+          status: machine.status?.toLowerCase() || 'idle',
+        };
+      })
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 5);
+  }, [machines, filteredSessions, kpis.capacityPerMachine]);
 
   // Alertas manutenção
   const maintenanceAlerts = machines.filter(m => (m.partialHours || m.totalHours || 0) >= 120);
@@ -986,6 +1155,9 @@ const DashboardView = () => {
         </div>
       )}
 
+      {/* Work Focus — IA Preditiva */}
+      <WorkFocusPanel machines={machines} avarias={avarias} />
+
       {/* KPIs Secundários */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
@@ -1003,8 +1175,8 @@ const DashboardView = () => {
         <StatCard
           icon={TrendingUp}
           title="MTBF"
-          value={kpis.mtbf}
-          unit="h"
+          value={kpis.mtbf ?? '—'}
+          unit={kpis.mtbf != null ? 'h' : ''}
           color="violet"
         />
         <StatCard
@@ -1120,39 +1292,48 @@ const DashboardView = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Utilização por Equipamento</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Top 5 mais utilizados</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Top 5 mais utilizados · base {kpis.capacityPerMachine}h disponíveis
+              </p>
             </div>
           </div>
-          <div className="space-y-4">
-            {utilizationData.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  item.status === 'active' ? 'bg-emerald-100' :
-                  item.status === 'maintenance' ? 'bg-red-100' : 'bg-slate-100 dark:bg-slate-700/50'
-                }`}>
-                  <Truck className={`w-5 h-5 ${
-                    item.status === 'active' ? 'text-emerald-600' :
-                    item.status === 'maintenance' ? 'text-red-600' : 'text-slate-500 dark:text-slate-400'
-                  }`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">{item.value}%</span>
+          {utilizationData.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+              Sem equipamentos para mostrar
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {utilizationData.map((item, index) => (
+                <div key={item.name} className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.status === 'active' ? 'bg-emerald-100' :
+                      item.status === 'maintenance' ? 'bg-red-100' : 'bg-slate-100 dark:bg-slate-700/50'
+                    }`}>
+                    <Truck className={`w-5 h-5 ${item.status === 'active' ? 'text-emerald-600' :
+                        item.status === 'maintenance' ? 'text-red-600' : 'text-slate-500 dark:text-slate-400'
+                      }`} />
                   </div>
-                  <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${item.value}%`,
-                        background: `linear-gradient(90deg, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 1) % COLORS.length]})`,
-                      }}
-                    />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{item.name}</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">{item.hours}h</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">{item.value}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${item.value}%`,
+                          background: `linear-gradient(90deg, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 1) % COLORS.length]})`,
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>

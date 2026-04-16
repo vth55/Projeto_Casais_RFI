@@ -37,8 +37,9 @@ export const ALERT_TYPES = {
 // Status de alerta (sem EXPIRED - alertas nunca expiram)
 export const ALERT_STATUS = {
   PENDING: 'PENDING',           // Aguarda validação
-  VALIDATED: 'VALIDATED',       // Validado pelo operador
-  CORRECTED: 'CORRECTED',       // Corrigido pelo operador
+  VALIDATED: 'VALIDATED',       // Confirmado sem alterações pelo operador
+  CORRECTED: 'CORRECTED',       // Horários alterados pelo operador
+  RESOLVED: 'RESOLVED',         // Anomalia resolvida (estado terminal)
 };
 
 // Thresholds de escalação (em horas)
@@ -181,30 +182,34 @@ const useAlertsStore = create(
           const alert = get().getAlertById(alertId);
           if (!alert) return { success: false, error: 'Alerta não encontrado' };
 
-          // Verificar se já foi validado
+          // Verificar se já foi processado
           if (alert.status !== ALERT_STATUS.PENDING) {
             return { success: false, error: 'Alerta já foi processado' };
           }
 
-          // NOTA: Alertas não expiram - ficam pendentes até serem validados
+          // Determinar se houve correção de horários
+          const originalStartStr = typeof alert.originalStartTime === 'string'
+            ? alert.originalStartTime
+            : (alert.originalStartTime?.toDate ? alert.originalStartTime.toDate().toISOString().slice(0, 16) : '');
+          const originalEndStr = typeof alert.originalEndTime === 'string'
+            ? alert.originalEndTime
+            : (alert.originalEndTime?.toDate ? alert.originalEndTime.toDate().toISOString().slice(0, 16) : '');
 
-          // Determinar se houve correção
           const wasChanged =
-            validationData.correctedStartTime !== alert.originalStartTime ||
-            validationData.correctedEndTime !== alert.originalEndTime;
-
-          const newStatus = wasChanged
-            ? ALERT_STATUS.CORRECTED
-            : ALERT_STATUS.VALIDATED;
+            validationData.correctedStartTime !== originalStartStr ||
+            validationData.correctedEndTime !== originalEndStr;
 
           // Calcular duração corrigida
           const startDate = new Date(validationData.correctedStartTime);
           const endDate = new Date(validationData.correctedEndTime);
           const correctedDurationHours = (endDate - startDate) / (1000 * 60 * 60);
 
+          // Resolução: CORRECTED se mudou horários, VALIDATED se confirmou original
+          const resolution = wasChanged ? 'CORRECTED' : 'VALIDATED';
+
           // Novo log de auditoria
           const auditEntry = {
-            action: wasChanged ? 'CORRECTED' : 'VALIDATED',
+            action: resolution,
             timestamp: Timestamp.now(),
             validatedBy: alert.operatorName,
             originalValues: {
@@ -212,39 +217,54 @@ const useAlertsStore = create(
               endTime: alert.originalEndTime,
               durationHours: alert.originalDurationHours,
             },
-            newValues: {
+            correctedValues: wasChanged ? {
               startTime: validationData.correctedStartTime,
               endTime: validationData.correctedEndTime,
               durationHours: correctedDurationHours,
-            },
+            } : null,
             notes: validationData.notes || '',
           };
 
-          // Atualizar alerta
+          // Atualizar alerta — status RESOLVED (terminal), resolution diz o que aconteceu
           await updateDoc(doc(db, `${basePath}/alerts`, alertId), {
-            status: newStatus,
-            correctedStartTime: validationData.correctedStartTime,
-            correctedEndTime: validationData.correctedEndTime,
-            correctedDurationHours: correctedDurationHours,
+            status: ALERT_STATUS.RESOLVED,
+            resolution,
+            correctedStartTime: wasChanged ? validationData.correctedStartTime : null,
+            correctedEndTime: wasChanged ? validationData.correctedEndTime : null,
+            correctedDurationHours: wasChanged ? correctedDurationHours : null,
             operatorNotes: validationData.notes || '',
             validatedAt: Timestamp.now(),
             validatedBy: alert.operatorName,
             auditLog: [...(alert.auditLog || []), auditEntry],
           });
 
-          // Se houve correção, atualizar também a sessão original
+          // Se houve correção, atualizar sessão preservando dados originais
           if (wasChanged && alert.sessionId) {
             await updateDoc(doc(db, `${basePath}/sessions`, alert.sessionId), {
+              // Preservar valores originais (imutáveis — só grava se ainda não existirem)
+              ...(alert.originalStartTime && { originalStartTime: alert.originalStartTime }),
+              ...(alert.originalEndTime && { originalEndTime: alert.originalEndTime }),
+              ...(alert.originalDurationHours && { originalDurationHours: alert.originalDurationHours }),
+              // Sobrescrever com valores corrigidos
               startTime: Timestamp.fromDate(startDate),
               endTime: Timestamp.fromDate(endDate),
               durationHours: correctedDurationHours,
+              // Metadados de correção
               correctedByOperator: true,
               correctedAt: Timestamp.now(),
+              correctionAlertId: alertId,
+              validationStatus: 'RESOLVED',
+            });
+          } else if (alert.sessionId) {
+            // Confirmou sem alterações — marcar sessão como resolvida
+            await updateDoc(doc(db, `${basePath}/sessions`, alert.sessionId), {
+              validationStatus: 'RESOLVED',
+              validatedAt: Timestamp.now(),
               correctionAlertId: alertId,
             });
           }
 
-          return { success: true, status: newStatus };
+          return { success: true, status: ALERT_STATUS.RESOLVED, resolution };
         } catch (error) {
           console.error('Erro ao validar alerta:', error);
           return { success: false, error: error.message };
@@ -257,11 +277,11 @@ const useAlertsStore = create(
         return alerts.filter((a) => a.status === ALERT_STATUS.PENDING);
       },
 
-      // Obter alertas corrigidos (para supervisão)
+      // Obter alertas resolvidos (para supervisão)
       getCorrectedAlerts: (obraId = null) => {
         const { alerts } = get();
         let filtered = alerts.filter(
-          (a) => a.status === ALERT_STATUS.CORRECTED || a.status === ALERT_STATUS.VALIDATED
+          (a) => a.status === ALERT_STATUS.RESOLVED || a.status === ALERT_STATUS.CORRECTED || a.status === ALERT_STATUS.VALIDATED
         );
 
         if (obraId) {
@@ -306,8 +326,9 @@ const useAlertsStore = create(
         return {
           total: alerts.length,
           pending: pendingAlerts.length,
-          validated: alerts.filter((a) => a.status === ALERT_STATUS.VALIDATED).length,
-          corrected: alerts.filter((a) => a.status === ALERT_STATUS.CORRECTED).length,
+          resolved: alerts.filter((a) => a.status === ALERT_STATUS.RESOLVED).length,
+          validated: alerts.filter((a) => a.status === ALERT_STATUS.VALIDATED || a.resolution === 'VALIDATED').length,
+          corrected: alerts.filter((a) => a.status === ALERT_STATUS.CORRECTED || a.resolution === 'CORRECTED').length,
           urgent: urgentCount,
           critical: criticalCount,
           byType: {

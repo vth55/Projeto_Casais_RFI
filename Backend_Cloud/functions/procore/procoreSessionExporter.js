@@ -17,6 +17,15 @@
 
 const admin = require('firebase-admin');
 
+// ─── Procore environment ─────────────────────────────────────────────────────
+// Sandbox enquanto estamos em desenvolvimento. Quando passar a produção, trocar
+// para `https://api.procore.com` + `https://login.procore.com`.
+// IMPORTANTE: tem de estar alinhado com procoreBridge.js (PROCORE_BASE_URL)
+// senão o token emitido numa base não é aceite na outra.
+const PROCORE_BASE_URL = 'https://sandbox.procore.com';
+const PROCORE_TOKEN_URL = `${PROCORE_BASE_URL}/oauth/token`;
+const PROCORE_API_URL = `${PROCORE_BASE_URL}/rest/v1.0`;
+
 // ─── Path constants ──────────────────────────────────────────────────────────
 
 const APP_ID = 'casais-rfid';
@@ -87,7 +96,7 @@ async function procoreFetch(endpoint, options = {}) {
         if (!data.refresh_token) throw new Error('PROCORE_NO_REFRESH_TOKEN');
 
         console.log('[procoreSessionExporter] token expiring — refreshing...');
-        const refreshRes = await fetch('https://login.procore.com/oauth/token', {
+        const refreshRes = await fetch(PROCORE_TOKEN_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -114,7 +123,7 @@ async function procoreFetch(endpoint, options = {}) {
         console.log('[procoreSessionExporter] token refreshed');
     }
 
-    const url = `https://api.procore.com/rest/v1.0${endpoint}`;
+    const url = `${PROCORE_API_URL}${endpoint}`;
     const res = await fetch(url, {
         ...options,
         headers: {

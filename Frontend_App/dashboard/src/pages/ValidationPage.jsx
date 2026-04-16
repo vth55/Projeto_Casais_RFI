@@ -239,17 +239,21 @@ const ValidationPage = ({ token }) => {
 
   // Already processed state
   if (alert && alert.status !== ALERT_STATUS.PENDING) {
+    const resolutionLabel = alert.resolution === 'CORRECTED' || alert.status === ALERT_STATUS.CORRECTED
+      ? 'corrigida'
+      : 'validada';
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-amber-600" />
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-emerald-600" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Já Processado</h1>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Sessão Resolvida</h1>
           <p className="text-slate-600">
-            Esta sessão já foi {alert.status === ALERT_STATUS.VALIDATED ? 'validada' : 'corrigida'} em{' '}
+            Esta sessão já foi {resolutionLabel} em{' '}
             {formatDateTime(alert.validatedAt)}.
           </p>
+          <p className="text-sm text-slate-500 mt-4">Pode fechar esta página.</p>
         </div>
       </div>
     );

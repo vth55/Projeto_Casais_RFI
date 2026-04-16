@@ -61,6 +61,8 @@ const StatusBadge = ({ status }) => {
     ERROR: { label: 'Erro', variant: 'danger', dot: true },
     PENDING: { label: 'Pendente', variant: 'warning', dot: true },
     VALIDATED: { label: 'Validado', variant: 'success', dot: false },
+    CORRECTED: { label: 'Corrigido', variant: 'info', dot: false },
+    RESOLVED: { label: 'Resolvido', variant: 'success', dot: false },
   };
 
   const config = statusConfig[status] || { label: status, variant: 'default', dot: false };

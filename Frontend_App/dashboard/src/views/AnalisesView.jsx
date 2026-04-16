@@ -17,11 +17,10 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
       <button
         key={tab.id}
         onClick={() => onChange(tab.id)}
-        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-          activeTab === tab.id
+        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
             ? 'border-primary-500 text-primary-600'
             : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'
-        }`}
+          }`}
       >
         {tab.label}
       </button>
@@ -139,72 +138,82 @@ const AnalisesView = () => {
   const _sessions = getFilteredSessions(); // Reservado para uso futuro com dados reais
   const kpis = getKPIs();
 
-  // Dados para gráficos gerais - baseados em sessões reais quando possível
+  // Dados para gráficos gerais - agrupados por dia da semana
   const chartData = useMemo(() => {
-    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-    return days.map((day, i) => ({
-      name: day,
-      horas: seededValue(i + 1, 20, 80),
-      emissoes: seededValue(i + 10, 100, 500),
-      combustivel: seededValue(i + 20, 50, 200),
-    }));
-  }, []);
+    const sessions = getFilteredSessions();
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const aggregation = days.map(day => ({ name: day, horas: 0, emissoes: 0, combustivel: 0 }));
+
+    sessions.forEach(s => {
+      if (s.status !== 'CLOSED' || !s.startTime) return;
+      const date = s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
+      const dayIdx = date.getDay();
+      const hours = s.durationHours || 0;
+      
+      aggregation[dayIdx].horas += hours;
+      // Cálculo aproximado de combustível/emissões para o gráfico (podes refinar depois)
+      aggregation[dayIdx].combustivel += hours * 15; // Média 15L/h
+      aggregation[dayIdx].emissoes += hours * 15 * 2.68;
+    });
+
+    // Reordenar para começar na Segunda-feira (padrão europeu)
+    const mondayFirst = [...aggregation.slice(1), aggregation[0]];
+    return mondayFirst;
+  }, [getFilteredSessions, machines]);
 
   // Dados de utilização baseados em máquinas reais
   const utilizationData = useMemo(() => {
-    return machines.slice(0, 6).map((m, i) => ({
-      name: m.name?.substring(0, 12) || m.id,
-      value: m.totalHours ? Math.min(100, Math.round((m.totalHours / 200) * 100)) : seededValue(i + 100, 40, 90),
-    }));
+    return machines.map((m) => {
+      // Cálculo de % baseado em 150h como 100% de utilização ideal/intervalo
+      const hours = m.totalHours || 0;
+      const percent = Math.min(100, Math.round((hours / 150) * 100));
+      return {
+        name: m.name?.substring(0, 12) || m.id,
+        value: percent,
+        rawHours: hours
+      };
+    }).sort((a, b) => b.value - a.value).slice(0, 6);
   }, [machines]);
 
   // Dados para comparação de períodos - baseados em sessões
   const comparisonData = useMemo(() => {
     const categories = ['Horas', 'Combustível', 'CO₂', 'Custo', 'Manutenções'];
-    const p1Seed = period1.charCodeAt(0);
-    const p2Seed = period2.charCodeAt(0);
-
-    return categories.map((cat, i) => ({
+    return categories.map((cat) => ({
       name: cat,
-      periodo1: seededValue(p1Seed + i, 200, 1200),
-      periodo2: seededValue(p2Seed + i, 200, 1200),
+      periodo1: 0,
+      periodo2: 0,
     }));
-  }, [period1, period2]);
+  }, []);
 
-  // KPIs comparativos baseados em dados reais quando possível
+  // KPIs comparativos baseados em dados reais
   const comparisonKPIs = useMemo(() => {
-    const p1Seed = period1.charCodeAt(0);
-    const p2Seed = period2.charCodeAt(0);
-
     return {
       period1: {
-        hours: kpis.totalHours > 0 ? Math.round(kpis.totalHours * 0.85) : seededValue(p1Seed, 200, 350),
-        fuel: kpis.totalFuel > 0 ? Math.round(kpis.totalFuel * 0.9) : seededValue(p1Seed + 1, 800, 1100),
-        co2: kpis.totalCO2 > 0 ? Math.round(kpis.totalCO2 * 0.88) : seededValue(p1Seed + 2, 2000, 3000),
-        cost: kpis.totalCost > 0 ? Math.round(kpis.totalCost * 0.9) : seededValue(p1Seed + 3, 10000, 16000),
-        utilization: kpis.utilizationRate > 0 ? Math.max(40, kpis.utilizationRate - 10) : seededValue(p1Seed + 4, 55, 85),
+        hours: 0,
+        fuel: 0,
+        co2: 0,
+        cost: 0,
+        utilization: 0,
       },
       period2: {
-        hours: kpis.totalHours > 0 ? kpis.totalHours : seededValue(p2Seed, 250, 400),
-        fuel: kpis.totalFuel > 0 ? kpis.totalFuel : seededValue(p2Seed + 1, 850, 1150),
-        co2: kpis.totalCO2 > 0 ? kpis.totalCO2 : seededValue(p2Seed + 2, 2100, 3100),
-        cost: kpis.totalCost > 0 ? kpis.totalCost : seededValue(p2Seed + 3, 12000, 18000),
-        utilization: kpis.utilizationRate > 0 ? kpis.utilizationRate : seededValue(p2Seed + 4, 65, 92),
+        hours: kpis.totalHours || 0,
+        fuel: kpis.totalFuel || 0,
+        co2: kpis.totalCO2 || 0,
+        cost: kpis.totalCost || 0,
+        utilization: kpis.utilizationRate || 0,
       },
     };
-  }, [period1, period2, kpis]);
+  }, [kpis]);
 
   // Dados para gráfico de tendência comparativa
   const trendComparisonData = useMemo(() => {
     const weeks = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
-    const p1Seed = period1.charCodeAt(0);
-    const p2Seed = period2.charCodeAt(0);
-    return weeks.map((week, i) => ({
+    return weeks.map((week) => ({
       name: week,
-      periodo1: seededValue(p1Seed + i * 10, 40, 120),
-      periodo2: seededValue(p2Seed + i * 10, 40, 120),
+      periodo1: 0,
+      periodo2: 0,
     }));
-  }, [period1, period2]);
+  }, []);
 
   const COLORS = ['#005EB8', '#0ea5e9', '#38bdf8', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -436,8 +445,8 @@ const AnalisesView = () => {
                     const totalSessoes = period.hours.reduce((sum, h) => sum + h.sessoes, 0);
                     const intensity = totalSessoes / 60; // 0 to 1
                     const bgColor = intensity > 0.6 ? 'bg-primary-500' :
-                                   intensity > 0.3 ? 'bg-primary-300' :
-                                   intensity > 0.1 ? 'bg-primary-100' : 'bg-slate-100 dark:bg-slate-700/50';
+                      intensity > 0.3 ? 'bg-primary-300' :
+                        intensity > 0.1 ? 'bg-primary-100' : 'bg-slate-100 dark:bg-slate-700/50';
                     const textColor = intensity > 0.3 ? 'text-white' : 'text-slate-700 dark:text-slate-200';
 
                     return (

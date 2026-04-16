@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, Image, X, Upload, Eye, Trash2, Camera, ShieldAlert, CheckCircle2, Phone, MessageSquare, Send, User, ChevronRight } from 'lucide-react';
+import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, Image, X, Upload, Eye, Trash2, Camera, ShieldAlert, CheckCircle2, Phone, MessageSquare, Send, User, ChevronRight, ChevronLeft, Brain, Sparkles, CalendarPlus } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
@@ -16,11 +16,233 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
   </div>
 );
 
-const MaintenanceCard = ({ machine, onSchedule, onComplete }) => {
+// ============================================================================
+// MaintenanceCalendar — grid mensal com eventos passados, avarias e previsões
+// ============================================================================
+const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+const MONTHS_PT = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+const sameDay = (a, b) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+const parseDate = (v) => {
+  if (!v) return null;
+  const d = v?.toDate?.() || new Date(v);
+  return isNaN(d) ? null : d;
+};
+
+const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules, getPrediction }) => {
+  const [cursor, setCursor] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+
+  // Eventos indexados por dia (YYYY-MM-DD)
+  const eventsByDay = useMemo(() => {
+    const map = new Map();
+    const push = (date, evt) => {
+      if (!date) return;
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(evt);
+    };
+
+    maintenanceRecords.forEach(r => {
+      const d = parseDate(r.createdAt);
+      const machine = machines.find(m => m.id === r.machineId);
+      push(d, { type: 'past', color: 'blue', label: 'Manutenção', machine: machine?.name || r.machineId, record: r });
+    });
+
+    avarias.forEach(a => {
+      const d = parseDate(a.createdAt);
+      const machine = machines.find(m => m.id === a.machineId);
+      push(d, { type: 'avaria', color: 'red', label: `Avaria (${a.status})`, machine: machine?.name || a.machineId, record: a });
+    });
+
+    machines.forEach(m => {
+      const partial = m.partialHours || 0;
+      if (partial < 80) return;
+      const pred = getPrediction(m);
+      if (pred?.predictedDate) {
+        const avgLabel = pred.avgHoursPerDay > 0 ? ` (${pred.avgHoursPerDay}h/dia)` : '';
+        const confLabel = pred.confidence === 'high' ? '🎯' : pred.confidence === 'medium' ? '📊' : '📐';
+        push(pred.predictedDate, {
+          type: 'forecast',
+          color: 'amber',
+          label: `${confLabel} Previsão IA — ${pred.remaining}h restantes${avgLabel}`,
+          machine: m.name || m.id,
+          record: m,
+        });
+      }
+    });
+
+    (schedules || []).forEach(s => {
+      const d = parseDate(s.scheduledDate);
+      const machine = machines.find(m => m.id === s.machineId);
+      push(d, {
+        type: 'scheduled',
+        color: 'indigo',
+        label: `Agendado: ${s.type || 'Manutenção'}`,
+        machine: machine?.name || s.machineId,
+        record: s,
+      });
+    });
+
+    return map;
+  }, [maintenanceRecords, avarias, machines, schedules, getPrediction]);
+
+  // Build grid (segunda=0)
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingBlank = (firstDay.getDay() + 6) % 7; // Monday=0
+
+  const cells = [];
+  for (let i = 0; i < leadingBlank; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const today = new Date();
+  const selectedKey = selectedDay ? `${selectedDay.getFullYear()}-${selectedDay.getMonth()}-${selectedDay.getDate()}` : null;
+  const selectedEvents = selectedKey ? (eventsByDay.get(selectedKey) || []) : [];
+
+  const colorClasses = {
+    blue: 'bg-blue-500',
+    red: 'bg-red-500',
+    amber: 'bg-amber-500',
+    indigo: 'bg-indigo-500',
+  };
+
+  return (
+    <div>
+      {/* Header com navegação */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => setCursor(new Date(year, month - 1, 1))}
+          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+          aria-label="Mês anterior"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="text-center">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{MONTHS_PT[month]} {year}</h3>
+          <button
+            onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+            className="text-xs text-primary-600 hover:underline"
+          >
+            Ir para hoje
+          </button>
+        </div>
+        <button
+          onClick={() => setCursor(new Date(year, month + 1, 1))}
+          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+          aria-label="Próximo mês"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Legenda */}
+      <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-slate-600 dark:text-slate-400">
+        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Manutenção passada</div>
+        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Avaria</div>
+        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Previsão IA</div>
+        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Agendamento Sede</div>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {WEEKDAYS.map(w => (
+          <div key={w} className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 py-2">{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+          const events = eventsByDay.get(key) || [];
+          const isToday = sameDay(day, today);
+          const isSelected = selectedDay && sameDay(day, selectedDay);
+          const uniqueColors = [...new Set(events.map(e => e.color))].slice(0, 3);
+
+          return (
+            <button
+              key={i}
+              onClick={() => setSelectedDay(day)}
+              className={`aspect-square flex flex-col items-center justify-between p-1.5 rounded-lg border transition-all text-left
+                ${isSelected ? 'border-primary-500 ring-2 ring-primary-500/30 bg-primary-50 dark:bg-primary-900/20' :
+                  isToday ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10' :
+                    'border-slate-200 dark:border-slate-700 hover:border-primary-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+            >
+              <span className={`text-sm font-medium ${isToday ? 'text-primary-600 font-bold' : 'text-slate-700 dark:text-slate-200'}`}>
+                {day.getDate()}
+              </span>
+              <div className="flex gap-0.5 items-center mt-auto">
+                {uniqueColors.map(c => (
+                  <span key={c} className={`w-1.5 h-1.5 rounded-full ${colorClasses[c]}`} />
+                ))}
+                {events.length > 3 && (
+                  <span className="text-[9px] text-slate-500 ml-0.5">+{events.length - 3}</span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Painel de eventos do dia selecionado */}
+      {selectedDay && (
+        <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold text-slate-900 dark:text-white">
+              {selectedDay.toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+            </h4>
+            <button onClick={() => setSelectedDay(null)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
+              <X className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+          {selectedEvents.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Sem eventos neste dia.</p>
+          ) : (
+            <div className="space-y-2">
+              {selectedEvents.map((e, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-3 p-3 rounded-lg border
+                    ${e.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' :
+                      e.color === 'red' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+                        e.color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' :
+                          'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colorClasses[e.color]}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{e.label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{e.machine}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MaintenanceCard = ({ machine, onSchedule, onComplete, prediction }) => {
   const hours = machine.partialHours || machine.totalHours || 0;
-  const progress = Math.min(100, (hours / 150) * 100);
+  const interval = prediction?.interval || 150;
+  const progress = Math.min(100, (hours / interval) * 100);
   const isUrgent = progress >= 100;
   const isWarning = progress >= 80;
+
+  const predDate = prediction?.predictedDate;
+  const predStr = predDate ? predDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : null;
 
   return (
     <Card className={`border-l-4 ${isUrgent ? 'border-l-red-500' : isWarning ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
@@ -30,7 +252,7 @@ const MaintenanceCard = ({ machine, onSchedule, onComplete }) => {
             <Truck className={`w-6 h-6 ${isUrgent ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-emerald-600'}`} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-slate-900 dark:text-white">{machine.name}</h3>
               {isUrgent && <Badge variant="danger">Urgente</Badge>}
               {isWarning && !isUrgent && <Badge variant="warning">Atenção</Badge>}
@@ -40,10 +262,26 @@ const MaintenanceCard = ({ machine, onSchedule, onComplete }) => {
         </div>
         <div className="text-right">
           <p className={`text-2xl font-bold ${isUrgent ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>{hours}h</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">de 150h</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">de {interval}h</p>
         </div>
       </div>
-      <div className="mt-4">
+
+      {/* IA Prediction Badge */}
+      {prediction && predStr && (
+        <div className="mt-3 flex items-center gap-2 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+              Previsão IA: {predStr} ({prediction.daysLeft} dias úteis)
+            </p>
+            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+              Média: {prediction.avgHoursPerDay}h/dia • Restam {prediction.remaining}h • Confiança: {prediction.confidence === 'high' ? 'Alta' : prediction.confidence === 'medium' ? 'Média' : 'Estimada'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3">
         <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
           <div className={`h-full rounded-full ${isUrgent ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${progress}%` }} />
         </div>
@@ -368,6 +606,114 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
   );
 };
 
+// Modal para agendar manutenção futura (Sede)
+const ScheduleMaintenanceModal = ({ machine, machines, onClose, onSave, prediction }) => {
+  const [formData, setFormData] = useState({
+    machineId: machine?.id || '',
+    scheduledDate: prediction?.predictedDate
+      ? prediction.predictedDate.toISOString().split('T')[0]
+      : new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    type: 'preventive',
+    notes: '',
+    assignedTo: '',
+  });
+
+  const handleSubmit = () => {
+    if (!formData.machineId || !formData.scheduledDate) return;
+    onSave({
+      ...formData,
+      scheduledDate: new Date(formData.scheduledDate),
+    });
+    onClose();
+  };
+
+  const types = [
+    { value: 'preventive', label: 'Preventiva' },
+    { value: 'inspection', label: 'Inspeção' },
+    { value: 'oil_change', label: 'Mudança de Óleo' },
+    { value: 'filter_change', label: 'Mudança de Filtros' },
+    { value: 'major_service', label: 'Revisão Geral' },
+  ];
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Agendar Manutenção" size="md">
+      <div className="space-y-4">
+        {prediction && (
+          <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <Brain className="w-5 h-5 text-amber-600" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                Sugestão IA: {prediction.predictedDate.toLocaleDateString('pt-PT')}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Baseado em {prediction.avgHoursPerDay}h/dia de uso real • {prediction.remaining}h restantes
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Equipamento *</label>
+          <select
+            value={formData.machineId}
+            onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Selecionar...</option>
+            {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data *</label>
+          <input
+            type="date"
+            value={formData.scheduledDate}
+            onChange={e => setFormData({ ...formData, scheduledDate: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
+          <select
+            value={formData.type}
+            onChange={e => setFormData({ ...formData, type: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+          >
+            {types.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </div>
+
+        <Input
+          label="Técnico / Responsável"
+          value={formData.assignedTo}
+          onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
+          placeholder="Nome do técnico..."
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notas</label>
+          <textarea
+            value={formData.notes}
+            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+            rows={2}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+            placeholder="Notas para o técnico..."
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+        <Button variant="outline" onClick={onClose}>Cancelar</Button>
+        <Button onClick={handleSubmit} disabled={!formData.machineId || !formData.scheduledDate} icon={CalendarPlus}>
+          Agendar
+        </Button>
+      </div>
+    </Modal>
+  );
+};
+
 // Componente de miniaturas de fotos para a tabela
 const PhotoThumbnails = ({ photos, onClick }) => {
   if (!photos?.length) {
@@ -420,19 +766,17 @@ const AvariaListItem = ({ avaria, onClick }) => {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 hover:shadow-md group ${
-        isResolvida
+      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 hover:shadow-md group ${isResolvida
           ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 opacity-70'
           : avaria.maquinaParada
             ? 'border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-900/10 hover:border-red-300'
             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary-300'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-3">
         {/* Indicador de estado */}
-        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-          isResolvida ? 'bg-emerald-500' : avaria.maquinaParada ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
-        }`} />
+        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isResolvida ? 'bg-emerald-500' : avaria.maquinaParada ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
+          }`} />
 
         {/* Info principal */}
         <div className="flex-1 min-w-0">
@@ -635,11 +979,14 @@ const ManutencaoView = () => {
     setActiveView,
     machines,
     maintenanceRecords,
+    maintenanceSchedules,
     updateMachine,
     addMaintenanceRecord,
+    addMaintenanceSchedule,
     uploadMaintenancePhoto,
     addPhotoToMaintenance,
     removePhotoFromMaintenance,
+    getSmartMaintenancePrediction,
     loading
   } = useStore();
 
@@ -653,6 +1000,7 @@ const ManutencaoView = () => {
 
   const [showNewModal, setShowNewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -737,11 +1085,17 @@ const ManutencaoView = () => {
           {activeTab === 'alerts' && (
             alertMachines.length === 0
               ? <EmptyState icon={Check} title="Sem alertas" description="Todos os equipamentos estão dentro dos limites." />
-              : <div className="space-y-4">{alertMachines.map(m => <MaintenanceCard key={m.id} machine={m} onSchedule={setSelectedMachine} onComplete={handleComplete} />)}</div>
+              : <div className="space-y-4">{alertMachines.map(m => <MaintenanceCard key={m.id} machine={m} onSchedule={(machine) => setShowScheduleModal(machine)} onComplete={handleComplete} prediction={getSmartMaintenancePrediction(m)} />)}</div>
           )}
 
           {activeTab === 'calendar' && (
-            <EmptyState icon={Calendar} title="Calendário" description="Funcionalidade em desenvolvimento." />
+            <MaintenanceCalendar
+              maintenanceRecords={maintenanceRecords}
+              avarias={avarias}
+              machines={machines}
+              schedules={maintenanceSchedules}
+              getPrediction={getSmartMaintenancePrediction}
+            />
           )}
 
           {activeTab === 'history' && (
@@ -832,6 +1186,17 @@ const ManutencaoView = () => {
           onAddPhoto={handleAddPhotoToExisting}
           onRemovePhoto={handleRemovePhoto}
           uploading={uploading}
+        />
+      )}
+
+      {/* Modal: Agendar manutenção futura */}
+      {showScheduleModal && (
+        <ScheduleMaintenanceModal
+          machine={showScheduleModal}
+          machines={machines}
+          onClose={() => setShowScheduleModal(null)}
+          onSave={addMaintenanceSchedule}
+          prediction={showScheduleModal ? getSmartMaintenancePrediction(showScheduleModal) : null}
         />
       )}
 

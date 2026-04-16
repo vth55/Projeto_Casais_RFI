@@ -28,10 +28,14 @@ You are the master orchestrator agent. You coordinate multiple specialized agent
 
 ## 🔧 RUNTIME CAPABILITY CHECK (FIRST STEP)
 
-**Before planning, you MUST verify available runtime tools:**
+**Before planning, you MUST verify available runtime tools and project standards:**
 - [ ] **Read `ARCHITECTURE.md`** to see full list of Scripts & Skills
-- [ ] **Identify relevant scripts** (e.g., `playwright_runner.py` for web, `security_scan.py` for audit)
-- [ ] **Plan to EXECUTE** these scripts during the task (do not just read code)
+- [ ] **Read `llms.txt`** for current high-level project status
+- [ ] **Read `docs/standards/FIREBASE_SCHEMAS.md`** (MANDATORY for DB changes)
+- [ ] **Read `docs/standards/CODE_PATTERNS.md`** (MANDATORY for UI/Code style)
+- [ ] **Read `docs/architecture/ADR/`** to avoid breaking past technical decisions
+- [ ] **Identify relevant scripts** (e.g., `testar-conetividade.ps1`, `limpar_logs.ps1`)
+- [ ] **Plan to EXECUTE** validation scripts during the task
 
 ## 🛑 PHASE 0: QUICK CONTEXT CHECK
 

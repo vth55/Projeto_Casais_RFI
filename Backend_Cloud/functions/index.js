@@ -9,11 +9,13 @@
  * - procoreBridge: Integração OAuth2 + REST API Procore (Chunks 1A/1B)
  * - procoreScheduledSync: Cron job horário de sincronização Procore → Firestore (Chunk 1C)
  * - procoreSessionExport: Exportar sessões para Procore (Timecard Entries)
+ * - procoreDailyWriteback: Cron diário (23:30) — Daily Logs + Cost Entries ao Procore
  * - procoreExportRetry: Cron job (30 min) de retry de exports Procore falhados
+ * - onSessionCorrected: Trigger Firestore — re-exporta Timecard para Procore quando sessão é corrigida
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -371,14 +373,15 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
 
         if (!activeSessionQuery.empty) {
             const sessionDoc = activeSessionQuery.docs[0];
-            const startTime = sessionDoc.data().startTime.toDate();
+            const sessionData = sessionDoc.data();
+            const startTime = sessionData.startTime.toDate();
             const endTime = new Date();
 
-            if (sessionDoc.data().cardId !== normalizedCard) {
-                return res.status(403).json({
-                    status: 'DENIED',
-                    message: 'Sessão iniciada por outro cartão. Sessão não encerrada.'
-                });
+            // LÓGICA DE SWITCH: Se o cartão for DIFERENTE, fechamos a sessão do anterior e abrimos para o novo
+            const isSwitch = sessionData.cardId !== normalizedCard;
+
+            if (isSwitch) {
+                console.log(`🔄 [SWITCH] Operador ${normalizedCard} a interromper sessão de ${sessionData.cardId} na máquina ${normalizedMachine}`);
             }
 
             const durationHours = (endTime - startTime) / (1000 * 60 * 60);
@@ -391,17 +394,19 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
             const activeTariff = getTariffForDate(startTime, tariffHistory);
             const costResult = calculateSessionCost(durationHours, activeTariff);
 
-            console.log(`🔒 Sessão encerrada: ${normalizedMachine} | ${durationHours.toFixed(2)}h`);
-            if (costResult) {
-                console.log(`💰 Custo: €${costResult.costs.totalCost} (tarifário: ${activeTariff.id})`);
-            } else {
-                console.log(`⚠️  Máquina ${normalizedMachine} sem tarifário definido — custo não calculado`);
-            }
-
+            console.log(`${isSwitch ? '🔄' : '🔒'} Sessão encerrada: ${normalizedMachine} | ${durationHours.toFixed(2)}h`);
+            
+            // Atualizar a sessão anterior
             await sessionDoc.ref.update({
                 endTime: admin.firestore.Timestamp.fromDate(endTime),
                 durationHours: durationHours,
                 status: 'CLOSED',
+                ...(isSwitch ? { 
+                    interruptedBy: normalizedCard,
+                    closeMethod: 'SWITCH' 
+                } : { 
+                    closeMethod: 'MANUAL' 
+                }),
                 ...(costResult ? { costs: costResult.costs, tariff: costResult.tariffSnapshot } : {}),
             });
 
@@ -410,6 +415,39 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
                 console.error('[Procore] export end failed:', err.message);
             });
 
+            // Se for um SWITCH, precisamos de criar a NOVA sessão IMEDIATAMENTE
+            if (isSwitch) {
+                const newSession = {
+                    cardId: normalizedCard,
+                    machineId: normalizedMachine,
+                    startTime: admin.firestore.Timestamp.fromDate(endTime), // Começa onde a outra acabou
+                    endTime: null,
+                    durationHours: 0,
+                    status: 'OPEN',
+                    previousSessionId: sessionDoc.id
+                };
+
+                const newSessionRef = await db.collection(SESSIONS_PATH).add(newSession);
+                
+                // Exportar início da nova sessão para o Procore
+                procoreSessionExporter.exportSessionToProcore(newSessionRef.id, 'start').catch((err) => {
+                    console.error('[Procore] switch start failed:', err.message);
+                });
+
+                await machineRef.update({
+                    status: 'ACTIVE',
+                    lastOperator: normalizedCard,
+                    lastSwitchAt: admin.firestore.Timestamp.fromDate(endTime)
+                });
+
+                return res.json({ 
+                    status: 'START', 
+                    type: 'SWITCH',
+                    message: `Sessão anterior fechada (${durationHours.toFixed(2)}h). Nova sessão iniciada.` 
+                });
+            }
+
+            // Se não for switch, é um fecho normal
             await db.runTransaction(async (t) => {
                 const mDoc = await t.get(machineRef);
                 if (!mDoc.exists) return;
@@ -1110,8 +1148,17 @@ exports.procoreBridge = procoreBridge;
 // Cron job (1h) que invoca runFullSync() para manter o catálogo Procore
 // (projects/equipment/directory) sincronizado em Firestore. Idempotente.
 
-const { procoreScheduledSync } = require('./procore/procoreScheduler');
+const { procoreScheduledSync, procoreDailyWriteback } = require('./procore/procoreScheduler');
 exports.procoreScheduledSync = procoreScheduledSync;
+
+// ============================================
+// PROCORE DAILY WRITEBACK (Fase 3 — Daily Logs + Costs)
+// ============================================
+// Cron diário (23:30 Lisbon) que agrega sessões RFID do dia e envia
+// Daily Logs (resumo por obra) e Cost Entries (combustível) ao Procore.
+// Os Timecards individuais já são enviados em real-time pelo procoreSessionExporter.
+
+exports.procoreDailyWriteback = procoreDailyWriteback;
 
 // ============================================
 // PROCORE EXPORT RETRY (Fase 3 — Automação IoT)
@@ -1134,6 +1181,56 @@ exports.procoreExportRetry = onSchedule(
         } catch (err) {
             console.error('[procoreExportRetry] critical:', err.message);
             throw err;
+        }
+    }
+);
+
+// ====================================================
+// PROCORE — Re-export Timecard após correção de anomalia
+// ====================================================
+// Quando uma sessão é corrigida pelo operador (validationStatus muda para RESOLVED
+// e correctedByOperator=true), os horários do Procore ficam desatualizados.
+// Este trigger re-exporta o Timecard com os valores corrigidos.
+
+exports.onSessionCorrected = onDocumentUpdated(
+    `${SESSIONS_PATH}/{sessionId}`,
+    async (event) => {
+        const before = event.data.before.data();
+        const after = event.data.after.data();
+
+        // Só dispara quando validationStatus muda para RESOLVED com correção
+        const becameResolved = before.validationStatus !== 'RESOLVED' && after.validationStatus === 'RESOLVED';
+        const wasCorrected = after.correctedByOperator === true || after.correctedByAdmin === true;
+
+        if (!becameResolved || !wasCorrected) return null;
+
+        // Só re-exportar se já houve export anterior (não criar timecard novo do nada)
+        if (!after.procoreExport?.exported) {
+            console.log(`[onSessionCorrected] session ${event.params.sessionId} — no prior Procore export, skipping`);
+            return null;
+        }
+
+        console.log(`[onSessionCorrected] session ${event.params.sessionId} — re-exporting corrected times to Procore`);
+
+        try {
+            // Invalidar export anterior para forçar re-criação
+            await event.data.after.ref.update({
+                'procoreExport.exported': false,
+                'procoreExport.reason': 'corrected_re_export',
+                'procoreExport.previousTimecardId': after.procoreExport.timecardId || null,
+            });
+
+            // Re-exportar com os novos horários (que já estão no doc)
+            const result = await procoreSessionExporter.exportSessionToProcore(
+                event.params.sessionId,
+                'end'
+            );
+
+            console.log(`[onSessionCorrected] re-export result:`, result.exported ? 'success' : result.reason);
+            return result;
+        } catch (err) {
+            console.error(`[onSessionCorrected] re-export failed for ${event.params.sessionId}:`, err.message);
+            return null;
         }
     }
 );

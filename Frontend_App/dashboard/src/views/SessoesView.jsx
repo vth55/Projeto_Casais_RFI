@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Clock, Play, Search, Download, Truck, User, Timer, Activity, CheckCircle, Calendar } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, StatusBadge, Table, EmptyState, Skeleton, Modal } from '../components/ui';
+import LiveTimer from '../components/ui/LiveTimer';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
   <div className="flex border-b border-slate-200 dark:border-slate-700">
@@ -16,11 +17,8 @@ const TabNav = ({ tabs, activeTab, onChange }) => (
 
 const ActiveSessionCard = ({ session, machine, operator }) => {
   const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
-  const now = new Date();
-  const durationMs = now - startTime;
-  const hours = Math.floor(durationMs / (1000 * 60 * 60));
-  const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-  const isLong = hours >= 5;
+  const durationMs = Date.now() - startTime.getTime();
+  const isLong = durationMs >= 5 * 60 * 60 * 1000;
 
   return (
     <Card className={`border-l-4 ${isLong ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
@@ -41,7 +39,11 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
           </div>
         </div>
         <div className="text-right">
-          <div className={`text-2xl font-bold tabular-nums ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}>{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}</div>
+          <LiveTimer
+            startTime={startTime}
+            tickMs={1000}
+            className={`text-2xl ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}
+          />
           <p className="text-xs text-slate-500 dark:text-slate-400">em curso</p>
         </div>
       </div>
@@ -141,7 +143,7 @@ const ValidationModal = ({ session, machine, operator, onClose, onValidate }) =>
 };
 
 const SessoesView = () => {
-  const { activeView, setActiveView, sessions, machines, operators, getFilteredSessions, updateSession, loading } = useStore();
+  const { activeView, setActiveView, sessions, machines, operators, getFilteredSessions, resolveSessionAnomaly, loading } = useStore();
 
   // Derivar tab directamente do activeView
   const activeTab = activeView === 'sessoes-historico' ? 'history' : activeView === 'sessoes-validacoes' ? 'validations' : 'active';
@@ -152,7 +154,7 @@ const SessoesView = () => {
   const filteredSessions = getFilteredSessions();
   const activeSessions = useMemo(() => sessions.filter(s => s.status === 'OPEN'), [sessions]);
   const closedSessions = useMemo(() => filteredSessions.filter(s => s.status === 'CLOSED'), [filteredSessions]);
-  const pendingValidations = useMemo(() => closedSessions.filter(s => s.durationHours >= 5 && s.validationStatus !== 'VALIDATED'), [closedSessions]);
+  const pendingValidations = useMemo(() => closedSessions.filter(s => s.durationHours >= 5 && s.validationStatus !== 'VALIDATED' && s.validationStatus !== 'RESOLVED'), [closedSessions]);
 
   const stats = useMemo(() => {
     const totalHours = closedSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
@@ -212,22 +214,14 @@ const SessoesView = () => {
     URL.revokeObjectURL(link.href);
   };
 
-  // Validar sessão
+  // Validar sessão — resolve anomalia com persistência original vs corrigido
   const handleValidate = async (sessionId, validationData) => {
-    const updates = {
-      validationStatus: 'VALIDATED',
-      validatedAt: new Date(),
-      validationNotes: validationData.notes,
-    };
-    if (validationData.action === 'correct' && validationData.correctedStart && validationData.correctedEnd) {
-      const start = validationData.correctedStart;
-      const end = validationData.correctedEnd;
-      const durationHours = (end - start) / (1000 * 60 * 60);
-      updates.correctedStartTime = start;
-      updates.correctedEndTime = end;
-      updates.correctedDurationHours = durationHours;
-    }
-    await updateSession(sessionId, updates);
+    await resolveSessionAnomaly(sessionId, {
+      action: validationData.action,
+      correctedStart: validationData.correctedStart,
+      correctedEnd: validationData.correctedEnd,
+      notes: validationData.notes,
+    });
   };
 
   const displayedSessions = getDisplayedSessions();
