@@ -22,7 +22,11 @@
     - Calendário agora mostra eventos passados, avarias, previsões IA e agendamentos da sede.
     - Adicionado `ScheduleMaintenanceModal` com sugestão inteligente de data.
 - [x] **Dashboard Focus**: Adicionado widget `WorkFocusPanel` no dashboard principal (Sede) para destacar máquinas iminentes de manutenção.
-- **Veredito**: Sistema robusto e pronto para a demonstração de Junho.
+- [x] **Segurança & Roles (RBAC)**:
+    - Adicionada permissão `maintenance:schedule` e protegidos botões de agendamento/registo.
+    - Ativados guards em `ManutencaoView.jsx` e `ConfiguracoesView.jsx` para parâmetros sensíveis.
+- [x] **Build**: Compilação `vite build` realizada com sucesso (0 erros).
+- **Veredito**: Sistema robusto, seguro e orientado à Sede, pronto para demonstração.
 
 ---
 

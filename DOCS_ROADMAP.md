@@ -36,7 +36,7 @@ Este documento é a "Fonte de Verdade" para o progresso do projeto. Combina a vi
 |----------------|--------|---------------------|----------------------|
 | **Controlo de Anomalias** | ✅ FEITO | Backend deteta sessões >5h e >14h. Link de validação por email funcional. | UI de visualização de anomalias (`QualidadeView`) precisa de refinamento visual. |
 | **Cálculo Dinâmico de Custos** | ✅ FEITO | Usa `consumptionRate` da máquina e `pricePerLitre` do Firestore. | - |
-| **Gestão de Parâmetros PWA** | 🟡 EM CURSO | UI nas Configurações para editar Diesel, CO2 e Manutenção (Global/Máquina). | Implementar verificação de permissões RBAC para estas edições sensíveis. |
+| **Gestão de Parâmetros PWA** | ✅ FEITO | UI nas Configurações para editar Diesel, CO2 e Manutenção (via RBAC). | - |
 | **Manutenção Preditiva Sede** | ✅ FEITO | Projeção IA via média móvel + Agendamento (Opção B). | - |
 | **Gestão em Massa** | 🟡 EM CURSO | Edição de tarifários, categorias e localizações de múltiplas máquinas simultaneamente. | Mudança de localização em massa em `MaquinasView`. |
 | **Login por Passcode** | 🔴 PLANEADO | Atualmente utiliza `signInAnonymously`. Lógica de verificação de PIN 4-dígitos pendente. | Prioridade máxima para a próxima Sprint técnica. |
