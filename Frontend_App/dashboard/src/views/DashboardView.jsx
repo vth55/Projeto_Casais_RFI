@@ -954,7 +954,7 @@ const WorkFocusPanel = ({ machines, avarias }) => {
 // ============================================================
 
 const DashboardView = () => {
-  const { machines, operators, sessions, getFilteredSessions, getKPIs, loading } = useStore();
+  const { machines, operators, sessions, getFilteredSessions, getKPIs, loading, systemSettings } = useStore();
   const { avarias } = useAvariasStore();
   const { isMobile } = useDeviceType();
   const filteredSessions = getFilteredSessions();
@@ -990,7 +990,7 @@ const DashboardView = () => {
         if (machine) {
           const consumption = (machine.consumptionRate || 0) * (session.durationHours || 0);
           grouped[day].combustivel += consumption;
-          grouped[day].co2 += consumption * 2.68;
+          grouped[day].co2 += consumption * (systemSettings?.co2FactorPerLitre || 2.68);
         }
       }
     });
@@ -1026,7 +1026,11 @@ const DashboardView = () => {
   }, [machines, filteredSessions, kpis.capacityPerMachine]);
 
   // Alertas manutenção
-  const maintenanceAlerts = machines.filter(m => (m.partialHours || m.totalHours || 0) >= 120);
+  const maintenanceAlerts = machines.filter(m => {
+    const interval = m.maintenanceInterval || systemSettings?.defaultMaintenanceInterval || 150;
+    const threshold = interval * 0.8;
+    return (m.partialHours || m.totalHours || 0) >= threshold;
+  });
 
   const COLORS = ['#005EB8', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 

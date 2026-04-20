@@ -4,7 +4,7 @@
 **Cliente:** Grupo Casais (Curso Tecnologias Avançadas de Construção)  
 **Data:** Dezembro 2024 (Evolução Industrial Abr 2026)  
 **Higiene:** ✅ Hardware legado e simuladores removidos  
-**Versão:** v1.1.0-stable
+**Versão:** v1.2.0-stable
 
 ---
 
@@ -42,6 +42,11 @@ Sistema Full-Stack PWA para gerir frotas de máquinas de construção, combinand
 │  ├─ START / STOP / SWITCH (Troca de operador)             │
 │  ├─ Guarda em scan_buffer/latest (auto-fill)              │
 │  └─ Grava logs de tentativas não autorizadas               │
+│                                                             │
+│  Cloud Function: procoreResiliencyEngine                    │
+│  ├─ procoreDailyWriteback (Sync agendado de backup)         │
+│  ├─ procoreExportRetry (Recuperação de falhas de rede)       │
+│  └─ onSessionCorrected (Auto-export após edição manual)     │
 │                                                             │
 │  Firestore Database:                                        │
 │  ├─ operators/ (cartões registados)                        │

@@ -20,8 +20,16 @@ Sempre que o utilizador pedir para ler, limpar, organizar ou auditar documentaç
 - **Regra de Leitura**: É proibido saltar linhas. O comando `view_file` deve percorrer o ficheiro integralmente.
 - **Regra de Veto**: Se o arqueólogo encontrar lógica proprietária ou ideias históricas, deve bloquear a eliminação e pedir confirmação manual.
 
-## Fluxo de Trabalho
-1. **Debate & Ideação** -> 2. **Investigação Profunda** -> 3. **Auditoria de Memória (@arqueologo-mestre)** -> 4. **Mapeamento Cirúrgico** -> 5. **Autorização Manual**.
+## Fluxo de Trabalho Industrial (Linear)
+1. **Ideação** → 2. **`/linear-intake`** → 3. **Linear (Issue)** → 4. **Mapeamento (Gemini)** → 5. **Autorização** → 6. **Execução (Claude)** → 7. **`/test-checklist`** → 8. **`/done-check`**.
+
+---
+
+## 🏗️ PROTOCOLO LINEAR (OBRIGATÓRIO)
+A regra de testes é agora bloqueadora e integrada no ciclo de vida da feature:
+- **Testes por Issue**: O `/linear-intake` deve gerar critérios de teste específicos.
+- **Validação de Prontidão**: O comando `/done-check` deve ser usado antes de marcar qualquer tarefa como concluída no `DOCS_ROADMAP.md`.
+- **Commits**: O Claude Code deve usar o ID da issue do Linear (ex: `PWA-XX`) em todos os commits.
 
 ---
 

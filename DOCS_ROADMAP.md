@@ -5,9 +5,9 @@ Este documento é a "Fonte de Verdade" para o progresso do projeto. Combina a vi
 ---
 
 ## 📊 RESUMO DE SAÚDE DO PROJETO
-> **Última Atualização:** 16 Abril 2026  
-> **Foco Atual:** Fase 5 - Autenticação & Gestão de Parâmetros  
-> **Estado Geral:** ✅ 95% Concluído (Fase Industrial Estável)
+> **Última Atualização:** 20 Abril 2026  
+> **Foco Atual:** Fase 6 - Industrialização & Blindagem (Conclusão Procore)  
+> **Estado Geral:** ✅ 98% Concluído (Integração Enterprise Estável)
 
 ---
 
@@ -15,8 +15,8 @@ Este documento é a "Fonte de Verdade" para o progresso do projeto. Combina a vi
 
 ### 🏗️ Integração Procore (Enterprise)
 - [x] **Fase 0-2**: OAuth2 Bridge e Sincronização de Directório/Equipamentos.
-- [x] **Fase 3**: Writeback automático de Daily Logs e Custos Diretos (Concluído).
-- [x] **Interface**: Aba de Integrações e Badges de Sync.
+- [x] **Fase 3-4**: Writeback automático de Daily Logs, Custos e Resiliência (DEPLOY COMPLETO).
+- [x] **Interface**: Aba de Integrações, Badges de Sync e Auth Sandbox Procore.
 
 ### 📱 Mobile Hub & Hardware
 - [x] **Tecnologia**: Smartphone-as-Machine (NFC Nativo) concluído.
@@ -44,12 +44,20 @@ Este documento é a "Fonte de Verdade" para o progresso do projeto. Combina a vi
 | **Checklist de Segurança** | 🔴 PLANEADO | Criar pop-up de pré-utilização no PWA do Operador. | Requisito de compliance. |
 | **Feedback (Toasts)** | 🔴 PLANEADO | Implementar avisos visuais de sucesso/erro em `SessoesCorrigidasView`. | Melhoria de UX. |
 | **Higiene de Produção** | 🟡 EM CURSO | Flag para esconder DevTools e remoção de MockData. | Preparação para demonstração final. |
+| **Validação de Perfis** | 🔴 PLANEADO | Testar permissões (Guards) via Modo Demo nas Configurações. | Verificar se Encarregado e Sustentabilidade vêem o que devem. |
 | **Nomenclatura Inteligente** | 🟡 EM CURSO | Gerador `{CAT}-{NUM} - {OBRA}` para apoiar criação manual na PWA. | Facilitar gestão enquanto aguardamos Procore. |
+| **Audit Trail (Settings)** | 🔴 PLANEADO (F6) | Registo de quem e quando alterou diesel/CO2/manutenção. | Requisito ISO 55001. |
+| **PIN Security** | 🔴 PLANEADO (F6) | Cloud Functions intermediária com Rate Limit. | Proteção contra Bruteforce. |
+| **Offline-First Login** | 🔴 PLANEADO (F6) | Cache local do PIN (hash) no Mobile Hub. | Operação em áreas sem rede. |
+| **Data Performance** | 🔴 PLANEADO (F6) | Pré-cálculo de KPIs via Cloud Functions (scheduled). | Preparação para frotas > 50 máquinas. |
 
 ---
 
-## 🔭 ROADMAP FUTURO (V3 - Inovação)
-- [ ] **Ponto 5: Sistema de Login Seguro (Username/Passcode)**: Substituir logins manuais por sistema formal para Dashboard e Mobile.
+- [ ] **Fase 6: Industrialização & Blindagem de Segurança**:
+    - [ ] Implementar Audit Trail para configurações sensíveis.
+    - [ ] Refatorar auth PIN para Cloud Functions com Rate Limit.
+    - [ ] Implementar Offline-First para o Mobile Hub.
+    - [ ] Otimizar performance de KPIs (Pre-calculation).
 - [ ] **Offline Sync (Human-Relay)**: Sincronização via Bluetooth entre telemóveis.
 - [ ] **Segurança BLE**: Alertas de proximidade entre máquinas e pessoal.
 - [ ] **AI Predict**: Previsão de avarias baseado em histórico de telemetria.

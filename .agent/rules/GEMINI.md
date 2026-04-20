@@ -95,6 +95,15 @@ When auto-applying an agent, inform the user:
 
 ## TIER 0: UNIVERSAL RULES (Always Active)
 
+### 🚫 Output Rules (CRITICAL)
+
+**NEVER create files (.md or otherwise) when the user asks for analysis, organization, or checklists.**
+
+- `/linear-intake`, `/test-checklist`, `/done-check` → Output goes in the CHAT, never to disk
+- The user will copy-paste from the chat to Linear manually
+- Creating files for these workflows is a **PROTOCOL VIOLATION**
+- If in doubt: **CHAT, NOT FILE**
+
 ### 🌐 Language Handling
 
 When user's prompt is NOT in English:

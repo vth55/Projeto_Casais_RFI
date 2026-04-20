@@ -4,10 +4,55 @@
 
 ---
 
+## 🏗️ NOTAS DE SESSÃO (20 Abril 2026 - Deploy Total: Integração Procore Estabilizada)
+
+**Estado do Sistema:** ✅ EM PRODUÇÃO (Sandbox)
+- [x] **Infraestrutura**: 9 Cloud Functions atualizadas e estabilizadas.
+- [x] **Novas Funções**: Criadas `procoreDailyWriteback`, `procoreExportRetry` e `onSessionCorrected` para resiliência de dados.
+- [x] **Segurança**: `procoreBridge` atualizado com novos segredos e tokens.
+- [x] **Preparação**: Sistema pronto para autenticação OAuth2 via Sandbox Procore.
+- **Veredito**: A "Ponte Digital" entre o IoT de campo e o ERP corporate está agora operacional.
+
+---
+
 ## 🚀 PRÓXIMA SESSÃO - INSTRUÇÕES
 
-**Data da última sessão:** 15/04/2026
-**Último commit:** `manual-revert` - Reposição da UI original (reversão do Sidebar Rail)
+**Data da última sessão:** 20/04/2026
+**Último commit:** `deploy-procore-stabilized` - Integração Procore v2 Cloud Functions.
+
+---
+
+## 🏗️ NOTAS DE SESSÃO (17 Abril 2026 (II) - Upgrade Industrial: SISTEMA LINEAR)
+
+**Nova Infraestrutura de Trabalho:**
+- **Estado**: ✅ OPERACIONAL.
+- [x] **Comandos Slash**: Ativados `/linear-intake`, `/test-checklist` e `/done-check`.
+- [x] **Agente**: Integrado o `linear-organizer` para análise profunda de código e gestão de issues.
+- [x] **Filosofia**: Regra de testes obrigatórios passa a ser bloqueadora via `/done-check`.
+- [x] **Manuais**: `AJUDA_COMANDOS.md` e `GEMINI.md` atualizados para refletir o novo Workflow Industrial.
+- **Veredito**: O projeto está agora blindado contra dívida técnica e erros de entrega.
+
+---
+
+## 🏗️ NOTAS DE SESSÃO (17 Abril 2026 - Transição para Gestão Industrial via Linear)
+
+**Handoff & Gestão de Projetos:**
+- **Estado**: 🗺️ MAPEADO e TRANSFERIDO.
+- **Linear**: Utilizador migrou a gestão de backlog para o **Linear** para melhor controlo de sprint.
+- [x] **Documentação**: Gemini (eu) consolidou a "Bíblia" do projeto para garantir que o Claude Code tenha contexto absoluto sem redundância.
+- [x] **Checklist**: Atualizado o [CLAUDE_TASK.txt](CLAUDE_TASK.txt) com os resultados dos patches de CO2 e Manutenção.
+- **Veredito**: O Gemini permanece como **Guardião da Memória** e **Arquiteto**. O ciclo de execução (Claude Code) está agora subordinado ao Linear.
+
+---
+
+## 🏗️ NOTAS DE SESSÃO (16 Abril 2026 - Tarde (IV) - INDUSTRIALIZAÇÃO)
+
+**Mapeamento de Patches & Roadmap Estratégico:**
+- **Estado**: ✅ MAPEADO (Pronto para Claude Code).
+- **Checklist Master**: Criado ficheiro [CLAUDE_TASK.txt](CLAUDE_TASK.txt) com instruções cirúrgicas para correção de valores hardcoded (CO2 e Manutenção).
+- [x] **ADR 005**: Formalizada a estratégia de Industrialização (Audit Trail, PIN Security via Cloud Functions, Offline-First).
+- [x] **Roadmap**: Sincronizada a Matriz de Execução e o Roadmap Futuro para incluir a Fase 6 de Blindagem.
+- **Veredito**: Arquitetura estabilizada e instruída. O sistema está pronto para a transição para o Executor (Claude Code).
 
 ---
 

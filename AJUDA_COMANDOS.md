@@ -22,6 +22,7 @@ Vitor, este é o teu mapa rápido. **O comando mais importante é o primeiro!**
 | **`documentation-writer`** | Escrever manuais e READMEs | "@documentation-writer, cria o manual desta pasta." |
 | **`arqueologo-mestre`** | Auditar documentos e código | "Arqueólogo, faz um raio-x a este módulo." |
 | **`orchestrator`** | Tarefas complexas com vários ficheiros | "Orchestrator, refatora o sistema de login." |
+| **`linear-organizer`** | Análise de código e Gestão de Backlog | "@linear-organizer, organiza as tarefas desta sprint." |
 
 ---
 
@@ -56,6 +57,23 @@ Basta escreveres `/` seguido do comando para eu ativar o guião oficial.
 | **`/preview`** | Gere o servidor local. | Ligar/Desligar a visualização da PWA. |
 | **`/deploy`** | Prepara o envio para produção. | Quando queres publicar no Firebase. |
 | **`/brainstorm`** | Debate ideias socráticas. | Estás indeciso sobre uma lógica. |
+
+### 🏗️ GESTÃO INDUSTRIAL (LINEAR)
+| Comando | O que faz? | Quando usar? |
+|---------|------------|--------------|
+| **`/linear-intake`** | Ideias Livres → Formato Linear. | Criar novas tasks/issues rapidamente. |
+| **`/test-checklist`**| Checklists de Teste obrigatórias. | Antes de dares a feature como "pronta". |
+| **`/done-check`** | Validação final de entrega. | Bloqueio de segurança antes do fecho. |
+
+---
+
+## 🔄 Fluxo de Trabalho (Workbox)
+
+Ideias brutas → **`/linear-intake`** → Copy-paste no Linear
+↳ Desenvolvimento do Código
+↳ **`/test-checklist`** → Testar Manualmente (Checks)
+↳ **`/done-check`** → Validar Requisitos
+↳ **Commit PWA-XX** (Auto-sync Linear)
 
 ---
 
