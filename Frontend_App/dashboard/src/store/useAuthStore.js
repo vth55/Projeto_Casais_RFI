@@ -1,10 +1,20 @@
 /**
  * Auth Store - Gestão de autenticação e permissões
  * CASAIS Fleet Intelligence
+ *
+ * Usa Firebase Auth (signInWithEmailAndPassword) e Firestore para carregar
+ * o perfil de sistema (systemRole) do utilizador autenticado.
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
 import {
   DEFAULT_ROLES,
   ROLE_LEVELS,
@@ -16,6 +26,32 @@ import {
   getAssignableRoles,
 } from '../config/permissions';
 
+/**
+ * Caminho base da colecção de utilizadores no Firestore.
+ * Estrutura: artifacts/casais-rfid/public/data/users/{uid}
+ */
+const USERS_COLLECTION = 'artifacts/casais-rfid/public/data/users';
+
+/**
+ * Carrega o perfil do utilizador no Firestore e devolve o systemRole.
+ * Se o documento não existir, devolve 'operador' como default.
+ *
+ * @param {string} uid - UID do utilizador Firebase Auth
+ * @returns {Promise<{systemRole: string, name: string, email: string}>}
+ */
+const fetchUserProfile = async (uid) => {
+  try {
+    const ref = doc(db, USERS_COLLECTION, uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data();
+    }
+  } catch (err) {
+    console.warn('useAuthStore: erro ao carregar perfil Firestore:', err.message);
+  }
+  return { systemRole: 'operador' };
+};
+
 const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -23,41 +59,109 @@ const useAuthStore = create(
       currentUser: null,
       isAuthenticated: false,
 
+      // Estado de inicialização do Firebase Auth
+      authLoading: true,
+
       // Perfis customizados (além dos default)
       customRoles: {},
 
-      // Simular login (em produção seria com Firebase Auth)
-      login: (user) => {
-        const role = get().getRole(user.systemRole || 'operador');
+      /**
+       * Inicializa o listener Firebase Auth para persistência de sessão.
+       * Deve ser chamado uma única vez na montagem do App.
+       * Devolve a função de cleanup para cancelar o listener.
+       *
+       * @returns {Function} unsubscribe
+       */
+      initAuth: () => {
+        if (!auth) {
+          set({ authLoading: false });
+          return () => {};
+        }
+
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (firebaseUser) {
+            // Utilizador já autenticado — carregar perfil do Firestore
+            const profile = await fetchUserProfile(firebaseUser.uid);
+            const role = get().getRole(profile.systemRole || 'operador');
+            set({
+              currentUser: {
+                id: firebaseUser.uid,
+                email: firebaseUser.email,
+                name: profile.name || firebaseUser.displayName || firebaseUser.email,
+                systemRole: profile.systemRole || 'operador',
+                assignedObraId: profile.assignedObraId || null,
+                cardId: profile.cardId || null,
+                permissions: role?.permissions || [],
+              },
+              isAuthenticated: true,
+              authLoading: false,
+            });
+          } else {
+            // Sem sessão activa
+            set({ currentUser: null, isAuthenticated: false, authLoading: false });
+          }
+        });
+
+        return unsubscribe;
+      },
+
+      /**
+       * Autentica com email e password via Firebase Auth.
+       * Após autenticação, carrega o perfil do Firestore para obter o systemRole.
+       *
+       * @param {{email: string, password: string}} credentials
+       * @throws {FirebaseError} em caso de credenciais inválidas ou erro de rede
+       */
+      login: async ({ email, password }) => {
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const firebaseUser = credential.user;
+
+        const profile = await fetchUserProfile(firebaseUser.uid);
+        const role = get().getRole(profile.systemRole || 'operador');
+
         set({
           currentUser: {
-            ...user,
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: profile.name || firebaseUser.displayName || firebaseUser.email,
+            systemRole: profile.systemRole || 'operador',
+            assignedObraId: profile.assignedObraId || null,
+            cardId: profile.cardId || null,
             permissions: role?.permissions || [],
           },
           isAuthenticated: true,
         });
       },
 
-      // Logout
-      logout: () => {
-        set({
-          currentUser: null,
-          isAuthenticated: false,
-        });
+      /**
+       * Termina a sessão do utilizador via Firebase Auth e limpa o estado local.
+       */
+      logout: async () => {
+        try {
+          if (auth) await signOut(auth);
+        } catch (err) {
+          console.warn('useAuthStore: erro ao terminar sessão:', err.message);
+        }
+        set({ currentUser: null, isAuthenticated: false });
       },
 
-      // Trocar perfil sem logout (DevTools / Demo)
+      /**
+       * Troca de perfil sem logout (DevTools / Demo).
+       * Apenas altera o estado local; não afecta o Firebase Auth.
+       *
+       * @param {string} roleId
+       */
       switchRole: (roleId) => {
         const { currentUser } = get();
         if (!currentUser) return;
 
         const role = get().getRole(roleId);
         if (!role) {
-          console.warn(`Role "${roleId}" não encontrado`);
+          console.warn(`Role "${roleId}" nao encontrado`);
           return;
         }
 
-        console.log(`🔄 Perfil alterado: ${currentUser.systemRole} → ${roleId}`);
+        console.log(`Perfil alterado: ${currentUser.systemRole} -> ${roleId}`);
         set({
           currentUser: {
             ...currentUser,
@@ -67,7 +171,10 @@ const useAuthStore = create(
         });
       },
 
-      // Obter dashboard default para o perfil atual
+      /**
+       * Devolve o dashboard default para o perfil actual.
+       * @returns {string}
+       */
       getDefaultDashboard: () => {
         const { currentUser } = get();
         if (!currentUser) return 'dashboard';
@@ -75,14 +182,17 @@ const useAuthStore = create(
         return role?.defaultDashboard || 'dashboard';
       },
 
-      // Definir utilizador atual (usado na inicialização)
+      /**
+       * Define o utilizador actual directamente (usado para sincronização interna).
+       * @param {object|null} user
+       */
       setCurrentUser: (user) => {
         if (!user) {
           set({ currentUser: null, isAuthenticated: false });
           return;
         }
 
-        const role = get().getRole(user.systemRole || 'admin'); // Default admin para dev
+        const role = get().getRole(user.systemRole || 'operador');
         set({
           currentUser: {
             ...user,
@@ -121,9 +231,7 @@ const useAuthStore = create(
 
         if (!existingRole) return;
 
-        // Não permitir editar roles de sistema (apenas permissões)
         if (existingRole.isSystem && DEFAULT_ROLES[roleId]) {
-          // Para roles de sistema, só podemos modificar via customRoles
           set((state) => ({
             customRoles: {
               ...state.customRoles,
@@ -148,7 +256,7 @@ const useAuthStore = create(
       deleteRole: (roleId) => {
         const role = get().getRole(roleId);
         if (role?.isSystem && DEFAULT_ROLES[roleId]) {
-          console.warn('Não é possível eliminar perfis de sistema');
+          console.warn('Nao e possivel eliminar perfis de sistema');
           return false;
         }
 
@@ -159,7 +267,7 @@ const useAuthStore = create(
         return true;
       },
 
-      // Verificar se utilizador atual tem permissão
+      // Verificar se utilizador actual tem permissão
       can: (permission) => {
         const { currentUser } = get();
         if (!currentUser) return false;
@@ -195,9 +303,9 @@ const useAuthStore = create(
 
       // === HIERARQUIA DE PERFIS ===
 
-      // Obter nível do utilizador atual
+      // Obter nível do utilizador actual
       getUserLevel: () => {
-        const { currentUser, customRoles = {} } = get();
+        const { currentUser } = get();
         if (!currentUser) return ROLE_LEVELS.OPERADOR;
         const role = get().getRole(currentUser.systemRole);
         return role?.level ?? ROLE_LEVELS.OPERADOR;
@@ -246,7 +354,6 @@ const useAuthStore = create(
           return Object.values(allRoles);
         }
 
-        // Outros vêem o seu nível e abaixo (para contexto)
         return Object.values(allRoles).filter(role => role.level >= userRole.level);
       },
 
@@ -267,20 +374,5 @@ const useAuthStore = create(
     }
   )
 );
-
-// Inicializar com utilizador admin para desenvolvimento
-if (typeof window !== 'undefined') {
-  const store = useAuthStore.getState();
-  if (!store.currentUser) {
-    store.setCurrentUser({
-      id: 'dev_admin',
-      name: 'Vitor Hugo',
-      email: 'vitor@casais.pt',
-      systemRole: 'admin',
-      assignedObraId: null,
-      cardId: 'OP_TEST_001',
-    });
-  }
-}
 
 export default useAuthStore;

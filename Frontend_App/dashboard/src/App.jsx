@@ -1,7 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense, useCallback } from 'react';
-import { signInAnonymously } from 'firebase/auth';
 import { getDocs, collection } from 'firebase/firestore';
-import { auth, db, projectId } from './config/firebase';
+import { db, projectId } from './config/firebase';
 import { createAllMockData } from './utils/mockData';
 import useStore from './store/useStore';
 import useThemeStore from './store/useThemeStore';
@@ -22,6 +21,9 @@ const ViewLoader = () => (
 
 // DevTools
 const DevTools = lazy(() => import('./components/DevTools'));
+
+// Página de Login
+const LoginPage = lazy(() => import('./pages/LoginPage'));
 
 // Página de Validação (lazy loaded - acesso via link do email)
 const ValidationPage = lazy(() => import('./pages/ValidationPage'));
@@ -52,7 +54,7 @@ import DashboardRouter from './views/dashboards/DashboardRouter';
 export default function App() {
   const { activeView, loading, setLoading, initializeListeners } = useStore();
   const { initTheme } = useThemeStore();
-  const { currentUser, getRole } = useAuthStore();
+  const { currentUser, isAuthenticated, authLoading, getRole, initAuth } = useAuthStore();
   const currentRole = getRole(currentUser?.systemRole);
 
   // Verificar se é página de validação ou reporte avaria (standalone routes)
@@ -86,17 +88,17 @@ export default function App() {
     initTheme();
   }, [initTheme]);
 
+  // Inicializar Firebase Auth (listener de sessão persistente)
   useEffect(() => {
-    const initialize = async () => {
-      // Auth anónimo
-      if (auth) {
-        try {
-          await signInAnonymously(auth);
-        } catch (error) {
-          console.warn('Auth error:', error.message);
-        }
-      }
+    const unsubscribe = initAuth();
+    return () => unsubscribe?.();
+  }, [initAuth]);
 
+  useEffect(() => {
+    // Só inicializar dados após o utilizador estar autenticado
+    if (!isAuthenticated) return;
+
+    const initialize = async () => {
       // Verificar/criar dados mock
       if (db) {
         try {
@@ -108,7 +110,7 @@ export default function App() {
           ]);
 
           if (machinesSnap.empty && operatorsSnap.empty && sessionsSnap.empty) {
-            console.log('📊 Criando dados mock...');
+            console.log('Criando dados mock...');
             await createAllMockData();
           }
         } catch (error) {
@@ -127,15 +129,13 @@ export default function App() {
     initialize().then(fn => { cleanup = fn; });
 
     return () => cleanup?.();
-  }, [initializeListeners, setLoading]);
+  }, [isAuthenticated, initializeListeners, setLoading]);
 
   // Memoizar renderView para evitar re-renders desnecessários
   const renderView = useCallback(() => {
-    // Mapear view para componente
     if (activeView.startsWith('obras')) return <ObrasView />;
     if (activeView.startsWith('maquinas')) return <MaquinasView />;
     if (activeView === 'operadores') return <OperadoresView />;
-    // Sessões - verificar submenus específicos primeiro
     if (activeView === 'sessoes-corrigidas') return <SessoesCorrigidasView />;
     if (activeView.startsWith('sessoes')) return <SessoesView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
@@ -147,8 +147,8 @@ export default function App() {
     return <DashboardRouter DefaultDashboard={DashboardView} />;
   }, [activeView, currentUser?.systemRole]);
 
-  // Se é Mobile Hub, renderizar standalone (sem sidebar/header)
-  // IMPORTANTE: Verificar ANTES do loading para não bloquear o operador móvel
+  // Rotas standalone: acessíveis sem login (Mobile Hub e Reporte de Avaria)
+  // IMPORTANTE: verificar ANTES do loading para não bloquear o operador móvel
   if (isMobileHub) {
     return (
       <ErrorBoundary>
@@ -159,8 +159,6 @@ export default function App() {
     );
   }
 
-  // Se é reporte de avaria via QR Code, renderizar standalone (sem sidebar/header)
-  // IMPORTANTE: Verificar ANTES do loading para não bloquear o operador móvel
   if (isReporteAvaria) {
     return (
       <ErrorBoundary>
@@ -171,18 +169,34 @@ export default function App() {
     );
   }
 
-  if (loading) {
+  // Aguardar resolução do estado Firebase Auth antes de decidir o que mostrar
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-600 font-medium">A carregar...</p>
+          <p className="text-slate-400 font-medium text-sm">A verificar sessao...</p>
         </div>
       </div>
     );
   }
 
-  // Se é página de validação, mostrar apenas essa página (sem layout/menus)
+  // Utilizador não autenticado — mostrar página de login
+  if (!isAuthenticated) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center bg-slate-900">
+            <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <LoginPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Página de validação (link do email) — sem layout/menus
   if (validationToken) {
     return (
       <ErrorBoundary>
@@ -193,6 +207,18 @@ export default function App() {
     );
   }
 
+  // Ecrã de loading enquanto os dados do Firestore carregam
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-600 dark:text-slate-400 font-medium">A carregar...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <Layout>
@@ -200,10 +226,12 @@ export default function App() {
           {renderView()}
         </Suspense>
       </Layout>
-      {/* DevTools - temporariamente visível para todos para facilitar o teste de Perfis na fase QA/Demo */}
-      <Suspense fallback={null}>
-        <DevTools />
-      </Suspense>
+      {/* DevTools — apenas para roles com showDevTools: true (admin, it) */}
+      {currentRole?.showDevTools && (
+        <Suspense fallback={null}>
+          <DevTools />
+        </Suspense>
+      )}
       {/* PWA - Notificações de instalação e offline */}
       <PWAPrompt />
     </ErrorBoundary>

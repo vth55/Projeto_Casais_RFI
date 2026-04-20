@@ -104,6 +104,7 @@ export const DEFAULT_ROLES = {
     permissions: Object.values(PERMISSIONS), // Todas as permissões
     isSystem: true, // Não pode ser eliminado
     canCreateRolesBelow: true, // Pode criar perfis de qualquer nível inferior
+    showDevTools: true, // DevTools visível para admin
   },
 
   gestor_frota: {

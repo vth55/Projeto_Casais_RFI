@@ -285,6 +285,7 @@ Para testar os diferentes perfis, utilizar as seguintes credenciais:
 | `testeoperador@fleet.com` | `123456` | operador |
 | `testesustentabilidade@fleet.com` | `123456` | gestor_sustentabilidade |
 | `testeviewer@fleet.com` | `123456` | gestor_frota |
+| `testefinanceiro@fleet.com` | `123456` | gestor_financeiro |
 
 ---
 
