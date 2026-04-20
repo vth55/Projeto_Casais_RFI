@@ -42,7 +42,6 @@ const OperadoresView = lazy(() => import('./views/OperadoresView'));
 const SessoesView = lazy(() => import('./views/SessoesView'));
 const ManutencaoView = lazy(() => import('./views/ManutencaoView'));
 const FinanceiroView = lazy(() => import('./views/FinanceiroView'));
-const QualidadeView = lazy(() => import('./views/QualidadeView'));
 const AnalisesView = lazy(() => import('./views/AnalisesView'));
 const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
 const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
@@ -140,7 +139,6 @@ export default function App() {
     if (activeView.startsWith('sessoes')) return <SessoesView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
     if (activeView.startsWith('financeiro')) return <FinanceiroView />;
-    if (activeView.startsWith('qualidade')) return <QualidadeView />;
     if (activeView.startsWith('analises')) return <AnalisesView />;
     if (activeView === 'relatorios') return <RelatoriosView />;
     if (activeView === 'configuracoes') return <ConfiguracoesView />;
