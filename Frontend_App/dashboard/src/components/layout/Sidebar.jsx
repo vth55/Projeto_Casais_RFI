@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, Truck, Users, Clock, Wrench, BarChart3,
-  FileText, Settings, ChevronDown, Wallet, CheckCircle, LogOut,
+  FileText, Settings, ChevronDown, Wallet, LogOut,
   Activity, Building2, Shield, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
@@ -40,7 +40,6 @@ const navigation = [
       { id: 'financeiro-custos',     label: 'Custos' },
     ],
   },
-  { id: 'qualidade',   label: 'Qualidade',     icon: CheckCircle },
   { id: 'analises',    label: 'Análises',      icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',    icon: FileText },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },

@@ -30,7 +30,7 @@ const MORE_ITEMS = [
   { id: 'obras',       label: 'Obras',         icon: Building2 },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'financeiro-custos', label: 'Financeiro', icon: Wallet },
-  { id: 'qualidade',   label: 'Qualidade',      icon: CheckCircle },
+  { id: 'sessoes-validacoes', label: 'Validações',  icon: CheckCircle },
   { id: 'analises',    label: 'Análises',       icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',     icon: FileText },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
