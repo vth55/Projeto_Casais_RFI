@@ -36,10 +36,13 @@ const admin = require('firebase-admin');
 const APP_ID = 'casais-rfid';
 const INTEGRATION_DOC_PATH = `artifacts/${APP_ID}/public/data/integrations/procore`;
 
-// Sandbox endpoints. Quando passar a produção, trocar para `https://api.procore.com`
-const PROCORE_BASE_URL = 'https://sandbox.procore.com';
-const PROCORE_AUTH_URL = `${PROCORE_BASE_URL}/oauth/authorize`;
-const PROCORE_TOKEN_URL = `${PROCORE_BASE_URL}/oauth/token`;
+// Sandbox endpoints. Quando passar a produção, trocar para:
+//   LOGIN_URL → https://login.procore.com
+//   API_URL   → https://api.procore.com
+const PROCORE_LOGIN_URL = 'https://login-sandbox.procore.com';
+const PROCORE_API_URL = 'https://sandbox.procore.com';
+const PROCORE_AUTH_URL = `${PROCORE_LOGIN_URL}/oauth/authorize`;
+const PROCORE_TOKEN_URL = `${PROCORE_LOGIN_URL}/oauth/token`;
 
 // REST API — Chunk 1B
 const PROCORE_API_VERSION = '/rest/v1.0';
@@ -108,6 +111,10 @@ async function exchangeCodeForToken(code) {
         redirect_uri: REDIRECT_URI,
     });
 
+    console.log('[procoreBridge] Token exchange →', PROCORE_TOKEN_URL);
+    console.log('[procoreBridge] client_id:', process.env.PROCORE_CLIENT_ID?.substring(0, 10) + '...');
+    console.log('[procoreBridge] redirect_uri:', REDIRECT_URI);
+
     const response = await fetch(PROCORE_TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -116,6 +123,7 @@ async function exchangeCodeForToken(code) {
 
     if (!response.ok) {
         const errText = await response.text();
+        console.error('[procoreBridge] Token exchange FAILED:', response.status, errText);
         throw new Error(`Procore token exchange failed (${response.status}): ${errText}`);
     }
 
@@ -201,7 +209,7 @@ async function procoreFetch(endpoint, { query = {}, method = 'GET', body } = {})
         throw new Error('PROCORE_COMPANY_ID secret não está configurado.');
     }
 
-    const url = new URL(`${PROCORE_BASE_URL}${endpoint}`);
+    const url = new URL(`${PROCORE_API_URL}${endpoint}`);
     Object.entries(query).forEach(([k, v]) => {
         if (v !== undefined && v !== null && v !== '') {
             url.searchParams.set(k, String(v));
@@ -857,7 +865,7 @@ module.exports = {
     procoreBridge,
     // Helpers OAuth (Chunk 1A)
     getValidAccessToken,
-    PROCORE_BASE_URL,
+    PROCORE_API_URL,
     // Helpers REST API (Chunk 1B) — re-utilizáveis em jobs agendados (Chunk 1C):
     procoreFetch,
     procoreFetchAll,

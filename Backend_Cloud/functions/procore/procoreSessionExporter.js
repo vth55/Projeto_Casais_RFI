@@ -18,13 +18,14 @@
 const admin = require('firebase-admin');
 
 // ─── Procore environment ─────────────────────────────────────────────────────
-// Sandbox enquanto estamos em desenvolvimento. Quando passar a produção, trocar
-// para `https://api.procore.com` + `https://login.procore.com`.
-// IMPORTANTE: tem de estar alinhado com procoreBridge.js (PROCORE_BASE_URL)
-// senão o token emitido numa base não é aceite na outra.
-const PROCORE_BASE_URL = 'https://sandbox.procore.com';
-const PROCORE_TOKEN_URL = `${PROCORE_BASE_URL}/oauth/token`;
-const PROCORE_API_URL = `${PROCORE_BASE_URL}/rest/v1.0`;
+// Sandbox enquanto estamos em desenvolvimento. Quando passar a produção, trocar para:
+//   LOGIN_URL → https://login.procore.com
+//   API_BASE  → https://api.procore.com
+// IMPORTANTE: tem de estar alinhado com procoreBridge.js
+const PROCORE_LOGIN_URL = 'https://login-sandbox.procore.com';
+const PROCORE_API_BASE = 'https://sandbox.procore.com';
+const PROCORE_TOKEN_URL = `${PROCORE_LOGIN_URL}/oauth/token`;
+const PROCORE_API_URL = `${PROCORE_API_BASE}/rest/v1.0`;
 
 // ─── Path constants ──────────────────────────────────────────────────────────
 

@@ -274,6 +274,18 @@ CO₂ (kg) = Horas × Consumo (L/h) × 2.68 kg/L
   - Operadores limitam-se ao "Mobile Hub" (Botões grandes para Scan e Reporte de Avaria).
 - **Segurança da UI:** Ocultação de módulos sensíveis e da Sidebar baseada unicamente nos privilégios granulares do perfil.
 
+#### 🔐 **Contas de Teste (Golden Accounts)**
+Para testar os diferentes perfis, utilizar as seguintes credenciais:
+
+| Email | Password | Role / Perfil |
+|-------|----------|---------------|
+| `vitorhugo22.igrejas@gmail.com` | `999999` | admin |
+| `testegestor@fleet.com` | `123456` | gestor_frota |
+| `testeencarregado@fleet.com` | `123456` | encarregado_obra |
+| `testeoperador@fleet.com` | `123456` | operador |
+| `testesustentabilidade@fleet.com` | `123456` | gestor_sustentabilidade |
+| `testeviewer@fleet.com` | `123456` | gestor_frota |
+
 ---
 
 ### 🎨 **BRAND & VISUAL CONSTRAINTS**
