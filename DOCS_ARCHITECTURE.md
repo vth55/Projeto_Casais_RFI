@@ -276,20 +276,11 @@ CO₂ (kg) = Horas × Consumo (L/h) × 2.68 kg/L
 
 ---
 
-### 🎨 **DESIGN SYSTEM & UX (Diretrizes Premium)**
-O projeto segue uma estética **Premium Industrial**, focada em clareza no terreno e elegância para a gestão.
+### 🎨 **BRAND & VISUAL CONSTRAINTS**
+Restrições obrigatórias para a identidade visual do projeto:
 
-**Directrizes Visuais:**
 - **Cor Principal:** Azul Institucional Casais `#005EB8`.
-- **Estética:** Clean, minimalista, uso de *glassmorphism* e gradientes suaves.
-- **Botões:** Targets de toque com mínimo de 44px (padrão Apple/Web).
-- **Proibição Crítica:** ❌ **NUNCA UTILIZAR ROXO/VIOLETA**. O design deve ser puramente baseado no azul e tons neutros/cinzas.
-
-**Breakpoints de Responsividade:**
-- **320px (iPhone SE):** Teste crítico de estabilidade de layout.
-- **390px (iPhone 12/13/14):** Padrão de visualização mobile.
-- **768px (Tablet):** Foco em supervisores de campo.
-- **Desktop:** Dashboard analítico completo.
+- **Proibição:** ❌ **NUNCA UTILIZAR ROXO/VIOLETA**.
 
 ---
 **Código relevante:**

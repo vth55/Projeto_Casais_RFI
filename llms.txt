@@ -9,12 +9,9 @@ A professional-grade PWA system for construction fleet management, designed for 
 - **Backend Stack**: Firebase Functions v2 (Node.js), Firestore.
 - **Integration**: Bi-directional sync with Procore API.
 
-## 🎨 Visual Identity & Design Guidelines (CRITICAL for Design AIs)
+## 🎨 Visual Identity & Brand Constraints
 - **Primary Brand Color**: Casais Blue `#005EB8`. 
-- **Aesthetic**: Premium Industrial. Clean, elite, high-contrast. 
-- **Style**: Subtle use of glassmorphism, modern typography (Outfit/Inter), and smooth micro-animations.
-- **Color Constraint**: ❌ **NEVER USE PURPLE/VIOLET**. This is a project-specific ban. 
-- **UX Goal**: Simplicity for operators in the field (Big buttons, high contrast) combined with density for managers/admins.
+- **Color Constraint**: ❌ **NEVER USE PURPLE/VIOLET** (Brand restriction). 
 
 ## Responsive Targets
 - **Mobile SE**: 320px (Strict layout stability).
