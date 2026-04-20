@@ -266,7 +266,6 @@ CO₂ (kg) = Horas × Consumo (L/h) × 2.68 kg/L
 ---
 
 ### 8. **Sistema RBAC Multi-Perfil**
-
 **Como funciona:**
 - **5 Níveis de Acesso:** Admin, IT, Encarregado de Obra, Técnico de Manutenção e Operador.
 - **Roteamento Inteligente:** O ecrã "Dashboard" adapta-se à função do utilizador.
@@ -275,6 +274,24 @@ CO₂ (kg) = Horas × Consumo (L/h) × 2.68 kg/L
   - Operadores limitam-se ao "Mobile Hub" (Botões grandes para Scan e Reporte de Avaria).
 - **Segurança da UI:** Ocultação de módulos sensíveis e da Sidebar baseada unicamente nos privilégios granulares do perfil.
 
+---
+
+### 🎨 **DESIGN SYSTEM & UX (Diretrizes Premium)**
+O projeto segue uma estética **Premium Industrial**, focada em clareza no terreno e elegância para a gestão.
+
+**Directrizes Visuais:**
+- **Cor Principal:** Azul Institucional Casais `#005EB8`.
+- **Estética:** Clean, minimalista, uso de *glassmorphism* e gradientes suaves.
+- **Botões:** Targets de toque com mínimo de 44px (padrão Apple/Web).
+- **Proibição Crítica:** ❌ **NUNCA UTILIZAR ROXO/VIOLETA**. O design deve ser puramente baseado no azul e tons neutros/cinzas.
+
+**Breakpoints de Responsividade:**
+- **320px (iPhone SE):** Teste crítico de estabilidade de layout.
+- **390px (iPhone 12/13/14):** Padrão de visualização mobile.
+- **768px (Tablet):** Foco em supervisores de campo.
+- **Desktop:** Dashboard analítico completo.
+
+---
 **Código relevante:**
 - `Frontend_App/dashboard/src/config/permissions.js`
 - `Frontend_App/dashboard/src/views/dashboards/DashboardRouter.jsx`

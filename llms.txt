@@ -1,35 +1,31 @@
-# Casais Fleet Intelligence
+# Casais Fleet Intelligence - AI Context
 
-Sistema de Gestão Inteligente de Frotas Industriais para o Grupo Casais. Focado em retrofit IoT, manutenção preditiva e integração Procore.
+## Project Overview
+A professional-grade PWA system for construction fleet management, designed for the Casais Group. It bridges field IoT/NFC data with Procore ERP.
 
-## Quick Context
-- **Stack**: React 19 (PWA), Firebase (Functions v2/Firestore), Arduino (RFID Hardware).
-- **Core Goal**: Track machine hours to calculate CO2, costs, and maintenance alerts (>150h).
-- **ERP Integration**: Bi-directional sync with Procore (Timecards, Equipment, Logs).
-- **Key Identity**: The "Arqueólogo-Mestre" protocol ensures documentation integrity.
+## Key Technical Details
+- **Architecture**: PWA (Frontend) + Cloud Functions (Backend) + Firebase (Database) + Arduino/Raspberry Pi (Hardware).
+- **Frontend Stack**: React 19, Vite, Tailwind CSS v4, Zustand.
+- **Backend Stack**: Firebase Functions v2 (Node.js), Firestore.
+- **Integration**: Bi-directional sync with Procore API.
 
-## Directory Structure
-- `/Frontend_App/dashboard`: React PWA Dashboard.
-- `/Backend_Cloud`: Firebase infrastructure and Procore Bridge.
-- `/arduino_rfid_simple`: RFID sensor logic and LED status feedback.
-- `/Hardware_Bridge_PC`: Serial-to-Cloud Python bridge.
-- `/docs`: Technical and Design specifications.
+## 🎨 Visual Identity & Design Guidelines (CRITICAL for Design AIs)
+- **Primary Brand Color**: Casais Blue `#005EB8`. 
+- **Aesthetic**: Premium Industrial. Clean, elite, high-contrast. 
+- **Style**: Subtle use of glassmorphism, modern typography (Outfit/Inter), and smooth micro-animations.
+- **Color Constraint**: ❌ **NEVER USE PURPLE/VIOLET**. This is a project-specific ban. 
+- **UX Goal**: Simplicity for operators in the field (Big buttons, high contrast) combined with density for managers/admins.
 
-## Critical Docs
-- `README.md`: Entry point.
-- `DOCS_HISTORY.md`: Session logs and decisions.
-- `DOCS_ARCHITECTURE.md`: Technical master file.
-- `DOCS_ROADMAP.md`: Feature matrix and progress.
-- `DOCS_OPERATIONS.md`: Deployment and setup.
-- `AJUDA_COMANDOS.md`: User cheat sheet for agents and commands.
-- `docs/standards/FIREBASE_SCHEMAS.md`: MANDATORY for DB changes.
-- `docs/standards/CODE_PATTERNS.md`: MANDATORY for Code/UI style.
+## Responsive Targets
+- **Mobile SE**: 320px (Strict layout stability).
+- **Smartphone**: 390px (Standard mobile view).
+- **Tablet**: 768px+ (Field supervisor view).
+- **Desktop**: Full analytics dashboard.
 
-## Current Status
-- ✅ Integração Procore & Writeback (Fase 3) Operacional.
-- ✅ Parâmetros Operacionais Dinâmicos (Diesel/CO2/Manutenção).
-- ✅ Machine-as-Hub (NFC Mobile).
-- ✅ Manutenção Preditiva Industrial (Sede) & Refinamento RBAC.
-- 🔴 Gemini: BLOQUEIO TOTAL DE CÓDIGO FONTE ATIVO (Protocolo Arqueólogo).
+## Folder Structure Core
+- `/Frontend_App/dashboard`: The React PWA.
+- `/.agent`: System rules and agent specialization (Gemini & Claude).
+- `/docs`: Technical ADRs and Operations manuals.
 
-> For deep technical logic, refer to `DOCS_ARCHITECTURE.md`.
+---
+*Created by Gemini (Architect) for external AI orchestration.*
