@@ -4,6 +4,17 @@
 
 ---
 
+## 🏗️ NOTAS DE SESSÃO (21 Abril 2026 - Auditoria QA Final: Blocos 1-9)
+
+**Estado do Módulo:** ✅ 99% CONCLUÍDO (Pronto para Demo Industrial)
+- [x] **QA Audit**: Testados e aprovados os Blocos 1 a 9 (Alertas, Histórico, Avarias, Export CSV, Filtros).
+- [x] **UX/UI**: Responsividade Mobile (390px) validada; Alinhamento de StatCards e Filtros.
+- [x] **Nomenclatura**: Purga completa de termos "IA", substituídos por "Previsão de Manutenção".
+- [!] **Gargalo**: Bug P3 (Calendário) - Dots de Previsão/Agendamento invisíveis na grelha (Lógica OK, Render Fail).
+- **Veredito**: O sistema está estável para apresentação. A persistência de dados e a reatividade dos filtros estão ao nível comercial.
+
+---
+
 ## 🏗️ NOTAS DE SESSÃO (20 Abril 2026 - Deploy Total: Integração Procore Estabilizada)
 
 **Estado do Sistema:** ✅ EM PRODUÇÃO (Sandbox)

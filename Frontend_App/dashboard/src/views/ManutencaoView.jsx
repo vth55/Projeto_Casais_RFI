@@ -35,7 +35,7 @@ const parseDate = (v) => {
   return isNaN(d) ? null : d;
 };
 
-const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules, getPrediction, setActiveView, onViewRecord }) => {
+const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules, getPrediction, setActiveView, onViewRecord, sessions }) => {
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -109,7 +109,7 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
     });
 
     return map;
-  }, [maintenanceRecords, avarias, machines, schedules, getPrediction]);
+  }, [maintenanceRecords, avarias, machines, schedules, getPrediction, sessions]);
 
   // Build grid (segunda=0)
   const firstDay = new Date(year, month, 1);
@@ -1203,6 +1203,7 @@ const ManutencaoView = () => {
     addPhotoToMaintenance,
     removePhotoFromMaintenance,
     getSmartMaintenancePrediction,
+    sessions,
     loading
   } = useStore();
 
@@ -1509,6 +1510,7 @@ const ManutencaoView = () => {
               schedules={maintenanceSchedules}
               getPrediction={getSmartMaintenancePrediction}
               setActiveView={setActiveView}
+              sessions={sessions}
               onViewRecord={(record) => setSelectedHistoryRecord(record)}
             />
           )}

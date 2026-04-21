@@ -4,6 +4,24 @@ Este documento guarda o "DNA" das ideias rascunhadas e brainstorms que ainda nã
 
 ---
 
+## 🚀 BRAINSTORM: UPGRADE MANUTENÇÃO (21/04/2026)
+Brainstorm focado no refinamento do módulo de Manutenção após auditoria v3.0.
+
+### 1. Galeria de Fotos "Antes & Depois" (APROVADO ✅)
+- **Ideia**: No modal de detalhe da manutenção, incluir uma galeria para ver fotos reais submetidas no terreno.
+- **Contexto**: Aumenta a confiança na auditoria e prova a execução do serviço.
+
+### 2. Modo Offline-Total para Mobile Hub (EM ANÁLISE 🟡)
+- **Ideia**: Permitir o funcionamento total sem rede em caves/obras remotas, com sync via Service Workers.
+- **Próximo Passo**: Questionar viabilidade técnica ao Executor (Claude).
+
+### 3. Ideias Descartadas (BACKLOG MORTO ❌)
+- **NFC Tagging**: Descartado por incompatibilidade de hardware (máquinas usam RFID em banda distinta do telemóvel).
+- **Health Score / Dashboard Poluído**: Descartado para manter a UI limpa e focar no que é essencial.
+- **Notificações Push**: Descartado pela complexidade vs. valor acrescentado na demo atual.
+
+---
+
 ## 🚀 BRAINSTORM: INDUSTRIALIZAÇÃO (16/04/2026)
 
 Este brainstorm surgiu durante a auditoria de conclusão da Fase 5 (Manutenção) e foca na transição para um ambiente de produção real.
