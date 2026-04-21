@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, Image, X, Upload, Eye, Trash2, Camera, ShieldAlert, CheckCircle2, Phone, MessageSquare, Send, User, ChevronRight, ChevronLeft, Brain, Sparkles, CalendarPlus } from 'lucide-react';
+import { Wrench, AlertTriangle, Calendar, Clock, Truck, Check, Plus, X, Upload, Eye, Trash2, Camera, ShieldAlert, CheckCircle2, Phone, MessageSquare, Send, User, ChevronRight, ChevronLeft, CalendarPlus, Search, Download, ChevronDown } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAvariasStore from '../store/useAvariasStore';
 import useAuthStore from '../store/useAuthStore';
@@ -35,12 +35,20 @@ const parseDate = (v) => {
   return isNaN(d) ? null : d;
 };
 
-const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules, getPrediction }) => {
+const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules, getPrediction, setActiveView, onViewRecord }) => {
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState(null);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalEvents, setModalEvents] = useState([]);
+  const [modalDate, setModalDate] = useState(null);
+  const [modalTypeFilter, setModalTypeFilter] = useState('all');
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -67,17 +75,21 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
       push(d, { type: 'avaria', color: 'red', label: `Avaria (${a.status})`, machine: machine?.name || a.machineId, record: a });
     });
 
+    // Build set of machineIds that have a scheduled event
+    const scheduledMachineIds = new Set((schedules || []).map(s => s.machineId));
+
     machines.forEach(m => {
+      // Skip forecast if machine already has a scheduled maintenance
+      if (scheduledMachineIds.has(m.id)) return;
       const partial = m.partialHours || 0;
       if (partial < 80) return;
       const pred = getPrediction(m);
       if (pred?.predictedDate) {
-        const avgLabel = pred.avgHoursPerDay > 0 ? ` (${pred.avgHoursPerDay}h/dia)` : '';
-        const confLabel = pred.confidence === 'high' ? '🎯' : pred.confidence === 'medium' ? '📊' : '📐';
+        const avgLabel = pred.avgHoursPerDay > 0 ? ` (${Number(pred.avgHoursPerDay).toFixed(1)}h/dia)` : '';
         push(pred.predictedDate, {
           type: 'forecast',
           color: 'amber',
-          label: `${confLabel} Previsão IA — ${pred.remaining}h restantes${avgLabel}`,
+          label: `Previsão — ${Number(pred.remaining).toFixed(1)}h restantes${avgLabel}`,
           machine: m.name || m.id,
           record: m,
         });
@@ -110,8 +122,6 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
   while (cells.length % 7 !== 0) cells.push(null);
 
   const today = new Date();
-  const selectedKey = selectedDay ? `${selectedDay.getFullYear()}-${selectedDay.getMonth()}-${selectedDay.getDate()}` : null;
-  const selectedEvents = selectedKey ? (eventsByDay.get(selectedKey) || []) : [];
 
   const colorClasses = {
     blue: 'bg-blue-500',
@@ -119,6 +129,33 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
     amber: 'bg-amber-500',
     indigo: 'bg-indigo-500',
   };
+
+  const handleDayClick = (day) => {
+    const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+    const events = eventsByDay.get(key) || [];
+    setModalDate(day);
+    setModalEvents(events);
+    setModalTypeFilter('all');
+    setModalOpen(true);
+  };
+
+  const filteredModalEvents = useMemo(() => {
+    if (modalTypeFilter === 'all') return modalEvents;
+    return modalEvents.filter(e => e.type === modalTypeFilter);
+  }, [modalEvents, modalTypeFilter]);
+
+  const handleEventClick = (e) => {
+    if (!setActiveView) return;
+    if (e.type === 'past' && onViewRecord) { onViewRecord(e.record); setModalOpen(false); }
+    else if (e.type === 'past') { setActiveView('manutencao-historico'); setModalOpen(false); }
+    else if (e.type === 'avaria') { setActiveView('manutencao-avarias'); setModalOpen(false); }
+    else if (e.type === 'forecast') { setActiveView('manutencao-alertas'); setModalOpen(false); }
+    // 'scheduled' — just show info, no navigation
+  };
+
+  // Year range for picker
+  const currentYear = today.getFullYear();
+  const yearRange = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
   return (
     <div>
@@ -131,8 +168,55 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{MONTHS_PT[month]} {year}</h3>
+        <div className="text-center relative">
+          <div className="flex items-center gap-1 justify-center">
+            {/* Month picker */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowMonthPicker(v => !v); setShowYearPicker(false); }}
+                className="text-lg font-bold text-slate-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 flex items-center gap-0.5 px-1 rounded"
+              >
+                {MONTHS_PT[month]}
+                <ChevronDown className="w-4 h-4 opacity-60" />
+              </button>
+              {showMonthPicker && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 grid grid-cols-3 gap-1 w-48">
+                  {MONTHS_PT.map((m, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { setCursor(new Date(year, idx, 1)); setShowMonthPicker(false); }}
+                      className={`px-2 py-1.5 text-xs rounded-lg font-medium transition-colors ${idx === month ? 'bg-primary-500 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
+                    >
+                      {m.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Year picker */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowYearPicker(v => !v); setShowMonthPicker(false); }}
+                className="text-lg font-bold text-slate-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 flex items-center gap-0.5 px-1 rounded"
+              >
+                {year}
+                <ChevronDown className="w-4 h-4 opacity-60" />
+              </button>
+              {showYearPicker && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 flex flex-col gap-1 w-28">
+                  {yearRange.map(y => (
+                    <button
+                      key={y}
+                      onClick={() => { setCursor(new Date(y, month, 1)); setShowYearPicker(false); }}
+                      className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${y === year ? 'bg-primary-500 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <button
             onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
             className="text-xs text-primary-600 hover:underline"
@@ -151,10 +235,10 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
 
       {/* Legenda */}
       <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-slate-600 dark:text-slate-400">
-        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Manutenção passada</div>
-        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Avaria</div>
-        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Previsão IA</div>
-        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Agendamento Sede</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-500" /> Manutenção passada</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" /> Avaria</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" /> Previsão</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" /> Agendamento Sede</div>
       </div>
 
       {/* Grid */}
@@ -169,24 +253,22 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
           const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
           const events = eventsByDay.get(key) || [];
           const isToday = sameDay(day, today);
-          const isSelected = selectedDay && sameDay(day, selectedDay);
           const uniqueColors = [...new Set(events.map(e => e.color))].slice(0, 3);
 
           return (
             <button
               key={i}
-              onClick={() => setSelectedDay(day)}
+              onClick={() => handleDayClick(day)}
               className={`aspect-square flex flex-col items-center justify-between p-1.5 rounded-lg border transition-all text-left
-                ${isSelected ? 'border-primary-500 ring-2 ring-primary-500/30 bg-primary-50 dark:bg-primary-900/20' :
-                  isToday ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10' :
-                    'border-slate-200 dark:border-slate-700 hover:border-primary-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                ${isToday ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10' :
+                  'border-slate-200 dark:border-slate-700 hover:border-primary-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
             >
               <span className={`text-sm font-medium ${isToday ? 'text-primary-600 font-bold' : 'text-slate-700 dark:text-slate-200'}`}>
                 {day.getDate()}
               </span>
               <div className="flex gap-0.5 items-center mt-auto">
                 {uniqueColors.map(c => (
-                  <span key={c} className={`w-1.5 h-1.5 rounded-full ${colorClasses[c]}`} />
+                  <span key={c} className={`inline-block w-2 h-2 rounded-full ${colorClasses[c]}`} />
                 ))}
                 {events.length > 3 && (
                   <span className="text-[9px] text-slate-500 ml-0.5">+{events.length - 3}</span>
@@ -197,40 +279,74 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
         })}
       </div>
 
-      {/* Painel de eventos do dia selecionado */}
-      {selectedDay && (
-        <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-semibold text-slate-900 dark:text-white">
-              {selectedDay.toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-            </h4>
-            <button onClick={() => setSelectedDay(null)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
-              <X className="w-4 h-4 text-slate-500" />
-            </button>
+      {/* Modal de eventos do dia */}
+      {modalOpen && modalDate && (
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={modalDate.toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+          size="md"
+        >
+          {/* Filter pills */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { key: 'all', label: 'Todos' },
+              { key: 'past', label: 'Manutenção' },
+              { key: 'avaria', label: 'Avaria' },
+              { key: 'forecast', label: 'Previsão' },
+              { key: 'scheduled', label: 'Agendamento' },
+            ].map(pill => (
+              <button
+                key={pill.key}
+                onClick={() => setModalTypeFilter(pill.key)}
+                className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${modalTypeFilter === pill.key
+                  ? 'bg-primary-500 text-white border-primary-500'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-primary-300'
+                }`}
+              >
+                {pill.label}
+                {pill.key === 'all' && <span className="ml-1 opacity-70">({modalEvents.length})</span>}
+              </button>
+            ))}
           </div>
-          {selectedEvents.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Sem eventos neste dia.</p>
+
+          {filteredModalEvents.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">Sem eventos neste dia.</p>
           ) : (
-            <div className="space-y-2">
-              {selectedEvents.map((e, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-center gap-3 p-3 rounded-lg border
-                    ${e.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' :
-                      e.color === 'red' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
-                        e.color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' :
-                          'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colorClasses[e.color]}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">{e.label}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{e.machine}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {filteredModalEvents.map((e, idx) => {
+                const isClickable = e.type !== 'scheduled';
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => isClickable ? handleEventClick(e) : undefined}
+                    disabled={!isClickable}
+                    className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border transition-all
+                      ${e.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' :
+                        e.color === 'red' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+                          e.color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' :
+                            'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}
+                      ${isClickable ? 'cursor-pointer hover:shadow-sm hover:scale-[1.01]' : 'cursor-default'}`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colorClasses[e.color]}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{e.label}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{e.machine}</p>
+                      {e.type === 'scheduled' && e.record?.assignedTo && (
+                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">Técnico: {e.record.assignedTo}</p>
+                      )}
+                    </div>
+                    {isClickable && <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                  </button>
+                );
+              })}
             </div>
           )}
-        </div>
+
+          <div className="flex justify-end mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="outline" onClick={() => setModalOpen(false)}>Fechar</Button>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -263,21 +379,21 @@ const MaintenanceCard = ({ machine, onSchedule, onComplete, prediction }) => {
           </div>
         </div>
         <div className="text-right">
-          <p className={`text-2xl font-bold ${isUrgent ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>{hours}h</p>
+          <p className={`text-2xl font-bold ${isUrgent ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>{hours.toFixed(1)}h</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">de {interval}h</p>
         </div>
       </div>
 
-      {/* IA Prediction Badge */}
+      {/* Prediction Badge */}
       {prediction && predStr && (
         <div className="mt-3 flex items-center gap-2 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-          <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <Calendar className="w-4 h-4 text-amber-600 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-              Previsão IA: {predStr} ({prediction.daysLeft} dias úteis)
+              Previsão de Manutenção: {predStr} ({prediction.daysLeft} dias úteis)
             </p>
             <p className="text-[10px] text-amber-600 dark:text-amber-400">
-              Média: {prediction.avgHoursPerDay}h/dia • Restam {prediction.remaining}h • Confiança: {prediction.confidence === 'high' ? 'Alta' : prediction.confidence === 'medium' ? 'Média' : 'Estimada'}
+              Média: {Number(prediction.avgHoursPerDay).toFixed(1)}h/dia • Restam {Number(prediction.remaining).toFixed(1)}h • Confiança: {prediction.confidence === 'high' ? 'Alta' : prediction.confidence === 'medium' ? 'Média' : 'Estimada'}
             </p>
           </div>
         </div>
@@ -299,6 +415,7 @@ const MaintenanceCard = ({ machine, onSchedule, onComplete, prediction }) => {
 // Modal para adicionar fotos a registo existente
 const PhotoGalleryModal = ({ record, onClose, onAddPhoto, onRemovePhoto, uploading }) => {
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const photos = record?.photos || [];
 
   const handleFileSelect = async (e) => {
@@ -308,9 +425,8 @@ const PhotoGalleryModal = ({ record, onClose, onAddPhoto, onRemovePhoto, uploadi
         await onAddPhoto(record.id, file);
       }
     }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
   return (
@@ -318,26 +434,18 @@ const PhotoGalleryModal = ({ record, onClose, onAddPhoto, onRemovePhoto, uploadi
       <div className="space-y-4">
         {/* Upload area */}
         <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 text-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
           <Camera className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <p className="text-slate-600 dark:text-slate-400 mb-2">
-            Arraste fotos ou clique para selecionar
-          </p>
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            icon={Upload}
-          >
-            {uploading ? 'A enviar...' : 'Adicionar Fotos'}
-          </Button>
+          <p className="text-slate-600 dark:text-slate-400 mb-3">Adicionar fotos à manutenção</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} icon={Upload}>
+              {uploading ? 'A enviar...' : 'Galeria'}
+            </Button>
+            <Button variant="outline" onClick={() => cameraInputRef.current?.click()} disabled={uploading} icon={Camera}>
+              Câmara
+            </Button>
+          </div>
         </div>
 
         {/* Photo grid */}
@@ -351,18 +459,10 @@ const PhotoGalleryModal = ({ record, onClose, onAddPhoto, onRemovePhoto, uploadi
                   className="w-full h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                  <a
-                    href={photo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 bg-white rounded-full hover:bg-slate-100"
-                  >
+                  <a href={photo.url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-full hover:bg-slate-100">
                     <Eye className="w-4 h-4 text-slate-700" />
                   </a>
-                  <button
-                    onClick={() => onRemovePhoto(record.id, photo.id, photo.path)}
-                    className="p-2 bg-red-500 rounded-full hover:bg-red-600"
-                  >
+                  <button onClick={() => onRemovePhoto(record.id, photo.id, photo.path)} className="p-2 bg-red-500 rounded-full hover:bg-red-600">
                     <Trash2 className="w-4 h-4 text-white" />
                   </button>
                 </div>
@@ -372,7 +472,7 @@ const PhotoGalleryModal = ({ record, onClose, onAddPhoto, onRemovePhoto, uploadi
           </div>
         ) : (
           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-            <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p>Sem fotos adicionadas</p>
           </div>
         )}
@@ -388,6 +488,7 @@ const PhotoGalleryModal = ({ record, onClose, onAddPhoto, onRemovePhoto, uploadi
 const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, setUploading }) => {
   const { uploadMaintenancePhoto } = useStore();
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const [formData, setFormData] = useState({
     machineId: machine?.id || '',
     type: 'preventive',
@@ -397,62 +498,57 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
   });
   const [pendingPhotos, setPendingPhotos] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [submitError, setSubmitError] = useState(null);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
-
     setPendingPhotos(prev => [...prev, ...imageFiles]);
-
-    // Create preview URLs
     imageFiles.forEach(file => {
       const url = URL.createObjectURL(file);
       setPreviewUrls(prev => [...prev, { file, url }]);
     });
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
   const removePreview = (index) => {
     setPendingPhotos(prev => prev.filter((_, i) => i !== index));
     setPreviewUrls(prev => {
       const toRemove = prev[index];
-      if (toRemove?.url) {
-        URL.revokeObjectURL(toRemove.url);
-      }
+      if (toRemove?.url) URL.revokeObjectURL(toRemove.url);
       return prev.filter((_, i) => i !== index);
     });
   };
 
   const handleSubmit = async () => {
     if (!formData.machineId) return;
-
     setUploading(true);
-
-    // Upload photos first
-    const maintenanceId = `maint_${Date.now()}`;
-    const uploadedPhotos = [];
-
-    for (const file of pendingPhotos) {
-      const result = await uploadMaintenancePhoto(file, maintenanceId);
-      if (result.success) {
-        uploadedPhotos.push(result.photo);
+    setSubmitError(null);
+    try {
+      const maintenanceId = `maint_${Date.now()}`;
+      const uploadedPhotos = [];
+      for (const file of pendingPhotos) {
+        try {
+          const result = await uploadMaintenancePhoto(file, maintenanceId);
+          if (result.success) uploadedPhotos.push(result.photo);
+        } catch (e) {
+          console.error('Falha no upload da foto:', e);
+        }
       }
+      previewUrls.forEach(p => URL.revokeObjectURL(p.url));
+      await onSave({
+        ...formData,
+        photos: uploadedPhotos,
+        cost: formData.cost ? parseFloat(formData.cost) : null,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Erro ao guardar manutenção:', error);
+      setSubmitError('Não foi possível guardar o registo. Tente novamente.');
+    } finally {
+      setUploading(false);
     }
-
-    // Clean up preview URLs
-    previewUrls.forEach(p => URL.revokeObjectURL(p.url));
-
-    await onSave({
-      ...formData,
-      photos: uploadedPhotos,
-      cost: formData.cost ? parseFloat(formData.cost) : null,
-    });
-
-    setUploading(false);
-    onClose();
   };
 
   const maintenanceTypes = [
@@ -469,9 +565,7 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
       <div className="space-y-4">
         {/* Machine selector */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Equipamento *
-          </label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Equipamento *</label>
           <select
             value={formData.machineId}
             onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
@@ -486,9 +580,7 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
 
         {/* Type selector */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Tipo de Manutenção *
-          </label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Manutenção *</label>
           <select
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
@@ -502,9 +594,7 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
 
         {/* Technician */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Técnico Responsável
-          </label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Técnico Responsável</label>
           <Input
             value={formData.technician}
             onChange={(e) => setFormData({ ...formData, technician: e.target.value })}
@@ -514,9 +604,7 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
 
         {/* Cost */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Custo (€)
-          </label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Custo (€)</label>
           <Input
             type="number"
             value={formData.cost}
@@ -527,9 +615,7 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Notas / Descrição
-          </label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notas / Descrição</label>
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -541,32 +627,22 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
 
         {/* Photo upload */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Fotos
-          </label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fotos</label>
           <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <div className="flex items-center justify-center gap-3">
-              <Camera className="w-8 h-8 text-slate-400" />
-              <div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  icon={Upload}
-                >
-                  Adicionar Fotos
-                </Button>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  JPG, PNG até 10MB cada
-                </p>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Camera className="w-8 h-8 text-slate-400 hidden sm:block" />
+              <div className="text-center sm:text-left">
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} icon={Upload}>
+                    Galeria
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => cameraInputRef.current?.click()} icon={Camera}>
+                    Tirar Foto
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">JPG, PNG até 10MB cada</p>
               </div>
             </div>
           </div>
@@ -578,7 +654,7 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
                 <div key={index} className="relative group">
                   <img
                     src={preview.url}
-                    alt={`Preview ${index + 1}`}
+                    alt={`Foto ${index + 1}`}
                     className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
                   />
                   <button
@@ -594,13 +670,15 @@ const NewMaintenanceModal = ({ machine, machines, onClose, onSave, uploading, se
         </div>
       </div>
 
+      {submitError && (
+        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-700 dark:text-red-400">{submitError}</p>
+        </div>
+      )}
+
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!formData.machineId || uploading}
-          icon={uploading ? null : Check}
-        >
+        <Button onClick={handleSubmit} disabled={!formData.machineId || uploading} icon={uploading ? null : Check}>
           {uploading ? 'A guardar...' : 'Registar Manutenção'}
         </Button>
       </div>
@@ -622,10 +700,7 @@ const ScheduleMaintenanceModal = ({ machine, machines, onClose, onSave, predicti
 
   const handleSubmit = () => {
     if (!formData.machineId || !formData.scheduledDate) return;
-    onSave({
-      ...formData,
-      scheduledDate: new Date(formData.scheduledDate),
-    });
+    onSave({ ...formData, scheduledDate: new Date(formData.scheduledDate) });
     onClose();
   };
 
@@ -642,13 +717,13 @@ const ScheduleMaintenanceModal = ({ machine, machines, onClose, onSave, predicti
       <div className="space-y-4">
         {prediction && (
           <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-            <Brain className="w-5 h-5 text-amber-600" />
+            <Calendar className="w-5 h-5 text-amber-600" />
             <div>
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                Sugestão IA: {prediction.predictedDate.toLocaleDateString('pt-PT')}
+                Previsão de Manutenção: {prediction.predictedDate.toLocaleDateString('pt-PT')}
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                Baseado em {prediction.avgHoursPerDay}h/dia de uso real • {prediction.remaining}h restantes
+                Baseado em {Number(prediction.avgHoursPerDay).toFixed(1)}h/dia de uso real • {Number(prediction.remaining).toFixed(1)}h restantes
               </p>
             </div>
           </div>
@@ -723,10 +798,7 @@ const PhotoThumbnails = ({ photos, onClick }) => {
   }
 
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-    >
+    <button onClick={onClick} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
       <div className="flex -space-x-2">
         {photos.slice(0, 3).map((photo, index) => (
           <img
@@ -776,11 +848,7 @@ const AvariaListItem = ({ avaria, onClick }) => {
         }`}
     >
       <div className="flex items-center gap-3">
-        {/* Indicador de estado */}
-        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isResolvida ? 'bg-emerald-500' : avaria.maquinaParada ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
-          }`} />
-
-        {/* Info principal */}
+        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isResolvida ? 'bg-emerald-500' : avaria.maquinaParada ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm text-slate-900 dark:text-white">{avaria.machineId}</span>
@@ -811,7 +879,6 @@ const AvariaListItem = ({ avaria, onClick }) => {
             )}
           </div>
         </div>
-
         <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 transition-colors flex-shrink-0" />
       </div>
     </button>
@@ -837,7 +904,6 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
     }
   };
 
-  // Formatar telefone para link
   const phoneClean = avaria.operadorTelefone?.replace(/\s/g, '') || '';
 
   return (
@@ -891,23 +957,13 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
                 )}
               </div>
             </div>
-
-            {/* Botões de contacto */}
             {phoneClean && (
               <div className="flex items-center gap-2">
-                <a
-                  href={`tel:${phoneClean}`}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 transition-colors"
-                >
+                <a href={`tel:${phoneClean}`} className="flex items-center gap-1.5 px-3 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 transition-colors">
                   <Phone className="w-3.5 h-3.5" />
                   Ligar
                 </a>
-                <a
-                  href={`https://wa.me/351${phoneClean.replace(/^\+?351/, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                >
+                <a href={`https://wa.me/351${phoneClean.replace(/^\+?351/, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors">
                   <MessageSquare className="w-3.5 h-3.5" />
                   WhatsApp
                 </a>
@@ -930,8 +986,6 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-2">
             Notas Internas ({avaria.notas?.length || 0})
           </p>
-
-          {/* Lista de notas */}
           {avaria.notas?.length > 0 && (
             <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
               {avaria.notas.map((nota) => (
@@ -944,8 +998,6 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
               ))}
             </div>
           )}
-
-          {/* Input para nova nota */}
           <div className="flex gap-2">
             <input
               type="text"
@@ -962,7 +1014,6 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex justify-between mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
         <Button variant="outline" onClick={onClose}>Fechar</Button>
         {!isResolvida && (
@@ -973,6 +1024,169 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
       </div>
     </Modal>
   );
+};
+
+// ============================================================================
+// Modal de detalhe de registo de histórico
+// ============================================================================
+const HistoryDetailModal = ({ record, machine, onClose, onViewPhotos }) => {
+  const date = record.createdAt?.toDate?.() || new Date(record.createdAt) || new Date();
+
+  const typeLabels = {
+    preventive: 'Preventiva',
+    corrective: 'Corretiva',
+    inspection: 'Inspeção',
+    oil_change: 'Mudança de Óleo',
+    filter_change: 'Mudança de Filtros',
+    repair: 'Reparação',
+  };
+
+  const typeLabel = typeLabels[record.type] || record.type || 'Preventiva';
+  const isCorrectiveType = record.type === 'corrective' || record.type === 'repair';
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Detalhe da Manutenção" size="md">
+      <div className="space-y-4">
+        {/* Equipamento + Tipo */}
+        <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+          <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+            <Wrench className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-slate-900 dark:text-white text-base truncate">
+              {machine?.name || record.machineId}
+            </h3>
+            <div className="mt-1">
+              <Badge variant={isCorrectiveType ? 'warning' : 'default'}>{typeLabel}</Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Detalhes em grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Data</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-white">
+              {date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Técnico</p>
+            <div className="flex items-center gap-2">
+              <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+              <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                {record.technician || 'Não especificado'}
+              </p>
+            </div>
+          </div>
+          {record.duration != null && (
+            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Duração</p>
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">{record.duration}h</p>
+              </div>
+            </div>
+          )}
+          {record.cost != null && (
+            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Custo</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-white">{record.cost.toFixed(2)}€</p>
+            </div>
+          )}
+        </div>
+
+        {/* Notas */}
+        {record.notes && (
+          <div>
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Notas / Descrição</p>
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+              {record.notes}
+            </p>
+          </div>
+        )}
+
+        {/* Fotos */}
+        {record.photos?.length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-2">
+              Fotos ({record.photos.length})
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {record.photos.slice(0, 6).map((photo, idx) => (
+                <img
+                  key={photo.id || idx}
+                  src={photo.url}
+                  alt={photo.name || `Foto ${idx + 1}`}
+                  className="w-full h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
+                />
+              ))}
+            </div>
+            {record.photos.length > 0 && (
+              <button
+                onClick={() => { onClose(); onViewPhotos(record); }}
+                className="mt-2 text-xs text-primary-600 hover:underline flex items-center gap-1"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Ver todas as fotos
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Estado */}
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Manutenção concluída</p>
+        </div>
+      </div>
+
+      <div className="flex justify-end mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+        <Button variant="outline" onClick={onClose}>Fechar</Button>
+      </div>
+    </Modal>
+  );
+};
+
+// ============================================================================
+// CSV export utility
+// ============================================================================
+const exportHistoryCSV = (records, machines, getTypeLabel) => {
+  const headers = ['Equipamento', 'Tipo', 'Data', 'Hora', 'Duração (h)', 'Técnico', 'Custo (€)', 'Notas', 'Estado'];
+  const escape = (v) => {
+    const str = String(v ?? '').replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const rows = records.map(r => {
+    const machine = machines.find(m => m.id === r.machineId);
+    const date = r.createdAt?.toDate?.() || new Date(r.createdAt) || new Date();
+    return [
+      machine?.name || r.machineId,
+      getTypeLabel(r.type),
+      date.toLocaleDateString('pt-PT'),
+      date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+      r.duration ?? '',
+      r.technician || '',
+      r.cost != null ? r.cost.toFixed(2) : '',
+      r.notes || '',
+      'Concluída',
+    ].map(escape).join(',');
+  });
+
+  const csv = [headers.map(escape).join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `manutencoes_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 const ManutencaoView = () => {
@@ -1009,8 +1223,46 @@ const ManutencaoView = () => {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const alertMachines = useMemo(() => machines.filter(m => (m.partialHours || m.totalHours || 0) >= 120).sort((a, b) => (b.partialHours || b.totalHours || 0) - (a.partialHours || a.totalHours || 0)), [machines]);
-  const urgentCount = alertMachines.filter(m => (m.partialHours || m.totalHours || 0) >= 150).length;
+  // History row detail modal
+  const [selectedHistoryRecord, setSelectedHistoryRecord] = useState(null);
+
+  // Search & filter state for Alertas tab
+  const [alertsSearch, setAlertsSearch] = useState('');
+  const [alertsTypeFilter, setAlertsTypeFilter] = useState('');
+
+  // Search & filter state for Histórico tab
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyTypeFilter, setHistoryTypeFilter] = useState('');
+  const [historyDateFrom, setHistoryDateFrom] = useState('');
+  const [historyDateTo, setHistoryDateTo] = useState('');
+
+  // Search & filter state for Avarias tab
+  const [avariasSearch, setAvariasSearch] = useState('');
+  const [avariasStatusFilter, setAvariasStatusFilter] = useState('');
+  const [avariasCategoriaFilter, setAvariasCategoriaFilter] = useState('');
+
+  // Percentage-based alert thresholds
+  const alertMachines = useMemo(() => machines.filter(m => {
+    const hours = m.partialHours || m.totalHours || 0;
+    const pred = getSmartMaintenancePrediction(m);
+    const interval = pred?.interval || 150;
+    return (hours / interval) >= 0.80;
+  }).sort((a, b) => {
+    const predA = getSmartMaintenancePrediction(a);
+    const predB = getSmartMaintenancePrediction(b);
+    const intA = predA?.interval || 150;
+    const intB = predB?.interval || 150;
+    const pctA = (a.partialHours || a.totalHours || 0) / intA;
+    const pctB = (b.partialHours || b.totalHours || 0) / intB;
+    return pctB - pctA;
+  }), [machines, getSmartMaintenancePrediction]);
+
+  const urgentCount = useMemo(() => alertMachines.filter(m => {
+    const hours = m.partialHours || m.totalHours || 0;
+    const pred = getSmartMaintenancePrediction(m);
+    const interval = pred?.interval || 150;
+    return (hours / interval) >= 1.0;
+  }).length, [alertMachines, getSmartMaintenancePrediction]);
 
   const handleComplete = (machine) => {
     setSelectedMachine(machine);
@@ -1044,8 +1296,8 @@ const ManutencaoView = () => {
   // Sort maintenance records by date (newest first)
   const sortedRecords = useMemo(() => {
     return [...maintenanceRecords].sort((a, b) => {
-      const dateA = a.createdAt?.toDate?.() || new Date(0);
-      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt) || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
       return dateB - dateA;
     });
   }, [maintenanceRecords]);
@@ -1061,6 +1313,95 @@ const ManutencaoView = () => {
     };
     return types[type] || type || 'Preventiva';
   };
+
+  // Filtered alert machines — percentage-based
+  const filteredAlertMachines = useMemo(() => {
+    let result = alertMachines;
+    if (alertsSearch.trim()) {
+      const q = alertsSearch.toLowerCase();
+      result = result.filter(m =>
+        (m.name || '').toLowerCase().includes(q) ||
+        (getCategoryName(m.category) || '').toLowerCase().includes(q)
+      );
+    }
+    if (alertsTypeFilter) {
+      if (alertsTypeFilter === 'urgent') {
+        result = result.filter(m => {
+          const hours = m.partialHours || m.totalHours || 0;
+          const pred = getSmartMaintenancePrediction(m);
+          const interval = pred?.interval || 150;
+          return (hours / interval) >= 1.0;
+        });
+      }
+      if (alertsTypeFilter === 'warning') {
+        result = result.filter(m => {
+          const hours = m.partialHours || m.totalHours || 0;
+          const pred = getSmartMaintenancePrediction(m);
+          const interval = pred?.interval || 150;
+          const pct = hours / interval;
+          return pct >= 0.80 && pct < 1.0;
+        });
+      }
+    }
+    return result;
+  }, [alertMachines, alertsSearch, alertsTypeFilter, getSmartMaintenancePrediction]);
+
+  // Filtered history records
+  const filteredHistoryRecords = useMemo(() => {
+    let result = sortedRecords;
+    if (historySearch.trim()) {
+      const q = historySearch.toLowerCase();
+      result = result.filter(r => {
+        const machine = machines.find(m => m.id === r.machineId);
+        return (
+          (machine?.name || r.machineId || '').toLowerCase().includes(q) ||
+          (r.technician || '').toLowerCase().includes(q) ||
+          (r.notes || '').toLowerCase().includes(q)
+        );
+      });
+    }
+    if (historyTypeFilter) {
+      result = result.filter(r => r.type === historyTypeFilter);
+    }
+    if (historyDateFrom) {
+      const from = new Date(historyDateFrom);
+      result = result.filter(r => {
+        const d = r.createdAt?.toDate?.() || new Date(r.createdAt);
+        return d >= from;
+      });
+    }
+    if (historyDateTo) {
+      const to = new Date(historyDateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter(r => {
+        const d = r.createdAt?.toDate?.() || new Date(r.createdAt);
+        return d <= to;
+      });
+    }
+    return result;
+  }, [sortedRecords, machines, historySearch, historyTypeFilter, historyDateFrom, historyDateTo]);
+
+  // Filtered avarias
+  const filteredAvarias = useMemo(() => {
+    let result = avarias;
+    if (avariasSearch.trim()) {
+      const q = avariasSearch.toLowerCase();
+      result = result.filter(a =>
+        (a.machineId || '').toLowerCase().includes(q) ||
+        (a.descricao || '').toLowerCase().includes(q) ||
+        (a.operadorNome || '').toLowerCase().includes(q)
+      );
+    }
+    if (avariasStatusFilter) {
+      result = result.filter(a => a.status === avariasStatusFilter);
+    }
+    if (avariasCategoriaFilter) {
+      result = result.filter(a => a.categoria === avariasCategoriaFilter);
+    }
+    return result;
+  }, [avarias, avariasSearch, avariasStatusFilter, avariasCategoriaFilter]);
+
+  const selectClasses = "px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500";
 
   if (loading) return <div className="space-y-6"><Skeleton variant="title" className="w-48" /><div className="grid grid-cols-1 sm:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton.Stat key={i} />)}</div></div>;
 
@@ -1078,23 +1419,88 @@ const ManutencaoView = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <StatCard icon={AlertTriangle} title="Alertas" value={alertMachines.length} color={alertMachines.length > 0 ? 'amber' : 'emerald'} />
-        <StatCard icon={Wrench} title="Urgentes" value={urgentCount} color={urgentCount > 0 ? 'red' : 'emerald'} />
-        <StatCard icon={Check} title="Concluídas" value={maintenanceRecords.length} color="primary" />
-        <StatCard icon={Image} title="Com Fotos" value={maintenanceRecords.filter(r => r.photos?.length > 0).length} color="slate" />
-        <StatCard icon={ShieldAlert} title="Avarias" value={avariasPendentes.length} color={avariasPendentes.length > 0 ? 'red' : 'emerald'} />
+      {/* StatCards — 4 cards, clickable */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div
+          className="cursor-pointer rounded-xl transition-all hover:scale-[1.02] hover:shadow-md"
+          onClick={() => { setActiveView('manutencao-alertas'); setAlertsTypeFilter(''); }}
+          title="Ver alertas"
+        >
+          <StatCard icon={AlertTriangle} title="Alertas" value={alertMachines.length} color={alertMachines.length > 0 ? 'amber' : 'emerald'} />
+        </div>
+        <div
+          className="cursor-pointer rounded-xl transition-all hover:scale-[1.02] hover:shadow-md"
+          onClick={() => { setActiveView('manutencao-alertas'); setAlertsTypeFilter('urgent'); }}
+          title="Ver urgentes"
+        >
+          <StatCard icon={Wrench} title="Urgentes" value={urgentCount} color={urgentCount > 0 ? 'red' : 'emerald'} />
+        </div>
+        <div
+          className="cursor-pointer rounded-xl transition-all hover:scale-[1.02] hover:shadow-md"
+          onClick={() => setActiveView('manutencao-historico')}
+          title="Ver histórico"
+        >
+          <StatCard icon={Check} title="Concluídas" value={maintenanceRecords.length} color="primary" />
+        </div>
+        <div
+          className="cursor-pointer rounded-xl transition-all hover:scale-[1.02] hover:shadow-md"
+          onClick={() => setActiveView('manutencao-avarias')}
+          title="Ver avarias"
+        >
+          <StatCard icon={ShieldAlert} title="Avarias" value={avariasPendentes.length} color={avariasPendentes.length > 0 ? 'red' : 'emerald'} />
+        </div>
       </div>
 
       <Card padding="none">
         <TabNav tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveView(id === 'calendar' ? 'manutencao-calendario' : id === 'history' ? 'manutencao-historico' : id === 'avarias' ? 'manutencao-avarias' : 'manutencao-alertas')} />
         <div className="p-6">
+
+          {/* ── Alertas tab ── */}
           {activeTab === 'alerts' && (
-            alertMachines.length === 0
-              ? <EmptyState icon={Check} title="Sem alertas" description="Todos os equipamentos estão dentro dos limites." />
-              : <div className="space-y-4">{alertMachines.map(m => <MaintenanceCard key={m.id} machine={m} onSchedule={canSchedule ? (machine) => setShowScheduleModal(machine) : null} onComplete={canCreate ? handleComplete : null} prediction={getSmartMaintenancePrediction(m)} />)}</div>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={alertsSearch}
+                    onChange={e => setAlertsSearch(e.target.value)}
+                    placeholder="Pesquisar equipamento..."
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <select
+                  value={alertsTypeFilter}
+                  onChange={e => setAlertsTypeFilter(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="">Todos os estados</option>
+                  <option value="urgent">Urgente (≥100%)</option>
+                  <option value="warning">Atenção (≥80%)</option>
+                </select>
+              </div>
+
+              {filteredAlertMachines.length === 0 ? (
+                alertMachines.length === 0
+                  ? <EmptyState icon={Check} title="Sem alertas" description="Todos os equipamentos estão dentro dos limites." />
+                  : <EmptyState icon={Search} title="Sem resultados" description="Nenhum equipamento corresponde à pesquisa." />
+              ) : (
+                <div className="space-y-4">
+                  {filteredAlertMachines.map(m => (
+                    <MaintenanceCard
+                      key={m.id}
+                      machine={m}
+                      onSchedule={canSchedule ? (machine) => setShowScheduleModal(machine) : null}
+                      onComplete={canCreate ? handleComplete : null}
+                      prediction={getSmartMaintenancePrediction(m)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
+          {/* ── Calendário tab ── */}
           {activeTab === 'calendar' && (
             <MaintenanceCalendar
               maintenanceRecords={maintenanceRecords}
@@ -1102,13 +1508,90 @@ const ManutencaoView = () => {
               machines={machines}
               schedules={maintenanceSchedules}
               getPrediction={getSmartMaintenancePrediction}
+              setActiveView={setActiveView}
+              onViewRecord={(record) => setSelectedHistoryRecord(record)}
             />
           )}
 
+          {/* ── Histórico tab ── */}
           {activeTab === 'history' && (
-            sortedRecords.length === 0
-              ? <EmptyState icon={Wrench} title="Sem registos" description="Nenhuma manutenção registada ainda." />
-              : (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={historySearch}
+                      onChange={e => setHistorySearch(e.target.value)}
+                      placeholder="Pesquisar equipamento, técnico ou notas..."
+                      className="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <select
+                    value={historyTypeFilter}
+                    onChange={e => setHistoryTypeFilter(e.target.value)}
+                    className={selectClasses}
+                  >
+                    <option value="">Todos os tipos</option>
+                    <option value="preventive">Preventiva</option>
+                    <option value="corrective">Corretiva</option>
+                    <option value="inspection">Inspeção</option>
+                    <option value="oil_change">Mudança Óleo</option>
+                    <option value="filter_change">Mudança Filtros</option>
+                    <option value="repair">Reparação</option>
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={Download}
+                    onClick={() => exportHistoryCSV(filteredHistoryRecords, machines, getTypeLabel)}
+                    disabled={filteredHistoryRecords.length === 0}
+                  >
+                    Exportar CSV
+                  </Button>
+                </div>
+                {/* Date range filters */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex items-center gap-2 flex-1">
+                    <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">De:</label>
+                    <input
+                      type="date"
+                      value={historyDateFrom}
+                      onChange={e => setHistoryDateFrom(e.target.value)}
+                      className={`flex-1 ${selectClasses}`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 flex-1">
+                    <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Até:</label>
+                    <input
+                      type="date"
+                      value={historyDateTo}
+                      onChange={e => setHistoryDateTo(e.target.value)}
+                      className={`flex-1 ${selectClasses}`}
+                    />
+                  </div>
+                  {(historySearch || historyTypeFilter || historyDateFrom || historyDateTo) && (
+                    <button
+                      onClick={() => { setHistorySearch(''); setHistoryTypeFilter(''); setHistoryDateFrom(''); setHistoryDateTo(''); }}
+                      className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1 whitespace-nowrap"
+                    >
+                      <X className="w-3.5 h-3.5" /> Limpar filtros
+                    </button>
+                  )}
+                </div>
+                {filteredHistoryRecords.length !== sortedRecords.length && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    A mostrar {filteredHistoryRecords.length} de {sortedRecords.length} registos
+                  </p>
+                )}
+              </div>
+
+              {filteredHistoryRecords.length === 0 ? (
+                sortedRecords.length === 0
+                  ? <EmptyState icon={Wrench} title="Sem registos" description="Nenhuma manutenção registada ainda." />
+                  : <EmptyState icon={Search} title="Sem resultados" description="Nenhum registo corresponde aos filtros aplicados." />
+              ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <Table.Head>
@@ -1123,11 +1606,15 @@ const ManutencaoView = () => {
                       </Table.Row>
                     </Table.Head>
                     <Table.Body>
-                      {sortedRecords.map(r => {
+                      {filteredHistoryRecords.map(r => {
                         const machine = machines.find(m => m.id === r.machineId);
-                        const date = r.createdAt?.toDate?.() || new Date();
+                        const date = r.createdAt?.toDate?.() || new Date(r.createdAt);
                         return (
-                          <Table.Row key={r.id}>
+                          <Table.Row
+                            key={r.id}
+                            onClick={() => setSelectedHistoryRecord(r)}
+                            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                          >
                             <Table.Cell>
                               <span className="font-medium text-slate-900 dark:text-white">
                                 {machine?.name || r.machineId}
@@ -1150,7 +1637,7 @@ const ManutencaoView = () => {
                             <Table.Cell>
                               <PhotoThumbnails
                                 photos={r.photos}
-                                onClick={() => setShowPhotoModal(r)}
+                                onClick={(e) => { e.stopPropagation(); setShowPhotoModal(r); }}
                               />
                             </Table.Cell>
                             <Table.Cell className="text-slate-600 dark:text-slate-400 max-w-xs truncate">
@@ -1162,14 +1649,72 @@ const ManutencaoView = () => {
                     </Table.Body>
                   </Table>
                 </div>
-              )
+              )}
+            </div>
           )}
 
+          {/* ── Avarias tab ── */}
           {activeTab === 'avarias' && (
-            avarias.length === 0
-              ? <EmptyState icon={ShieldAlert} title="Sem casos de avaria" description="Nenhuma avaria reportada pelos operadores. As avarias são submetidas via QR Code no terreno." />
-              : <div className="space-y-2">{avarias.map(a => <AvariaListItem key={a.id} avaria={a} onClick={() => setSelectedAvaria(a)} />)}</div>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={avariasSearch}
+                    onChange={e => setAvariasSearch(e.target.value)}
+                    placeholder="Pesquisar máquina, descrição ou operador..."
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                <select
+                  value={avariasStatusFilter}
+                  onChange={e => setAvariasStatusFilter(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="">Todos os estados</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="resolvida">Resolvida</option>
+                </select>
+                <select
+                  value={avariasCategoriaFilter}
+                  onChange={e => setAvariasCategoriaFilter(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="">Todas as categorias</option>
+                  {Object.entries(CATEGORIA_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              {(avariasSearch || avariasStatusFilter || avariasCategoriaFilter) && filteredAvarias.length !== avarias.length && (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    A mostrar {filteredAvarias.length} de {avarias.length} avarias
+                  </p>
+                  <button
+                    onClick={() => { setAvariasSearch(''); setAvariasStatusFilter(''); setAvariasCategoriaFilter(''); }}
+                    className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" /> Limpar filtros
+                  </button>
+                </div>
+              )}
+
+              {filteredAvarias.length === 0 ? (
+                avarias.length === 0
+                  ? <EmptyState icon={ShieldAlert} title="Sem casos de avaria" description="Nenhuma avaria reportada pelos operadores. As avarias são submetidas via QR Code no terreno." />
+                  : <EmptyState icon={Search} title="Sem resultados" description="Nenhuma avaria corresponde aos filtros aplicados." />
+              ) : (
+                <div className="space-y-2">
+                  {filteredAvarias.map(a => (
+                    <AvariaListItem key={a.id} avaria={a} onClick={() => setSelectedAvaria(a)} />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
+
         </div>
       </Card>
 
@@ -1214,6 +1759,16 @@ const ManutencaoView = () => {
           onClose={() => setSelectedAvaria(null)}
           onResolver={resolverAvaria}
           onAddNota={addNota}
+        />
+      )}
+
+      {/* Modal: Detalhe de registo de histórico */}
+      {selectedHistoryRecord && (
+        <HistoryDetailModal
+          record={selectedHistoryRecord}
+          machine={machines.find(m => m.id === selectedHistoryRecord.machineId)}
+          onClose={() => setSelectedHistoryRecord(null)}
+          onViewPhotos={(r) => setShowPhotoModal(r)}
         />
       )}
     </div>
