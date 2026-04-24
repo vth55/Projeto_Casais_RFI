@@ -4,6 +4,18 @@
 
 ---
 
+## 🏗️ NOTAS DE SESSÃO (23 Abril 2026 - Debug & Fixes: Cloud Functions Procore)
+
+**Estado da Integração:** ✅ FASE 3 CONCLUÍDA (Pendente Deploy/Teste)
+- [x] **Bug Refresh**: Corrigida a lógica de expiração de token em `procoreSessionExporter.js`.
+- [x] **Bug Mapeamento**: Resolvida falha de match de obras usando fallback para o campo `name`.
+- [x] **Segurança**: Adicionados segredos do Procore às 5 Cloud Functions críticas.
+- [x] **API Payload**: Corrigida a estrutura de `createDailyLog` para o endpoint `notes_logs`.
+- [x] **Feature**: Adicionado endpoint de teste manual `POST /api/procore/daily-log`.
+- **Veredito**: A "espinha dorsal" da integração está agora blindada e resiliente.
+
+---
+
 ## 🏗️ NOTAS DE SESSÃO (21 Abril 2026 - Auditoria QA Final: Blocos 1-9)
 
 **Estado do Módulo:** ✅ 99% CONCLUÍDO (Pronto para Demo Industrial)

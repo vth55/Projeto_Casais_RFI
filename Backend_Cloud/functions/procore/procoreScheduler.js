@@ -213,6 +213,14 @@ const procoreDailyWriteback = onSchedule(
                 if (s._machine?.name)  group.machines.add(s._machine.name);
             }
 
+            // ── Ler custo de combustível uma vez (fora do loop) ────────
+            const settingsSnap = await admin.firestore()
+                .doc(`artifacts/${APP_ID}/public/data/settings/fuelCost`)
+                .get();
+            const fuelCostPerLitre = settingsSnap.exists
+                ? (settingsSnap.data()?.pricePerLitre || 1.65)
+                : 1.65;
+
             // ── Enviar Daily Logs + Cost Entries por obra ───────────────
             for (const [obraName, group] of Object.entries(byObra)) {
                 const project = await findProcoreProjectId(obraName);
@@ -251,13 +259,6 @@ const procoreDailyWriteback = onSchedule(
                 // ── Cost Entries (combustível por sessão) ───────────────
                 // Usa consumptionRate (L/h) definido na ficha da máquina na PWA.
                 // Fallback: fuelUsed do registo de sessão (se existir).
-                // Custo por litro: configurável em Firestore (settings/fuelCost) ou 1.65€ por defeito.
-                const settingsSnap = await admin.firestore()
-                    .doc(`artifacts/${APP_ID}/public/data/settings/fuelCost`)
-                    .get();
-                const fuelCostPerLitre = settingsSnap.exists
-                    ? (settingsSnap.data()?.pricePerLitre || 1.65)
-                    : 1.65;
 
                 for (const s of group.sessions) {
                     // Calcular litros consumidos — fonte preferencial: consumptionRate da máquina

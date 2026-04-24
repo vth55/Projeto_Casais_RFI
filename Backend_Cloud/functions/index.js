@@ -256,7 +256,13 @@ function calculateSessionCost(durationHours, tariff) {
     };
 }
 
-exports.handleSessionTrigger = onRequest(async (req, res) => {
+exports.handleSessionTrigger = onRequest(
+    {
+        secrets: [_PCI, _PCS, _PCID],
+        region: 'us-central1',
+        cors: true,
+    },
+    async (req, res) => {
     res.set('Content-Type', 'application/json');
 
     if (req.method !== 'POST') {
@@ -269,8 +275,14 @@ exports.handleSessionTrigger = onRequest(async (req, res) => {
         return res.status(400).json({ error: 'Faltam dados (cardId ou machineId).' });
     }
 
-    const normalizedCard = cardId.toUpperCase().trim();
-    const normalizedMachine = machineId.trim();
+    // Validação de input — prevenir path traversal e payloads maliciosos
+    const VALID_ID_REGEX = /^[A-Za-z0-9_\-]{1,80}$/;
+    const normalizedCard = String(cardId).toUpperCase().trim();
+    const normalizedMachine = String(machineId).trim();
+
+    if (!VALID_ID_REGEX.test(normalizedCard) || !VALID_ID_REGEX.test(normalizedMachine)) {
+        return res.status(400).json({ error: 'cardId ou machineId contém caracteres inválidos.' });
+    }
     const timestamp = admin.firestore.Timestamp.now();
 
     try {
@@ -619,6 +631,8 @@ exports.autoCloseStuckSessions = onSchedule(
     {
         schedule: 'every 5 minutes',
         timeZone: 'Europe/Lisbon',
+        secrets: [_PCI, _PCS, _PCID],
+        region: 'us-central1',
     },
     async (event) => {
         console.log('🔄 Iniciando auto-close de sessões abandonadas...');
@@ -629,9 +643,10 @@ exports.autoCloseStuckSessions = onSchedule(
             const config = configSnap.exists ? configSnap.data() : {};
             const globalAutoCloseHours = config.globalConfig?.autoCloseHours || 14;
 
-            // Buscar sessões abertas
+            // Buscar sessões abertas (cap de segurança: 500 sessões)
             const openSessionsQuery = await db.collection(SESSIONS_PATH)
                 .where('status', '==', 'OPEN')
+                .limit(500)
                 .get();
 
             if (openSessionsQuery.empty) {
@@ -1028,6 +1043,7 @@ exports.checkLongSessions = onSchedule(
     {
         schedule: 'every 10 minutes',
         timeZone: 'Europe/Lisbon',
+        region: 'us-central1',
     },
     async (event) => {
         console.log('🔄 Verificando sessões longas...');
@@ -1038,9 +1054,10 @@ exports.checkLongSessions = onSchedule(
             const config = configSnap.exists ? configSnap.data() : {};
             const globalLongSessionHours = config.globalConfig?.longSessionHours || config.globalConfig?.fatigueHours || 5;
 
-            // Buscar sessões abertas
+            // Buscar sessões abertas (cap de segurança: 500 sessões)
             const openSessionsQuery = await db.collection(SESSIONS_PATH)
                 .where('status', '==', 'OPEN')
+                .limit(500)
                 .get();
 
             if (openSessionsQuery.empty) {
@@ -1139,7 +1156,12 @@ exports.checkLongSessions = onSchedule(
 // OAuth2 bridge para a API REST do Procore. Endpoints expostos via hosting
 // rewrite em `/api/procore/**`. Ver `procore/procoreBridge.js`.
 
-const { procoreBridge } = require('./procore/procoreBridge');
+const {
+    procoreBridge,
+    PROCORE_CLIENT_ID: _PCI,
+    PROCORE_CLIENT_SECRET: _PCS,
+    PROCORE_COMPANY_ID: _PCID,
+} = require('./procore/procoreBridge');
 exports.procoreBridge = procoreBridge;
 
 // ============================================
@@ -1173,6 +1195,8 @@ exports.procoreExportRetry = onSchedule(
     {
         schedule: 'every 30 minutes',
         timeZone: 'Europe/Lisbon',
+        secrets: [_PCI, _PCS, _PCID],
+        region: 'us-central1',
     },
     async () => {
         try {
@@ -1193,7 +1217,11 @@ exports.procoreExportRetry = onSchedule(
 // Este trigger re-exporta o Timecard com os valores corrigidos.
 
 exports.onSessionCorrected = onDocumentUpdated(
-    `${SESSIONS_PATH}/{sessionId}`,
+    {
+        document: `${SESSIONS_PATH}/{sessionId}`,
+        secrets: [_PCI, _PCS, _PCID],
+        region: 'us-central1',
+    },
     async (event) => {
         const before = event.data.before.data();
         const after = event.data.after.data();

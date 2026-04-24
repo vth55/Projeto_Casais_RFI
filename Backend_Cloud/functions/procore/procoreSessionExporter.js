@@ -93,7 +93,8 @@ async function procoreFetch(endpoint, options = {}) {
     let token = data.access_token;
 
     // Refresh if token expires within 60 seconds
-    if ((data.expires_at || 0) - 60_000 <= Date.now()) {
+    const expiresAtMs = data.expires_at?.toMillis ? data.expires_at.toMillis() : (data.expires_at || 0);
+    if (expiresAtMs - 60_000 <= Date.now()) {
         if (!data.refresh_token) throw new Error('PROCORE_NO_REFRESH_TOKEN');
 
         console.log('[procoreSessionExporter] token expiring — refreshing...');
@@ -286,7 +287,7 @@ async function createTimecardEntry(projectId, { date, hours, description, loginI
  */
 async function resolveEntities(machineData, operatorData, obraData) {
     const [project, user, equipment] = await Promise.all([
-        findProcoreProject(obraData?.workName),
+        findProcoreProject(obraData?.workName || obraData?.name),
         findProcoreUser(operatorData?.email),
         findProcoreEquipment(machineData?.name || machineData?.id),
     ]);
@@ -300,7 +301,7 @@ async function resolveEntities(machineData, operatorData, obraData) {
 async function _doExportStart(sessionData, machineData, operatorData, obraData) {
     const { project, user, equipment } = await resolveEntities(machineData, operatorData, obraData);
 
-    if (!project) return { exported: false, reason: 'no_project_match', obraName: obraData?.workName };
+    if (!project) return { exported: false, reason: 'no_project_match', obraName: obraData?.workName || obraData?.name };
     if (!user)    return { exported: false, reason: 'no_user_match',    operatorEmail: operatorData?.email };
 
     const date = new Date().toISOString().split('T')[0];
@@ -332,7 +333,7 @@ async function _doExportStart(sessionData, machineData, operatorData, obraData) 
 async function _doExportEnd(sessionData, machineData, operatorData, obraData) {
     const { project, user, equipment } = await resolveEntities(machineData, operatorData, obraData);
 
-    if (!project) return { exported: false, reason: 'no_project_match', obraName: obraData?.workName };
+    if (!project) return { exported: false, reason: 'no_project_match', obraName: obraData?.workName || obraData?.name };
     if (!user)    return { exported: false, reason: 'no_user_match',    operatorEmail: operatorData?.email };
 
     const endTime   = sessionData.endTime?.toDate   ? sessionData.endTime.toDate()   : new Date(sessionData.endTime);

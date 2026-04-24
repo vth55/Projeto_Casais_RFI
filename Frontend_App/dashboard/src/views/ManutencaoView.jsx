@@ -58,7 +58,7 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
     const map = new Map();
     const push = (date, evt) => {
       if (!date) return;
-      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(evt);
     };
@@ -131,7 +131,7 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
   };
 
   const handleDayClick = (day) => {
-    const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+    const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
     const events = eventsByDay.get(key) || [];
     setModalDate(day);
     setModalEvents(events);
@@ -250,7 +250,7 @@ const MaintenanceCalendar = ({ maintenanceRecords, avarias, machines, schedules,
       <div className="grid grid-cols-7 gap-1">
         {cells.map((day, i) => {
           if (!day) return <div key={i} className="aspect-square" />;
-          const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+          const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
           const events = eventsByDay.get(key) || [];
           const isToday = sameDay(day, today);
           const uniqueColors = [...new Set(events.map(e => e.color))].slice(0, 3);
@@ -1157,7 +1157,9 @@ const HistoryDetailModal = ({ record, machine, onClose, onViewPhotos }) => {
 const exportHistoryCSV = (records, machines, getTypeLabel) => {
   const headers = ['Equipamento', 'Tipo', 'Data', 'Hora', 'Duração (h)', 'Técnico', 'Custo (€)', 'Notas', 'Estado'];
   const escape = (v) => {
-    const str = String(v ?? '').replace(/"/g, '""');
+    const str = String(v ?? '')
+      .replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ')
+      .replace(/"/g, '""');
     return `"${str}"`;
   };
 

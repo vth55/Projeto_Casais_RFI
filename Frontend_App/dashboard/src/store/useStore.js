@@ -1190,7 +1190,7 @@ const useStore = create((set, get) => ({
   },
 
   // Resolver anomalia de sessão (admin dashboard — preserva original vs corrigido)
-  resolveSessionAnomaly: async (sessionId, { correctedStart, correctedEnd, notes, action }) => {
+  resolveSessionAnomaly: async (sessionId, { correctedStart, correctedEnd, correctedHours, notes, action }) => {
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
       const { sessions } = get();
@@ -1203,7 +1203,21 @@ const useStore = create((set, get) => ({
         validationNotes: notes || '',
       };
 
-      if (action === 'correct' && correctedStart && correctedEnd) {
+      if (action === 'correct' && correctedHours != null) {
+        // Correcção por horas: manter startTime, recalcular endTime
+        const startDate = session.startTime?.toDate ? session.startTime.toDate() : new Date(session.startTime);
+        const durationHours = parseFloat(correctedHours);
+        const endDate = new Date(startDate.getTime() + durationHours * 3600000);
+
+        updates.originalStartTime = session.startTime;
+        updates.originalEndTime = session.endTime;
+        updates.originalDurationHours = session.durationHours;
+        updates.startTime = Timestamp.fromDate(startDate);
+        updates.endTime = Timestamp.fromDate(endDate);
+        updates.durationHours = durationHours;
+        updates.correctedByAdmin = true;
+        updates.correctedAt = Timestamp.now();
+      } else if (action === 'correct' && correctedStart && correctedEnd) {
         const start = correctedStart instanceof Date ? correctedStart : new Date(correctedStart);
         const end = correctedEnd instanceof Date ? correctedEnd : new Date(correctedEnd);
         const durationHours = (end - start) / (1000 * 60 * 60);
