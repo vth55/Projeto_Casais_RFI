@@ -175,7 +175,7 @@ async function getValidAccessToken() {
         throw new Error('PROCORE_NOT_CONNECTED: Tokens incompletos.');
     }
 
-    const expiresAtMs = data.expires_at?.toMillis?.() || 0;
+    const expiresAtMs = data.expires_at?.toMillis ? data.expires_at.toMillis() : (data.expires_at || 0);
     const isExpiringSoon = Date.now() + REFRESH_SAFETY_MARGIN_MS >= expiresAtMs;
 
     if (isExpiringSoon) {
@@ -929,7 +929,7 @@ async function handleStatus(req, res) {
         }
 
         const data = snap.data();
-        const expiresAtMs = data.expires_at?.toMillis?.() || 0;
+        const expiresAtMs = data.expires_at?.toMillis ? data.expires_at.toMillis() : (data.expires_at || 0);
         const now = Date.now();
 
         return res.json({
@@ -1386,11 +1386,24 @@ const procoreBridge = onRequest(
         const action = path.split('/').pop() || '';
 
         try {
+            // ── Rotas públicas (OAuth flow) ─────────────────────────────
             if (req.method === 'GET' && action === 'authorize') {
                 return handleAuthorize(req, res);
             }
             if (req.method === 'GET' && action === 'callback') {
                 return await handleCallback(req, res);
+            }
+
+            // ── Auth check para todas as outras rotas ───────────────────
+            const authHeader = req.headers.authorization || '';
+            const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+            if (!idToken) {
+                return res.status(401).json({ error: 'Missing Authorization header' });
+            }
+            try {
+                req._user = await admin.auth().verifyIdToken(idToken);
+            } catch (authErr) {
+                return res.status(401).json({ error: 'Invalid or expired token' });
             }
             if (req.method === 'GET' && action === 'status') {
                 return await handleStatus(req, res);

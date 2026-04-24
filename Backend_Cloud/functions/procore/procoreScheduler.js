@@ -171,29 +171,35 @@ const procoreDailyWriteback = onSchedule(
             console.log(`[procoreDailyWriteback] ${sessionsSnap.size} sessões finalizadas hoje`);
 
             // ── Enriquecer sessões com dados de máquina/operador/obra ───
-            const sessions = [];
-            for (const doc of sessionsSnap.docs) {
+            const sessions = await Promise.all(sessionsSnap.docs.map(async (doc) => {
                 const s = doc.data();
                 s._id = doc.id;
 
-                const [machine, operator] = await Promise.all([
-                    s.machineId ? admin.firestore().doc(`${MACHINES_PATH}/${s.machineId}`).get() : null,
-                    s.cardId ? admin.firestore().doc(`${OPERATORS_PATH}/${s.cardId}`).get() : null,
-                ]);
+                try {
+                    const [machine, operator] = await Promise.all([
+                        s.machineId ? admin.firestore().doc(`${MACHINES_PATH}/${s.machineId}`).get() : null,
+                        s.cardId ? admin.firestore().doc(`${OPERATORS_PATH}/${s.cardId}`).get() : null,
+                    ]);
 
-                s._machine = machine?.exists ? machine.data() : null;
-                s._operator = operator?.exists ? operator.data() : null;
+                    s._machine = machine?.exists ? machine.data() : null;
+                    s._operator = operator?.exists ? operator.data() : null;
 
-                const obraId = s.obraId || s._machine?.location?.workId || s._machine?.obraId;
-                if (obraId) {
-                    const obraSnap = await admin.firestore().doc(`${OBRAS_PATH}/${obraId}`).get();
-                    s._obra = obraSnap.exists ? obraSnap.data() : null;
-                } else if (s._machine?.location?.workName) {
-                    s._obra = { workName: s._machine.location.workName };
+                    const obraId = s.obraId || s._machine?.location?.workId || s._machine?.obraId;
+                    if (obraId) {
+                        const obraSnap = await admin.firestore().doc(`${OBRAS_PATH}/${obraId}`).get();
+                        s._obra = obraSnap.exists ? obraSnap.data() : null;
+                    } else if (s._machine?.location?.workName) {
+                        s._obra = { workName: s._machine.location.workName };
+                    }
+                } catch (err) {
+                    console.error(`[procoreDailyWriteback] failed to enrich session ${s._id}:`, err.message);
+                    s._machine = null;
+                    s._operator = null;
+                    s._obra = null;
                 }
 
-                sessions.push(s);
-            }
+                return s;
+            }));
 
             // ── Agrupar por obra ────────────────────────────────────────
             const byObra = {};

@@ -20,6 +20,12 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const procoreSessionExporter = require('./procore/procoreSessionExporter');
+const {
+    procoreBridge,
+    PROCORE_CLIENT_ID: _PCI,
+    PROCORE_CLIENT_SECRET: _PCS,
+    PROCORE_COMPANY_ID: _PCID,
+} = require('./procore/procoreBridge');
 
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -232,7 +238,7 @@ function getTariffForDate(date, tariffHistory) {
 }
 
 function calculateSessionCost(durationHours, tariff) {
-    if (!tariff) return null;
+    if (!tariff || typeof tariff.totalCostPerHour !== 'number') return null;
     const h = Math.round(durationHours * 100) / 100;
     const opCost = tariff.type === 'MACHINE_AND_OPERATOR' ? (tariff.operatorCostPerHour || 0) : 0;
     return {
@@ -592,7 +598,7 @@ exports.resendAlertEmail = onRequest(async (req, res) => {
         }
 
         // Enviar email
-        const result = await sendValidationEmail(alert, true);
+        const result = await sendValidationEmail(alert, null, null, true);
 
         if (result.success) {
             // Atualizar contador de reenvios
@@ -1156,12 +1162,6 @@ exports.checkLongSessions = onSchedule(
 // OAuth2 bridge para a API REST do Procore. Endpoints expostos via hosting
 // rewrite em `/api/procore/**`. Ver `procore/procoreBridge.js`.
 
-const {
-    procoreBridge,
-    PROCORE_CLIENT_ID: _PCI,
-    PROCORE_CLIENT_SECRET: _PCS,
-    PROCORE_COMPANY_ID: _PCID,
-} = require('./procore/procoreBridge');
 exports.procoreBridge = procoreBridge;
 
 // ============================================

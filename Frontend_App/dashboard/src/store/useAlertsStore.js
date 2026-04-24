@@ -398,8 +398,16 @@ const useAlertsStore = create(
             auditLog: [...(alert.auditLog || []), auditEntry],
           });
 
-          // TODO: Trigger Cloud Function para reenviar email
-          console.log(`📧 Email reenviado para ${alert.operatorEmail} (${newResendCount}x)`);
+          // Chamar Cloud Function para reenviar email
+          try {
+            await fetch('/api/resend-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ alertId }),
+            });
+          } catch (emailErr) {
+            console.warn('Falha ao chamar resendAlertEmail:', emailErr.message);
+          }
 
           return { success: true, resendCount: newResendCount };
         } catch (error) {

@@ -120,7 +120,7 @@ async function procoreFetch(endpoint, options = {}) {
         await integRef.update({
             access_token:  newTokens.access_token,
             refresh_token: newTokens.refresh_token,
-            expires_at:    Date.now() + (newTokens.expires_in * 1000),
+            expires_at:    admin.firestore.Timestamp.fromMillis(Date.now() + (newTokens.expires_in * 1000)),
         });
         console.log('[procoreSessionExporter] token refreshed');
     }

@@ -14,6 +14,7 @@ import useAuthStore from '../store/useAuthStore';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { PERMISSION_CATEGORIES, PERMISSIONS, DEFAULT_ROLES, ROLE_LEVELS, getLevelLabel } from '../config/permissions';
 import useThemeStore from '../store/useThemeStore';
+import { authFetch } from '../utils/authFetch';
 
 // ============================================================
 // PROCORE INTEGRATION SECTION — Fase 2 (UI)
@@ -33,7 +34,7 @@ const ProcoreIntegrationSection = () => {
 
   const fetchStatus = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/procore/status', { cache: 'no-store' });
+      const res = await authFetch('/api/procore/status', { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setStatus(await res.json());
       setStatusError(null);
@@ -54,7 +55,7 @@ const ProcoreIntegrationSection = () => {
     setSyncing(true);
     setSyncError(null);
     try {
-      const res = await fetch('/api/procore/sync', { method: 'POST' });
+      const res = await authFetch('/api/procore/sync', { method: 'POST' });
       if (!res.ok && res.status !== 207) {
         const text = await res.text();
         throw new Error(`Sync falhou: ${text.slice(0, 200)}`);
@@ -70,7 +71,7 @@ const ProcoreIntegrationSection = () => {
   const handleDisconnect = async () => {
     if (!confirm('Desconectar a integração Procore? Será preciso reautorizar para voltar a sincronizar.')) return;
     try {
-      await fetch('/api/procore/disconnect', { method: 'POST' });
+      await authFetch('/api/procore/disconnect', { method: 'POST' });
       await fetchStatus();
     } catch (err) {
       setStatusError(err.message || 'Erro ao desconectar');

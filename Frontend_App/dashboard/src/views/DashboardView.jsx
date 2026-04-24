@@ -15,6 +15,7 @@ import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
 import MachineStoryRings from '../components/ui/MachineStoryRings';
 import LiveTimer from '../components/ui/LiveTimer';
 import useDeviceType from '../hooks/useDeviceType';
+import { authFetch } from '../utils/authFetch';
 
 // Filtros de período — 3 presets + calendário personalizado
 const toIsoDate = (d) => {
@@ -207,7 +208,7 @@ const useProcoreStatus = () => {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch(PROCORE_STATUS_URL, { cache: 'no-store' });
+      const res = await authFetch(PROCORE_STATUS_URL, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setStatus(json);
@@ -316,7 +317,7 @@ const ProcoreReconciliationPanel = () => {
     setSyncing(true);
     setSyncError(null);
     try {
-      const res = await fetch(PROCORE_SYNC_URL, { method: 'POST' });
+      const res = await authFetch(PROCORE_SYNC_URL, { method: 'POST' });
       if (!res.ok && res.status !== 207) {
         const text = await res.text();
         throw new Error(`Sync falhou (${res.status}): ${text.slice(0, 160)}`);
@@ -569,7 +570,7 @@ const MobileProcoreCard = () => {
     if (syncing) return;
     setSyncing(true);
     try {
-      const res = await fetch(PROCORE_SYNC_URL, { method: 'POST' });
+      const res = await authFetch(PROCORE_SYNC_URL, { method: 'POST' });
       if (!res.ok && res.status !== 207) throw new Error('Sync falhou');
       await refetch();
     } catch (_) { /* silently handled */ }
