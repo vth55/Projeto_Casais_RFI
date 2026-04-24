@@ -1,0 +1,1 @@
+import{J as o}from"./index-DQfL7F_q.js";async function c(a,e={}){const t=o.currentUser,r={...e.headers||{}};if(t){const n=await t.getIdToken();r.Authorization=`Bearer ${n}`}return fetch(a,{...e,headers:r})}export{c as a};

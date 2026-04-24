@@ -888,6 +888,7 @@ const AvariaListItem = ({ avaria, onClick }) => {
 // Modal de detalhe de uma avaria com contacto e notas
 const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
   const [notaTexto, setNotaTexto] = useState('');
+  const [lightboxIdx, setLightboxIdx] = useState(null);
   const isResolvida = avaria.status === 'resolvida';
   const createdDate = avaria.createdAt?.toDate ? avaria.createdAt.toDate() : new Date(avaria.createdAt);
 
@@ -989,11 +990,47 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
             </p>
             <div className="grid grid-cols-3 gap-2">
               {avaria.photos.map((photo, idx) => (
-                <a key={photo.id || idx} href={photo.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-primary-500 transition-all">
+                <button key={photo.id || idx} onClick={() => setLightboxIdx(idx)} className="aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-primary-500 transition-all cursor-zoom-in">
                   <img src={photo.url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                </a>
+                </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {lightboxIdx !== null && avaria.photos?.[lightboxIdx] && (
+          <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center" onClick={() => setLightboxIdx(null)}>
+            {/* Fechar */}
+            <button onClick={() => setLightboxIdx(null)} className="absolute top-4 right-4 w-10 h-10 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10">
+              <X className="w-5 h-5" />
+            </button>
+            {/* Contador */}
+            <div className="absolute top-4 left-4 text-white/70 text-sm font-medium">{lightboxIdx + 1} / {avaria.photos.length}</div>
+            {/* Navegacao */}
+            {avaria.photos.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + avaria.photos.length) % avaria.photos.length); }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % avaria.photos.length); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
+            {/* Imagem */}
+            <img
+              src={avaria.photos[lightboxIdx].url}
+              alt={`Foto ${lightboxIdx + 1}`}
+              className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         )}
 
