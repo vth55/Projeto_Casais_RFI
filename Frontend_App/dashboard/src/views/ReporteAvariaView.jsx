@@ -54,6 +54,24 @@ const AppHeader = () => (
   </div>
 );
 
+// ─── Comprimir imagem para base64 (max ~200KB) ──────────────
+const compressImageToBase64 = (file, maxWidth = 800, quality = 0.7) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(null);
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 // ─── Captura de Foto (câmara real) ────────────────────────────
 const PhotoCapture = ({ photos, onCapture, onRemove }) => {
   const fileInputRef = useRef(null);
@@ -354,16 +372,16 @@ const ReporteAvariaView = () => {
 
   const canSubmit = machineId && tipoProblema && maquinaParada !== null && descricao.trim().length > 5;
 
-  const handleAddPhoto = useCallback((photo) => {
-    setPhotos((prev) => prev.length < 3 ? [...prev, photo] : prev);
-  }, []);
+  const handleAddPhoto = useCallback(async (photo) => {
+    if (photos.length >= 3) return;
+    const base64 = await compressImageToBase64(photo.file);
+    if (base64) {
+      setPhotos((prev) => prev.length < 3 ? [...prev, { ...photo, url: base64 }] : prev);
+    }
+  }, [photos.length]);
 
   const handleRemovePhoto = useCallback((photoId) => {
-    setPhotos((prev) => {
-      const removed = prev.find((p) => p.id === photoId);
-      if (removed?.url) URL.revokeObjectURL(removed.url);
-      return prev.filter((p) => p.id !== photoId);
-    });
+    setPhotos((prev) => prev.filter((p) => p.id !== photoId));
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -382,6 +400,7 @@ const ReporteAvariaView = () => {
         descricao: descricao.trim(),
         hasPhoto: photos.length > 0,
         photoCount: photos.length,
+        photos: photos.map(({ id, url }) => ({ id, url })),
       });
 
       setSubmitting(false);
@@ -390,7 +409,6 @@ const ReporteAvariaView = () => {
   }, [canSubmit, submitting, submitAvaria, machineId, operadorNome, operadorTelefone, maquinaParada, tipoProblema, descricao, photos]);
 
   const handleReset = useCallback(() => {
-    photos.forEach((p) => { if (p.url) URL.revokeObjectURL(p.url); });
     setMachineId('');
     setOperadorNome('');
     setOperadorTelefone('');

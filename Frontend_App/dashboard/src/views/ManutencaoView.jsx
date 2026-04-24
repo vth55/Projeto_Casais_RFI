@@ -981,6 +981,22 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
           </div>
         )}
 
+        {/* Fotos */}
+        {avaria.photos?.length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-2">
+              Fotos ({avaria.photos.length})
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {avaria.photos.map((photo, idx) => (
+                <a key={photo.id || idx} href={photo.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-primary-500 transition-all">
+                  <img src={photo.url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Notas internas */}
         <div>
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mb-2">
