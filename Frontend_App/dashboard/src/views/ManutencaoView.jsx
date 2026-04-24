@@ -834,7 +834,7 @@ const CATEGORIA_LABELS = {
 // Lista de avarias — linha compacta, clicável para abrir detalhe
 const AvariaListItem = ({ avaria, onClick }) => {
   const isResolvida = avaria.status === 'resolvida';
-  const createdDate = new Date(avaria.createdAt);
+  const createdDate = avaria.createdAt?.toDate ? avaria.createdAt.toDate() : new Date(avaria.createdAt);
   const timeStr = createdDate.toLocaleDateString('pt-PT') + ' ' + createdDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -889,7 +889,7 @@ const AvariaListItem = ({ avaria, onClick }) => {
 const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
   const [notaTexto, setNotaTexto] = useState('');
   const isResolvida = avaria.status === 'resolvida';
-  const createdDate = new Date(avaria.createdAt);
+  const createdDate = avaria.createdAt?.toDate ? avaria.createdAt.toDate() : new Date(avaria.createdAt);
 
   const handleSubmitNota = () => {
     if (!notaTexto.trim()) return;
@@ -976,7 +976,7 @@ const AvariaDetailModal = ({ avaria, onClose, onResolver, onAddNota }) => {
         {avaria.resolvedAt && (
           <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
             <p className="text-xs text-emerald-700 dark:text-emerald-400">
-              Resolvida em {new Date(avaria.resolvedAt).toLocaleDateString('pt-PT')} por {avaria.resolvedBy || 'Gestor'}
+              Resolvida em {(avaria.resolvedAt?.toDate ? avaria.resolvedAt.toDate() : new Date(avaria.resolvedAt)).toLocaleDateString('pt-PT')} por {avaria.resolvedBy || 'Gestor'}
             </p>
           </div>
         )}

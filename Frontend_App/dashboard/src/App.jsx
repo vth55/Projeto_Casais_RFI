@@ -8,6 +8,7 @@ import { Layout } from './components/layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAPrompt from './components/PWAPrompt';
 import useAuthStore from './store/useAuthStore';
+import useAvariasStore from './store/useAvariasStore';
 
 // Loading fallback para lazy components
 const ViewLoader = () => (
@@ -119,9 +120,10 @@ export default function App() {
 
       // Inicializar listeners Firestore
       const cleanup = initializeListeners();
+      const cleanupAvarias = useAvariasStore.getState().initializeListener();
       setLoading(false);
 
-      return cleanup;
+      return () => { cleanup(); cleanupAvarias(); };
     };
 
     let cleanup;

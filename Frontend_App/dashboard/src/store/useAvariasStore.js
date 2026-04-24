@@ -1,87 +1,156 @@
 /**
- * Avarias Store - Reporte e gestão de avarias por QR Code
+ * Avarias Store - Reporte e gestão de avarias
  * CASAIS Fleet Intelligence
+ *
+ * Persistência: Firestore (artifacts/{projectId}/public/data/avarias)
+ * Fotos: Firebase Storage (avarias/{avariaId}/{filename})
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import {
+  collection, onSnapshot, query, orderBy, addDoc, updateDoc, doc, Timestamp,
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage, projectId } from '../config/firebase';
 
-const useAvariasStore = create(
-  persist(
-    (set, get) => ({
-      avarias: [],
+const basePath = `artifacts/${projectId}/public/data`;
 
-      // Submeter nova avaria (chamado pelo operador via QR Code)
-      submitAvaria: (avaria) => {
-        const id = `avaria_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const novaAvaria = {
-          id,
-          ...avaria,
-          status: 'pendente',
-          notas: [],
-          createdAt: new Date().toISOString(),
-          resolvedAt: null,
-          resolvedBy: null,
-        };
+const useAvariasStore = create((set, get) => ({
+  avarias: [],
+  loading: true,
 
-        set((state) => ({
-          avarias: [novaAvaria, ...state.avarias],
-        }));
+  // Inicializar listener Firestore (chamado uma vez no App)
+  initializeListener: () => {
+    if (!db) return () => {};
 
-        return { success: true, id };
+    const q = query(
+      collection(db, `${basePath}/avarias`),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsub = onSnapshot(q,
+      (snapshot) => {
+        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        set({ avarias: data, loading: false });
       },
+      (error) => {
+        console.error('Erro avarias listener:', error);
+        set({ loading: false });
+      }
+    );
 
-      // Adicionar nota interna (comunicação técnico sobre a avaria)
-      addNota: (avariaId, texto, autor) => {
-        const nota = {
-          id: `nota_${Date.now()}`,
-          texto: texto.trim(),
-          autor: autor || 'Gestor',
-          createdAt: new Date().toISOString(),
-        };
+    return unsub;
+  },
 
-        set((state) => ({
-          avarias: state.avarias.map((a) =>
-            a.id === avariaId
-              ? { ...a, notas: [...(a.notas || []), nota] }
-              : a
-          ),
-        }));
-      },
+  // Submeter nova avaria com upload de fotos para Storage
+  submitAvaria: async (avaria, photoFiles = []) => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
 
-      // Marcar avaria como resolvida (chamado pelo gestor na dashboard)
-      resolverAvaria: (avariaId) => {
-        set((state) => ({
-          avarias: state.avarias.map((a) =>
-            a.id === avariaId
-              ? {
-                  ...a,
-                  status: 'resolvida',
-                  resolvedAt: new Date().toISOString(),
-                  resolvedBy: 'Gestor',
-                }
-              : a
-          ),
-        }));
-      },
+    try {
+      const avariaData = {
+        ...avaria,
+        status: 'pendente',
+        notas: [],
+        photos: [],
+        createdAt: Timestamp.now(),
+        resolvedAt: null,
+        resolvedBy: null,
+      };
 
-      // Getters
-      getAvariasPendentes: () => {
-        return get().avarias.filter((a) => a.status === 'pendente');
-      },
+      // Criar doc no Firestore primeiro (para ter o ID)
+      const docRef = await addDoc(collection(db, `${basePath}/avarias`), avariaData);
 
-      getAvariasResolvidas: () => {
-        return get().avarias.filter((a) => a.status === 'resolvida');
-      },
+      // Upload fotos para Storage
+      if (photoFiles.length > 0 && storage) {
+        const uploadedPhotos = [];
+        for (const file of photoFiles) {
+          try {
+            const timestamp = Date.now();
+            const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const storagePath = `avarias/${docRef.id}/${fileName}`;
+            const storageRef = ref(storage, storagePath);
 
-      getAvariasByMachine: (machineId) => {
-        return get().avarias.filter((a) => a.machineId === machineId);
-      },
-    }),
-    {
-      name: 'casais-avarias',
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            uploadedPhotos.push({
+              id: `photo_${timestamp}`,
+              name: file.name,
+              url: downloadURL,
+              path: storagePath,
+              size: file.size,
+              type: file.type,
+            });
+          } catch (err) {
+            console.error('Falha no upload da foto:', err);
+          }
+        }
+
+        if (uploadedPhotos.length > 0) {
+          await updateDoc(docRef, {
+            photos: uploadedPhotos,
+            hasPhoto: true,
+            photoCount: uploadedPhotos.length,
+          });
+        }
+      }
+
+      return { success: true, id: docRef.id };
+    } catch (error) {
+      console.error('Erro ao submeter avaria:', error);
+      return { success: false, error: error.message };
     }
-  )
-);
+  },
+
+  // Adicionar nota interna
+  addNota: async (avariaId, texto, autor) => {
+    if (!db) return;
+    try {
+      const { avarias } = get();
+      const avaria = avarias.find(a => a.id === avariaId);
+      const currentNotas = avaria?.notas || [];
+
+      const nota = {
+        id: `nota_${Date.now()}`,
+        texto: texto.trim(),
+        autor: autor || 'Gestor',
+        createdAt: new Date().toISOString(),
+      };
+
+      await updateDoc(doc(db, `${basePath}/avarias`, avariaId), {
+        notas: [...currentNotas, nota],
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar nota:', error);
+    }
+  },
+
+  // Marcar avaria como resolvida
+  resolverAvaria: async (avariaId) => {
+    if (!db) return;
+    try {
+      await updateDoc(doc(db, `${basePath}/avarias`, avariaId), {
+        status: 'resolvida',
+        resolvedAt: Timestamp.now(),
+        resolvedBy: 'Gestor',
+      });
+    } catch (error) {
+      console.error('Erro ao resolver avaria:', error);
+    }
+  },
+
+  // Getters
+  getAvariasPendentes: () => {
+    return get().avarias.filter((a) => a.status === 'pendente');
+  },
+
+  getAvariasResolvidas: () => {
+    return get().avarias.filter((a) => a.status === 'resolvida');
+  },
+
+  getAvariasByMachine: (machineId) => {
+    return get().avarias.filter((a) => a.machineId === machineId);
+  },
+}));
 
 export default useAvariasStore;
