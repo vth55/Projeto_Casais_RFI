@@ -7,7 +7,8 @@ A professional-grade PWA system for construction fleet management, designed for 
 - **Architecture**: PWA (Frontend) + Cloud Functions (Backend) + Firebase (Database) + Arduino/Raspberry Pi (Hardware).
 - **Frontend Stack**: React 19, Vite, Tailwind CSS v4, Zustand.
 - **Backend Stack**: Firebase Functions v2 (Node.js), Firestore.
-- **Integration**: Bi-directional sync with Procore API.
+- **Integration**: Bi-directional sync with Procore API (Authenticated via Firebase Auth Middleware).
+- **Security**: JWT verification on all bridge routes; `authFetch` utility for frontend.
 
 ## 🎨 Visual Identity & Brand Constraints
 - **Primary Brand Color**: Casais Blue `#005EB8`. 
