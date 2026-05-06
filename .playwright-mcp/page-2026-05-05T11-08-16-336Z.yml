@@ -1,0 +1,113 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#mount-point"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Company Home" [ref=e8] [cursor=pointer]:
+            - /url: /4283171/company/home
+            - img "Casais Fleet Intelligence"
+          - button "Casais Fleet Intelligence Select a Project" [ref=e10] [cursor=pointer]:
+            - generic:
+              - generic: Casais Fleet Intelligence
+              - generic: Select a Project
+            - generic:
+              - img
+          - button "Company Tools Equipment" [ref=e11] [cursor=pointer]:
+            - generic:
+              - generic: Company Tools
+              - generic: Equipment
+            - generic:
+              - img
+          - generic [ref=e13]:
+            - img [ref=e15]
+            - generic [ref=e17]:
+              - generic [ref=e18]: Favorites
+              - navigation "Favorites":
+                - list
+          - button "Apps Select an App" [ref=e20] [cursor=pointer]:
+            - generic:
+              - generic: Apps
+              - generic: Select an App
+            - generic:
+              - img
+        - generic [ref=e21]:
+          - button "Support & Feedback" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+          - button "Announcements" [ref=e25] [cursor=pointer]:
+            - img [ref=e26]
+          - button "Account & Profile" [ref=e29] [cursor=pointer]:
+            - generic [ref=e31]: VI
+  - main [ref=e33]:
+    - generic [ref=e360]:
+      - generic [ref=e361]:
+        - navigation [ref=e362]:
+          - generic [ref=e363] [cursor=pointer]: Equipment
+          - img [ref=e365]
+          - generic [ref=e367]: Escavadora Volvo EC220D
+        - button [ref=e368] [cursor=pointer]:
+          - generic [ref=e370]:
+            - img
+      - heading "Escavadora Volvo EC220D" [level=1] [ref=e373]
+      - generic [ref=e376]:
+        - generic:
+          - generic:
+            - img
+          - generic: Loading
+        - navigation [ref=e378]:
+          - generic [ref=e379]:
+            - generic [ref=e382]: General Details
+            - generic [ref=e385] [cursor=pointer]: Maintenance Records
+            - generic [ref=e388] [cursor=pointer]: Project Logs
+            - generic [ref=e391] [cursor=pointer]: Change History (1)
+        - generic [ref=e392]:
+          - generic [ref=e393]:
+            - heading "General Information" [level=3] [ref=e394]
+            - button "Edit" [ref=e395] [cursor=pointer]:
+              - generic [ref=e397]: Edit
+          - generic [ref=e398]:
+            - generic [ref=e399]:
+              - generic [ref=e401]:
+                - heading "Equipment Category" [level=4] [ref=e402]
+                - generic [ref=e403]: Construction
+              - generic [ref=e405]:
+                - heading "Equipment Type" [level=4] [ref=e406]
+                - generic [ref=e407]: Hydraulic Excavator
+            - generic [ref=e408]:
+              - generic [ref=e410]:
+                - heading "Make" [level=4] [ref=e411]
+                - generic [ref=e412]: Volvo
+              - generic [ref=e414]:
+                - heading "Model" [level=4] [ref=e415]
+                - generic [ref=e416]: EC220D
+            - generic [ref=e417]:
+              - heading "Year" [level=4] [ref=e420]
+              - generic [ref=e422]:
+                - 'heading "Serial #" [level=4] [ref=e423]'
+                - generic [ref=e424]: EC220-001-PT
+            - generic [ref=e425]:
+              - generic [ref=e427]:
+                - 'heading "ID #" [level=4] [ref=e428]'
+                - generic [ref=e429]: CAV-001
+              - generic [ref=e431]:
+                - heading "Display Name" [level=4] [ref=e432]
+                - generic [ref=e433]: Escavadora Volvo EC220D
+            - heading "Description" [level=4] [ref=e437]
+            - heading "Attachments" [level=4] [ref=e441]
+          - heading "Current Project" [level=3] [ref=e443]
+          - generic [ref=e445]:
+            - heading "Current Project" [level=4] [ref=e448]
+            - generic [ref=e450]:
+              - heading "Status" [level=4] [ref=e451]
+              - generic [ref=e452]: Available
+  - contentinfo [ref=e60]:
+    - link "Terms of Service" [ref=e61] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e62] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e64]:
+      - text: Powered By
+      - link "Procore" [ref=e65] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e66]

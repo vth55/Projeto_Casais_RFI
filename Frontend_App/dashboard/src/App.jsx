@@ -21,7 +21,7 @@ const ViewLoader = () => (
 );
 
 // DevTools
-const DevTools = lazy(() => import('./components/DevTools'));
+const DevTools = lazy(() => import('./dev/DevTools'));
 
 // Página de Login
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -47,12 +47,13 @@ const AnalisesView = lazy(() => import('./views/AnalisesView'));
 const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
 const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
 const SessoesCorrigidasView = lazy(() => import('./views/SessoesCorrigidasView'));
+const EstaleiroView = lazy(() => import('./views/EstaleiroView'));
 
 // Dashboard Router (perfis)
 import DashboardRouter from './views/dashboards/DashboardRouter';
 
 export default function App() {
-  const { activeView, loading, setLoading, initializeListeners } = useStore();
+  const { activeView, loading, setLoading, initializeListeners, setActiveView } = useStore();
   const { initTheme } = useThemeStore();
   const { currentUser, isAuthenticated, authLoading, getRole, initAuth } = useAuthStore();
   const currentRole = getRole(currentUser?.systemRole);
@@ -81,6 +82,26 @@ export default function App() {
     if (window.location.href.includes('/mobile-hub')) {
       setIsMobileHub(true);
     }
+
+    // Sincronizar URL com activeView no carregamento inicial (deep links)
+    const PATH_TO_VIEW = {
+      '/obras': 'obras-todas',
+      '/sessoes': 'sessoes-historico',
+      '/sessoes/ativas': 'sessoes-ativas',
+      '/sessoes/validacoes': 'sessoes-validacoes',
+      '/sessoes/corrigidas': 'sessoes-corrigidas',
+      '/maquinas': 'maquinas-lista',
+      '/operadores': 'operadores',
+      '/manutencao': 'manutencao-alertas',
+      '/financeiro': 'financeiro-custos',
+      '/analises': 'analises-geral',
+      '/relatorios': 'relatorios',
+      '/configuracoes': 'configuracoes',
+    };
+    const mappedView = PATH_TO_VIEW[path];
+    if (mappedView) {
+      setActiveView(mappedView);
+    }
   }, []);
 
   // Inicializar tema ao carregar
@@ -103,15 +124,20 @@ export default function App() {
       if (db) {
         try {
           const basePath = `artifacts/${projectId}/public/data`;
-          const [machinesSnap, operatorsSnap, sessionsSnap] = await Promise.all([
+          const [machinesSnap, operatorsSnap, sessionsSnap, alertsSnap] = await Promise.all([
             getDocs(collection(db, `${basePath}/machines`)),
             getDocs(collection(db, `${basePath}/operators`)),
             getDocs(collection(db, `${basePath}/sessions`)),
+            getDocs(collection(db, `${basePath}/alerts`)),
           ]);
 
           if (machinesSnap.empty && operatorsSnap.empty && sessionsSnap.empty) {
             console.log('Criando dados mock...');
             await createAllMockData();
+          } else if (alertsSnap.empty) {
+            console.log('A criar alertas pendentes mock...');
+            const { createMockAlerts } = await import('./utils/mockData');
+            await createMockAlerts();
           }
         } catch (error) {
           console.error('Erro ao verificar dados:', error);
@@ -135,9 +161,10 @@ export default function App() {
   // Memoizar renderView para evitar re-renders desnecessários
   const renderView = useCallback(() => {
     if (activeView.startsWith('obras')) return <ObrasView />;
+    if (activeView === 'estaleiro') return <EstaleiroView />;
     if (activeView.startsWith('maquinas')) return <MaquinasView />;
     if (activeView === 'operadores') return <OperadoresView />;
-    if (activeView === 'sessoes-corrigidas') return <SessoesCorrigidasView />;
+    if (activeView === 'sessoes-corrigidas' || activeView === 'sessoes-validacoes') return <SessoesCorrigidasView />;
     if (activeView.startsWith('sessoes')) return <SessoesView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
     if (activeView.startsWith('financeiro')) return <FinanceiroView />;

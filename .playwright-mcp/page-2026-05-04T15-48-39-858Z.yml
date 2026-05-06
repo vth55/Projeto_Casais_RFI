@@ -1,0 +1,5 @@
+- generic [ref=e4]:
+  - heading "The page you were looking for doesn't exist." [level=1] [ref=e5]
+  - paragraph [ref=e6]: You may have mistyped the address or the page may have moved.
+  - link "Go Back" [ref=e7] [cursor=pointer]:
+    - /url: javascript:history.back()

@@ -1,0 +1,61 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "My Apps" [ref=e9] [cursor=pointer]:
+        - /url: /developers
+      - link "Docs" [ref=e10] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e11] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e12] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e13]:
+      - link "Help" [ref=e14] [cursor=pointer]:
+        - /url: /developer_support
+        - img [ref=e15]
+      - generic [ref=e22] [cursor=pointer]:
+        - img "Bell Outline" [ref=e23]
+        - generic [ref=e26]: "1"
+      - link "VI" [ref=e32] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e33]:
+    - generic [ref=e35]:
+      - img "Loading" [ref=e39]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - navigation [ref=e45]:
+            - navigation "Breadcrumb" [ref=e46]:
+              - link "Apps" [ref=e47] [cursor=pointer]:
+                - /url: /developer_apps
+                - generic [ref=e48]: Apps
+              - img [ref=e50]
+              - link:
+                - /url: /developer_apps/bb391c31-1589-4bc0-a9ec-dc783e673274
+          - generic [ref=e52]:
+            - heading [level=1]
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e58]:
+              - text: Looks like Procore is really popular right now
+              - paragraph [ref=e59]: We're experiencing a high volume of visitors. Please try refreshing in a few minutes. Your sandbox is being created, and you'll receive an email with instructions shortly.
+            - img [ref=e61]
+          - img [ref=e63]
+    - text:                                                        
+  - contentinfo [ref=e64]:
+    - generic [ref=e65]: © 2026 Procore. All rights reserved
+    - generic [ref=e66]:
+      - link "System Status" [ref=e67] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e68] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e69] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e70] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9

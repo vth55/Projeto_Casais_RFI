@@ -59,6 +59,31 @@ Este documento é a "Fonte de Verdade" para o progresso do projeto. Combina a vi
     - [ ] Refatorar auth PIN para Cloud Functions com Rate Limit.
     - [ ] Implementar Offline-First para o Mobile Hub.
     - [ ] Otimizar performance de KPIs (Pre-calculation).
+
+### 📆 Sprints de Desenvolvimento (Nova Planificação)
+
+- [ ] **Sprint 1 — Procore em produção (a fundação)**
+    - [ ] Migrar sandbox → produção.
+    - [ ] Validar write-back end-to-end (Timecards, Daily Logs, Cost Entries).
+    - [ ] Indicadores visuais de sync em ObrasView/OperadoresView/SessoesView.
+    - [ ] Painel "Saúde da Integração" em Configurações (último sync, fila retry, erros).
+
+- [ ] **Sprint 2 — Relatórios reais + Códigos de avaria**
+    - [ ] Implementar `handleExport()` (CSV/Excel via SheetJS, PDF via jsPDF).
+    - [ ] Categorização estruturada de avarias (HID/MEC/PNE/ELE + severidade).
+    - [ ] Tabela de códigos editável na página de Configurações.
+
+- [ ] **Sprint 3 — Avarias → Procore + Financeiro**
+    - [ ] Avarias com fotos → Procore Punch List/Inspections (diferenciador).
+    - [ ] Tarifários locais → Cost Entries automáticos no Procore (Integração Fase 4).
+
+- [ ] **Sprint 4 — Polish + Diferenciadores**
+    - [ ] Widgets ROI no DashboardView.
+    - [ ] Inspeções guiadas passo-a-passo no Mobile Hub.
+    - [ ] Timeline consolidada em MaquinasView.
+    - [ ] F5 Procore: error handling robusto + docs.
+
+### 🔮 Backlog de Inovação Técnica
 - [ ] **Offline Sync (Human-Relay)**: Sincronização via Bluetooth entre telemóveis.
 - [ ] **Segurança BLE**: Alertas de proximidade entre máquinas e pessoal.
 - [ ] **AI Predict**: Previsão de avarias baseado em histórico de telemetria.

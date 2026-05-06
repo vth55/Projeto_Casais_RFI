@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Menu, Bell, Search, Wifi, Download, WifiOff } from 'lucide-react';
+import { Bell, Search, Wifi, Download, WifiOff } from 'lucide-react';
 import useStore from '../../store/useStore';
 import usePWAInstall from '../../hooks/usePWAInstall';
 import useOnlineStatus from '../../hooks/useOnlineStatus';
@@ -11,6 +11,12 @@ const viewTitles = {
   'maquinas-categorias': { title: 'Categorias', description: 'Categorias de equipamentos' },
   'maquinas-localizacoes': { title: 'Localizações', description: 'Localização dos equipamentos' },
   operadores: { title: 'Operadores', description: 'Gestão de operadores' },
+  obras: { title: 'Obras', description: 'Gestão de obras e localizações' },
+  'obras-todas': { title: 'Obras', description: 'Gestão de obras e localizações' },
+  'obras-em-curso': { title: 'Obras Em Curso', description: 'Obras atualmente ativas' },
+  'obras-planeadas': { title: 'Obras Planeadas', description: 'Obras em planeamento' },
+  'obras-concluidas': { title: 'Obras Concluídas', description: 'Obras finalizadas' },
+  'obras-mapa': { title: 'Mapa de Obras', description: 'Localização geográfica das obras' },
   sessoes: { title: 'Sessões', description: 'Histórico de sessões' },
   'sessoes-ativas': { title: 'Sessões Ativas', description: 'Sessões em curso' },
   'sessoes-historico': { title: 'Histórico de Sessões', description: 'Todas as sessões' },
@@ -55,12 +61,6 @@ const Header = ({ onMenuClick }) => {
     <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 transition-colors">
       {/* Left side */}
       <div className="flex items-center gap-4">
-        <button
-          onClick={onMenuClick}
-          className="md:hidden p-2 -ml-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
         <div>
           <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{viewInfo.title}</h1>
           {viewInfo.description && (

@@ -37,14 +37,14 @@ const DashboardOperador = () => {
     [sessions, myCardId]
   );
 
-  // Abre o Mobile Hub numa nova janela com tamanho mobile
   const openMobileHub = () => {
-    window.open('#/mobile-hub', '_blank', 'width=390,height=844');
+    window.location.hash = '/mobile-hub';
+    window.location.reload();
   };
 
-  // Abre o reporte de avaria
   const openReporteAvaria = () => {
-    window.open('#/reporte-avaria', '_blank', 'width=390,height=844');
+    window.location.hash = '/reporte-avaria';
+    window.location.reload();
   };
 
   return (

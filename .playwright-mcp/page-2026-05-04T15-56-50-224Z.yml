@@ -1,0 +1,24 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - img [ref=e4]
+    - heading "Log in to your account" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - text: Email
+      - textbox "Email" [active] [ref=e7]: a33137@alunos.ipca.pt
+    - generic [ref=e8]: Caps Lock is ON
+    - generic [ref=e9] [cursor=pointer]:
+      - checkbox "Remember Email" [checked] [ref=e10]
+      - text: Remember Email
+    - button "Continue" [ref=e11] [cursor=pointer]
+    - generic:
+      - link "Forgot your password?" [ref=e12] [cursor=pointer]:
+        - /url: /passwords/new
+      - generic [ref=e13]: "|"
+      - link "Trouble logging in?" [ref=e14] [cursor=pointer]:
+        - /url: https://support.procore.com/faq/trouble-logging-in-to-procore
+  - generic [ref=e15]:
+    - link "Privacy Notice" [ref=e16] [cursor=pointer]:
+      - /url: https://www.procore.com/legal/terms-of-service
+    - text: "|"
+    - link "Terms Of Use" [ref=e17] [cursor=pointer]:
+      - /url: https://www.procore.com/legal/terms-of-service

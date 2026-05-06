@@ -18,10 +18,8 @@
 const admin = require('firebase-admin');
 
 // ─── Procore environment ─────────────────────────────────────────────────────
-// Sandbox enquanto estamos em desenvolvimento. Quando passar a produção, trocar para:
-//   LOGIN_URL → https://login.procore.com
-//   API_BASE  → https://api.procore.com
-// IMPORTANTE: tem de estar alinhado com procoreBridge.js
+// Dev Sandbox endpoints. Tem de estar alinhado com procoreBridge.js.
+// Dados estáveis, sem refresh mensal — preserva matching de IDs Procore↔Firestore.
 const PROCORE_LOGIN_URL = 'https://login-sandbox.procore.com';
 const PROCORE_API_BASE = 'https://sandbox.procore.com';
 const PROCORE_TOKEN_URL = `${PROCORE_LOGIN_URL}/oauth/token`;
@@ -160,26 +158,40 @@ async function isProcoreConnected() {
 // ─── Entity matching (fuzzy, normalised) ─────────────────────────────────────
 
 /**
+ * Read the configured default Procore project from the integration doc.
+ * Returns null if none is configured.
+ */
+async function getDefaultProcoreProject() {
+    const snap = await admin.firestore().doc(PROCORE_INTEGRATION_PATH).get();
+    const defaultId = snap.data()?.defaultProcoreProjectId;
+    if (!defaultId) return null;
+    const projSnap = await admin.firestore().doc(`${PROJECTS_COLLECTION}/${defaultId}`).get();
+    const projName = projSnap.exists ? (projSnap.data().name || 'Default Project') : 'Default Project';
+    return { id: defaultId, name: projName };
+}
+
+/**
  * Search the cached Procore projects collection for a project whose name
- * fuzzy-matches the given obra name. Uses substring inclusion in both
- * directions to accommodate partial names.
+ * fuzzy-matches the given obra name. Falls back to the configured default
+ * project when no name match is found (covers null obraName and sandbox demos).
  *
  * @param {string} obraName - Work site name from the Casais system.
  * @returns {Promise<{id: number, name: string}|null>} Matched project or null.
  */
 async function findProcoreProject(obraName) {
-    if (!obraName) return null;
-    const snap = await admin.firestore().collection(PROJECTS_COLLECTION).limit(200).get();
-    const target = normalizeForMatching(obraName);
-    for (const doc of snap.docs) {
-        const p = doc.data();
-        const name = normalizeForMatching(p.name || p.display_name || p.project_number);
-        if (name && (name === target || name.includes(target) || target.includes(name))) {
-            return { id: p.id, name: p.name };
+    if (obraName) {
+        const snap = await admin.firestore().collection(PROJECTS_COLLECTION).limit(200).get();
+        const target = normalizeForMatching(obraName);
+        for (const doc of snap.docs) {
+            const p = doc.data();
+            const name = normalizeForMatching(p.name || p.display_name || p.project_number);
+            if (name && (name === target || name.includes(target) || target.includes(name))) {
+                return { id: p.id, name: p.name };
+            }
         }
+        console.warn(`[procoreSessionExporter] no project match for: "${obraName}" — trying default`);
     }
-    console.warn(`[procoreSessionExporter] no project match for: "${obraName}"`);
-    return null;
+    return await getDefaultProcoreProject();
 }
 
 /**
@@ -282,16 +294,60 @@ async function createTimecardEntry(projectId, { date, hours, description, loginI
 // ─── Session export strategies ───────────────────────────────────────────────
 
 /**
- * Resolve all required Procore entities in parallel.
- * Returns { project, user, equipment } — project + user are required for export.
+ * Resolve all required Procore entities.
+ * Prefers stored IDs (fast, reliable). Falls back to fuzzy match for legacy/manual records.
+ * Records resolutionMode for monitoring: 'stored' | 'fuzzy' | 'default' | 'none'.
  */
 async function resolveEntities(machineData, operatorData, obraData) {
-    const [project, user, equipment] = await Promise.all([
-        findProcoreProject(obraData?.workName || obraData?.name),
-        findProcoreUser(operatorData?.email),
-        findProcoreEquipment(machineData?.name || machineData?.id),
-    ]);
-    return { project, user, equipment };
+    const resolution = { project: 'none', user: 'none', equipment: 'none' };
+
+    // ── Project ─────────────────────────────────────────────────────────────
+    let project = null;
+    if (obraData?.procoreProjectId) {
+        project = { id: obraData.procoreProjectId, name: obraData.procoreProjectName || obraData.name || 'Obra' };
+        resolution.project = 'stored';
+    } else {
+        project = await findProcoreProject(obraData?.workName || obraData?.name);
+        resolution.project = project ? 'fuzzy' : 'default';
+    }
+
+    // ── User ─────────────────────────────────────────────────────────────────
+    let user = null;
+    if (operatorData?.procoreUserId) {
+        user = { id: operatorData.procoreUserId, name: operatorData.name };
+        resolution.user = 'stored';
+    } else {
+        user = await findProcoreUser(operatorData?.email);
+        resolution.user = user ? 'fuzzy' : 'none';
+        // Self-heal: persist discovered ID back to operator doc
+        if (user && operatorData?._docId) {
+            admin.firestore().doc(`${OPERATORS_PATH}/${operatorData._docId}`)
+                .set({ procoreUserId: user.id }, { merge: true })
+                .catch(e => console.warn('[procoreSessionExporter] self-heal user ID failed:', e.message));
+        }
+    }
+
+    // ── Equipment ────────────────────────────────────────────────────────────
+    let equipment = null;
+    if (machineData?.procoreEquipmentId) {
+        equipment = { id: machineData.procoreEquipmentId, name: machineData.procoreEquipmentNumber || machineData.name };
+        resolution.equipment = 'stored';
+    } else {
+        equipment = await findProcoreEquipment(machineData?.name || machineData?.id);
+        resolution.equipment = equipment ? 'fuzzy' : 'none';
+        // Self-heal: persist discovered ID back to machine doc
+        if (equipment && machineData?._docId) {
+            admin.firestore().doc(`${MACHINES_PATH}/${machineData._docId}`)
+                .set({ procoreEquipmentId: equipment.id, procoreEquipmentNumber: equipment.name }, { merge: true })
+                .catch(e => console.warn('[procoreSessionExporter] self-heal equipment ID failed:', e.message));
+        }
+    }
+
+    if (resolution.project === 'none' || resolution.project === 'default') {
+        console.warn(`[procoreSessionExporter] resolveEntities — using default project (resolutionMode: ${JSON.stringify(resolution)})`);
+    }
+
+    return { project, user, equipment, resolutionMode: resolution };
 }
 
 /**
@@ -396,10 +452,13 @@ async function exportSessionToProcore(sessionId, eventType) {
     }
 
     // ── Load related entities ────────────────────────────────────────────────
-    const [machineData, operatorData] = await Promise.all([
+    const [machineDataRaw, operatorDataRaw] = await Promise.all([
         getMachineById(sessionData.machineId),
         getOperatorById(sessionData.cardId),
     ]);
+    // Inject doc IDs for self-healing write-back in resolveEntities
+    const machineData = machineDataRaw ? { ...machineDataRaw, _docId: sessionData.machineId } : null;
+    const operatorData = operatorDataRaw ? { ...operatorDataRaw, _docId: sessionData.cardId } : null;
 
     // Resolve obra: prefer explicit session obraId, fall back to machine location
     const obraId = sessionData.obraId

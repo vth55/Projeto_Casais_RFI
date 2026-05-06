@@ -1,0 +1,25 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - img [ref=e4]
+    - heading "Log in to your account" [level=1] [ref=e5]
+    - generic [ref=e6]: You'll need to login first.
+    - generic [ref=e7]:
+      - text: Email
+      - textbox "Email" [active] [ref=e8]
+    - generic [ref=e9]: Caps Lock is ON
+    - generic [ref=e10] [cursor=pointer]:
+      - checkbox "Remember Email" [ref=e11]
+      - text: Remember Email
+    - button "Continue" [ref=e12] [cursor=pointer]
+    - generic:
+      - link "Forgot your password?" [ref=e13] [cursor=pointer]:
+        - /url: /passwords/new
+      - generic [ref=e14]: "|"
+      - link "Trouble logging in?" [ref=e15] [cursor=pointer]:
+        - /url: https://support.procore.com/faq/trouble-logging-in-to-procore
+  - generic [ref=e16]:
+    - link "Privacy Notice" [ref=e17] [cursor=pointer]:
+      - /url: https://www.procore.com/legal/terms-of-service
+    - text: "|"
+    - link "Terms Of Use" [ref=e18] [cursor=pointer]:
+      - /url: https://www.procore.com/legal/terms-of-service

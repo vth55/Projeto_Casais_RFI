@@ -99,11 +99,16 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
 
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
         <StatusBadge status={machine.status} />
-        {machine.location && (
+        {machine.location ? (
           <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
             <MapPin className="w-3.5 h-3.5" />
             {getLocationName(machine.location)}
           </div>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Estaleiro
+          </span>
         )}
       </div>
     </Card>
@@ -244,7 +249,8 @@ const BulkLocationModal = ({ isOpen, onClose, selectedMachines, machines, obras,
 
   const obraOptions = [
     { value: '', label: 'Selecionar obra...' },
-    ...obras.map(o => ({ value: o.id, label: o.name })),
+    { value: 'estaleiro', label: '🏗️ Estaleiro (parque de máquinas)' },
+    ...obras.filter(o => !o.isVirtual).map(o => ({ value: o.id, label: o.name })),
     { value: 'none', label: '-- Remover localização --' },
   ];
 
@@ -595,10 +601,17 @@ const MaquinasView = () => {
                   </Table.Cell>
                   <Table.Cell>{getCategoryName(machine.category, '-')}</Table.Cell>
                   <Table.Cell>
-                    <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {getLocationName(machine.location, 'Sem localização')}
-                    </div>
+                    {machine.location ? (
+                      <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {getLocationName(machine.location)}
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Estaleiro
+                      </span>
+                    )}
                   </Table.Cell>
                   <Table.Cell align="right">{machine.totalHours || 0}h</Table.Cell>
                   <Table.Cell align="center"><StatusBadge status={machine.status} /></Table.Cell>

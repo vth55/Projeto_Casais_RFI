@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "Docs" [ref=e9] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e10] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e11] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e12]:
+      - link "Help" [ref=e13] [cursor=pointer]:
+        - /url: /developer_support
+        - img [ref=e14]
+      - link "Sign In" [ref=e17] [cursor=pointer]:
+        - /url: /signin
+      - link "Sign Up" [ref=e18] [cursor=pointer]:
+        - /url: /signup
+  - generic [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - heading "Login To Your Account" [level=2] [ref=e22]
+        - button "Sign in with your Procore account" [ref=e25] [cursor=pointer]
+      - generic [ref=e26]:
+        - text: New to the Procore Developer Portal?
+        - link "Sign Up" [ref=e27] [cursor=pointer]:
+          - /url: /signup
+    - link "Privacy Notice" [ref=e29] [cursor=pointer]:
+      - /url: https://www.procore.com/legal/privacy

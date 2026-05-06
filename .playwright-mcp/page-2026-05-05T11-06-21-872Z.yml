@@ -1,0 +1,61 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#mount-point"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Company Home" [ref=e8] [cursor=pointer]:
+            - /url: /4283171/company/home
+            - img "Casais Fleet Intelligence"
+          - button "Casais Fleet Intelligence Select a Project" [ref=e10] [cursor=pointer]:
+            - generic:
+              - generic: Casais Fleet Intelligence
+              - generic: Select a Project
+            - generic:
+              - img
+          - button "Company Tools Equipment" [ref=e11] [cursor=pointer]:
+            - generic:
+              - generic: Company Tools
+              - generic: Equipment
+            - generic:
+              - img
+          - generic [ref=e13]:
+            - img [ref=e15]
+            - generic [ref=e17]:
+              - generic [ref=e18]: Favorites
+              - navigation "Favorites":
+                - list
+          - button "Apps Select an App" [ref=e20] [cursor=pointer]:
+            - generic:
+              - generic: Apps
+              - generic: Select an App
+            - generic:
+              - img
+        - generic [ref=e21]:
+          - button "Support & Feedback" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+          - button "Announcements" [ref=e25] [cursor=pointer]:
+            - img [ref=e26]
+          - button "Account & Profile" [ref=e29] [cursor=pointer]:
+            - generic [ref=e31]: VI
+  - main [ref=e33]:
+    - generic [ref=e40]:
+      - navigation [ref=e42]:
+        - generic [ref=e43] [cursor=pointer]: Equipment
+        - img [ref=e45]
+        - generic [ref=e47]: New Equipment
+      - heading "Create Equipment" [level=1] [ref=e50]
+      - generic [ref=e55]:
+        - img [ref=e57]
+        - generic [ref=e59]: Loading...
+  - contentinfo [ref=e60]:
+    - link "Terms of Service" [ref=e61] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e62] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e64]:
+      - text: Powered By
+      - link "Procore" [ref=e65] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e66]

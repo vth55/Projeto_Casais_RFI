@@ -1,0 +1,548 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e8] [cursor=pointer]:
+          - /url: https://trackunit.com
+          - img "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e9]
+        - navigation "Menu" [ref=e13]:
+          - button "Menu Toggle" [ref=e14] [cursor=pointer]:
+            - img [ref=e16]
+            - img [ref=e18]
+  - main [ref=e22]:
+    - article [ref=e23]:
+      - generic [ref=e25]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e32]: Fleet Management
+            - heading "Total fleet management, powered by insights." [level=1] [ref=e35]
+            - paragraph [ref=e38]: Cut the guesswork, reduce costs, and drive uptime for any make, model, or type of construction equipment using Trackunit’s industry-leading mixed-fleet platform.
+            - link "Request a demo" [ref=e42] [cursor=pointer]:
+              - /url: "#demo"
+              - generic [ref=e44]: Request a demo
+          - img "A man in a white shirt uses a laptop at a red counter, with digital overlays showing site asset and equipment status for construction IoT." [ref=e47]
+        - generic [ref=e50]:
+          - generic [ref=e54]: Solution Benefits
+          - heading "Your complete mixed-fleet solution" [level=2] [ref=e57]
+          - paragraph [ref=e60]: Simplify fleet management with total coverage under one login—streamline workflows and unlock new levels of productivity with clarity, control, and confidence.
+          - region "Carousel" [ref=e69]:
+            - generic [ref=e70]:
+              - group "1 of 7" [ref=e71]:
+                - generic [ref=e74]:
+                  - img [ref=e79]
+                  - generic [ref=e84]:
+                    - heading "Proactive operations" [level=2] [ref=e87]
+                    - heading "Maximize uptime and productivity with unified visibility into real-time risks that require attention. Combat 20-30% downtime." [level=2] [ref=e90]:
+                      - text: Maximize uptime and productivity with unified visibility into real-time risks that require attention.
+                      - text: Combat 20-30% downtime.
+              - group "2 of 7" [ref=e91]:
+                - generic [ref=e94]:
+                  - img [ref=e99]
+                  - generic [ref=e104]:
+                    - heading "Cost reduction" [level=2] [ref=e107]
+                    - heading "Take control of expenses for fuel, maintenance, parts, labor, and travel to improve your bottom line. Save 18-25% on maintenance expenses." [level=2] [ref=e110]:
+                      - text: Take control of expenses for fuel, maintenance, parts, labor, and travel to improve your bottom line.
+                      - text: Save 18-25% on maintenance expenses.
+              - group "3 of 7" [ref=e111]:
+                - generic [ref=e114]:
+                  - img [ref=e119]
+                  - generic [ref=e124]:
+                    - heading "Simplicity" [level=2] [ref=e127]
+                    - heading "Centralize oversights, increase information flow, and synchronize business processes to empower action. Save 5-10 hrs/wk on manual processes." [level=2] [ref=e130]:
+                      - text: Centralize oversights, increase information flow, and synchronize business processes to empower action.
+                      - text: Save 5-10 hrs/wk on manual processes.
+              - group "4 of 7" [ref=e131]:
+                - generic [ref=e134]:
+                  - img [ref=e139]
+                  - generic [ref=e144]:
+                    - heading "Fleet safety" [level=2] [ref=e147]
+                    - heading "Enable oversight for operator safety and prevent unauthorized operation of machinery on site. 79% reduction in potential injury." [level=2] [ref=e150]:
+                      - text: Enable oversight for operator safety and prevent unauthorized operation of machinery on site.
+                      - text: 79% reduction in potential injury.
+              - group "5 of 7" [ref=e151]:
+                - generic [ref=e154]:
+                  - img [ref=e159]
+                  - generic [ref=e164]:
+                    - heading "Security" [level=2] [ref=e167]
+                    - heading "Safeguard your equipment against theft and track unauthorized movement in real-time. Stop $35k+ average loss per incident." [level=2] [ref=e170]:
+                      - text: Safeguard your equipment against theft and track unauthorized movement in real-time.
+                      - text: Stop $35k+ average loss per incident.
+              - group "6 of 7" [ref=e171]:
+                - generic [ref=e174]:
+                  - img [ref=e179]
+                  - generic [ref=e184]:
+                    - heading "Sustainability" [level=2] [ref=e187]
+                    - heading "Reduce emissions and fuel use while meeting reporting and compliance needs for sustainability goals. Reduce idle time by 20-30%." [level=2] [ref=e190]:
+                      - text: Reduce emissions and fuel use while meeting reporting and compliance needs for sustainability goals.
+                      - text: Reduce idle time by 20-30%.
+              - group "7 of 7" [ref=e191]:
+                - generic [ref=e194]:
+                  - img [ref=e199]
+                  - generic [ref=e204]:
+                    - heading "Customer Experience" [level=2] [ref=e207]
+                    - heading "Exceed customer expectations using digital tools and insights to anticipate needs and increase revenue. Drive up to 8% more repeat business." [level=2] [ref=e210]:
+                      - text: Exceed customer expectations using digital tools and insights to anticipate needs and increase revenue.
+                      - text: Drive up to 8% more repeat business.
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - generic [ref=e217]: Use Cases
+            - heading "Take charge of your connected fleet" [level=2] [ref=e220]
+            - paragraph [ref=e223]: Elevate visibility and command your fleet using powerful software tools to transform your operations.
+          - generic [ref=e224]:
+            - generic [ref=e225]:
+              - img "A map shows a Linarolo, Italy location near a river and roads, with details over an aerial construction site—ideal for connected jobsite." [ref=e228]
+              - paragraph [ref=e231]: Location insight
+              - heading "Make the invisible, visible" [level=3] [ref=e234]
+              - paragraph [ref=e237]: Track equipment location in real time with GPS, status, and movement—all on one unified map.
+            - generic [ref=e238]:
+              - img "Construction site with excavator, workers in safety gear, and a machine fault alert on engine speed; vehicles blur past. Construction IoT." [ref=e241]
+              - paragraph [ref=e244]: Increase uptime
+              - heading "Fix fast, fail less" [level=3] [ref=e247]
+              - paragraph [ref=e250]: Detect failures early using CAN data, diagnostics, and alerts to keep machines running longer.
+            - generic [ref=e251]:
+              - img "A man stands by blue equipment. An overlay shows overdue service details for an Electric 3219 scissor lift, fleet management." [ref=e254]
+              - paragraph [ref=e257]: Equipment maintenance
+              - heading "Stop calendar-based over-servicing" [level=3] [ref=e260]
+              - paragraph [ref=e263]: Use data-driven triggers and reports to digitize workflows and dispatch teams exactly when needed.
+            - generic [ref=e264]:
+              - img "A Fleet Utilization bar chart overlays a construction site, tracking usage trends from Oct 12–16, peaking on Oct 15. Construction IoT." [ref=e267]
+              - paragraph [ref=e270]: Increase productivity
+              - heading "Smarter use of every machine" [level=3] [ref=e273]
+              - paragraph [ref=e276]: Eliminate uncertainty with real-time insights and reports that boost equipment utilization and decision-making.
+            - generic [ref=e277]:
+              - img "Digital dashboard displays 68% average Site Idle Time and a line graph, over an aerial view of a construction site and greenery, for construction IoT." [ref=e280]
+              - paragraph [ref=e283]: Limit waste
+              - heading "Idle assets are active losses" [level=3] [ref=e286]
+              - paragraph [ref=e289]: Spot idling with site reports to lower fuel and maintenance costs, and extend equipment life.
+            - generic [ref=e290]:
+              - img "Notification panel with three alerts over a construction site image, highlighting recent jobsite activity for connected jobsite." [ref=e293]
+              - paragraph [ref=e296]: Manage theft
+              - heading "Stop theft before it starts" [level=3] [ref=e299]
+              - paragraph [ref=e302]: Secure your fleet with access control, geofences, movement alerts, and real-time location tracking.
+            - generic [ref=e303]:
+              - img "A person in a hard hat and vest holds an ID card with IPAF logo, showing a scissor lift license by blue industrial equipment." [ref=e306]
+              - paragraph [ref=e309]: Fleet safety
+              - heading "The key to safer operations" [level=3] [ref=e312]
+              - paragraph [ref=e315]: Protect machines, sites, and people with smart access, real-time reporting, and accountability tools.
+            - generic [ref=e316]:
+              - img "A digital dashboard shows fleet emissions totaling 14,620 kg CO₂ and a monthly bar chart over a construction site, highlighting telematics." [ref=e319]
+              - paragraph [ref=e322]: Reduce emissions
+              - heading "Smarter fleets, cleaner future" [level=3] [ref=e325]
+              - paragraph [ref=e328]: Adjust equipment operations to meet ESG and sustainability goals using fleet-wide CO2 emissions reporting.
+        - generic [ref=e334]:
+          - generic [ref=e335]:
+            - generic [ref=e339]: Products & Services
+            - heading "Plug in to a complete digital toolbox" [level=2] [ref=e342]
+            - paragraph [ref=e345]: It’s never been easier to take control of your complete fleet, your jobsites, and your daily equipment operations. Choose the right solutions to meet your unique needs.
+          - generic [ref=e346]:
+            - generic [ref=e347]:
+              - img "Four black electronic sensor devices sit side by side on a red background, some with QR codes and lights, used for construction IoT." [ref=e350]
+              - paragraph [ref=e353]: Telematics
+              - heading "Connectivity for your full fleet" [level=3] [ref=e356]
+              - paragraph [ref=e359]: Empower your insights with flexible, rugged, best-in-class IoT devices—built for construction and any equipment type.
+              - link "Learn more" [ref=e363] [cursor=pointer]:
+                - /url: https://trackunit.com/iot-telematics/
+                - generic [ref=e365]: Learn more
+            - generic [ref=e366]:
+              - img "A monitor with a map and markers, plus two smartphones showing GPS apps, all on a dark surface—illustrating fleet management." [ref=e369]
+              - paragraph [ref=e372]: Interfaces
+              - heading "Mixed fleet at your fingertips" [level=3] [ref=e375]
+              - paragraph [ref=e378]: Bring your insights into operation using the industry-leading Trackunit Manager solution and companion mobile apps.
+              - link "Learn more" [ref=e382] [cursor=pointer]:
+                - /url: https://trackunit.com/trackunit-manager/
+                - generic [ref=e384]: Learn more
+            - generic [ref=e385]:
+              - img "Trackunit Data Feeds" [ref=e388]
+              - paragraph [ref=e391]: Integrations
+              - heading "Plug and play data feeds" [level=3] [ref=e394]
+              - paragraph [ref=e397]: Accelerate your mixed-fleet connectivity with single-click, standardized API integrations from over 100 OEMs and telematics providers.
+              - link "Learn more" [ref=e401] [cursor=pointer]:
+                - /url: https://new.manager.trackunit.com/marketplace?q=&c=DATA_FEEDS
+                - generic [ref=e403]: Learn more
+            - generic [ref=e404]:
+              - img "JavaScript code snippet importing mongoose and Schema, defining a Design schema, with SDK label overlay for construction equipment tracking." [ref=e407]
+              - paragraph [ref=e410]: Apps
+              - heading "Connect and create" [level=3] [ref=e413]
+              - paragraph [ref=e416]: Extend and scale-up your solution by installing or building valuable companion apps hosted in the Trackunit Marketplace.
+              - link "Learn more" [ref=e420] [cursor=pointer]:
+                - /url: https://trackunit.com/marketplace/
+                - generic [ref=e422]: Learn more
+        - generic [ref=e424]:
+          - generic [ref=e425]:
+            - generic [ref=e429]: Overview
+            - heading "Fleet Management your way" [level=2] [ref=e432]
+            - paragraph [ref=e435]: Mixed-fleet management isn’t one-size-fits-all. That’s why companies choose Trackunit for a full-fleet solution that works for them—empowering teams and transforming their work.
+          - generic [ref=e436]:
+            - generic [ref=e437]:
+              - img "A row of orange excavators parked outdoors with a digital pop-up to create a service network, highlighting construction IoT." [ref=e440]
+              - heading "For OEMs" [level=3] [ref=e443]
+              - paragraph [ref=e446]: Stay connected to your product lifecycle and customer experience across mixed equipment models and types in your brand family.
+            - generic [ref=e447]:
+              - img "Construction site with heavy equipment and a digital event log overlay tracking service alerts and machine events for fleet management." [ref=e450]
+              - heading "For dealers" [level=3] [ref=e453]
+              - paragraph [ref=e456]: Service and support the operational lifecycle of machinery across your customer network for single or multiple OEM brands.
+            - generic [ref=e457]:
+              - img "A construction equipment yard with trucks, machinery, and alerts for a machine fault and 75% utilization, highlighting fleet management." [ref=e460]
+              - heading "For rental" [level=3] [ref=e463]
+              - paragraph [ref=e466]: Unify your rental cycle management for mixed brands, mixed equipment types, and mixed telematics solutions that are deployed to the jobsite.
+            - generic [ref=e467]:
+              - img "A forklift at a construction site with mountains behind, digital alerts above for user access and jobsite entry on a connected jobsite." [ref=e470]
+              - heading "For contractors" [level=3] [ref=e473]
+              - paragraph [ref=e476]: Maximize jobsite performance across your mixed fleet for both rented and owned equipment—any brand, any type.
+        - generic [ref=e479]:
+          - 'heading "Full fleet ROI (Example: 1,000-machine fleet, 3-year timeframe)" [level=3] [ref=e482]'
+          - generic [ref=e483]:
+            - generic [ref=e484]:
+              - heading "Save time locating equipment" [level=3] [ref=e487]
+              - heading "2000+hrs" [level=2] [ref=e490]
+              - paragraph [ref=e493]: Use accurate real-time GPS location to save an average of 20 minutes each time you need to find an asset (at least twice per year per asset).
+            - generic [ref=e498]:
+              - heading "Avoid unnecessary maintenance" [level=3] [ref=e501]
+              - heading "$90k" [level=2] [ref=e504]
+              - paragraph [ref=e507]: Perform service on assets according to equipment runtime data, eliminating unneeded calendar-based events (3% avg. cost reduction).
+            - generic [ref=e512]:
+              - heading "Top-line revenue growth lever" [level=3] [ref=e515]
+              - heading "$600k+" [level=2] [ref=e518]
+              - paragraph [ref=e521]: Capture additional rental contract revenue based on usage and proactive customer outreach to meet jobsite needs (4% avg. increase).
+        - generic [ref=e527]:
+          - generic [ref=e528]:
+            - generic [ref=e532]: Full Stack
+            - heading "Everything you need, in one place" [level=2] [ref=e535]
+            - paragraph [ref=e538]: Lead your fleet into the future with a powerful platform built to connect, perform, and give you total coverage.
+          - generic [ref=e539]:
+            - generic [ref=e540]:
+              - heading "Software Features" [level=2] [ref=e543]
+              - paragraph [ref=e546]: Smart, easy-to-use tools that turn real-time data into better decisions.
+            - generic [ref=e547]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e550]
+              - generic [ref=e552]: Real-time GPS and equipment health
+            - generic [ref=e553]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e556]
+              - generic [ref=e558]: Utilization insights and reporting
+            - generic [ref=e559]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e562]
+              - generic [ref=e564]: Fuel usage and idle reporting
+            - generic [ref=e565]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e568]
+              - generic [ref=e570]: Preventative maintenance and service
+            - generic [ref=e571]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e574]
+              - generic [ref=e576]: Theft prevention and recovery
+            - generic [ref=e577]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e580]
+              - generic [ref=e582]: Smart alerts and automation
+            - generic [ref=e583]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e586]
+              - generic [ref=e588]: Geo-fencing and site-level intelligence
+            - generic [ref=e589]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e592]
+              - generic [ref=e594]: Digital Access Management
+            - generic [ref=e595]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e598]
+              - generic [ref=e600]: Fleet-wide emissions reporting
+            - generic [ref=e601]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e604]
+              - paragraph [ref=e607]: Role-based dashboards
+            - paragraph [ref=e611]: And much more…
+          - generic [ref=e612]:
+            - generic [ref=e613]:
+              - heading "Connectivity" [level=2] [ref=e616]
+              - paragraph [ref=e619]: Reliable, jobsite-ready connections that work across your entire fleet.
+            - generic [ref=e620]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e623]
+              - paragraph [ref=e626]: Industry-leading construction IoT
+            - generic [ref=e627]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e630]
+              - paragraph [ref=e633]: Certified industrial-rated performance
+            - generic [ref=e634]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e637]
+              - paragraph [ref=e640]: Solutions for all equipment types
+            - generic [ref=e641]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e644]
+              - paragraph [ref=e647]: Global LTE-M 5G Roaming
+            - generic [ref=e648]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e651]
+              - paragraph [ref=e654]: Edge, OTA, and AI smart services
+            - generic [ref=e655]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e658]
+              - paragraph [ref=e661]: 100+ plug and play OEM data feeds
+            - generic [ref=e662]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e665]
+              - paragraph [ref=e668]: Autonomous Bluetooth network
+            - generic [ref=e669]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e672]
+              - paragraph [ref=e675]: Secure, governed, scalable, and private
+            - generic [ref=e676]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e679]
+              - paragraph [ref=e682]: API access for custom workflows
+            - generic [ref=e683]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e686]
+              - paragraph [ref=e689]: Centralized cloud platform integration
+            - paragraph [ref=e693]: And much more…
+          - generic [ref=e694]:
+            - generic [ref=e695]:
+              - heading "Services & Support" [level=2] [ref=e698]
+              - paragraph [ref=e701]: From onboarding to full optimization or customization, we’re with you all the way.
+            - generic [ref=e702]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e705]
+              - paragraph [ref=e708]: SLA-backed uptime and reliability
+            - generic [ref=e709]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e712]
+              - paragraph [ref=e715]: Multi-channel customer support
+            - generic [ref=e716]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e719]
+              - paragraph [ref=e722]: Customer success program
+            - generic [ref=e723]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e726]
+              - paragraph [ref=e729]: Multilingual platform & Help Center
+            - generic [ref=e730]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e733]
+              - paragraph [ref=e736]: OEM and retrofit install programs
+            - generic [ref=e737]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e740]
+              - paragraph [ref=e743]: Public, interactive product roadmap
+            - generic [ref=e744]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e747]
+              - paragraph [ref=e750]: Flexible fleet and asset plans
+            - generic [ref=e751]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e754]
+              - paragraph [ref=e757]: Marketplace App integrations
+            - generic [ref=e758]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e761]
+              - paragraph [ref=e764]: Developer Hub and SDK
+            - generic [ref=e765]:
+              - img "A black check mark on a light gray background, symbolizing approval or task completion in construction equipment tracking." [ref=e768]
+              - paragraph [ref=e771]: Consulting & hands-on workshops
+            - paragraph [ref=e775]: And much more…
+        - generic [ref=e778]:
+          - heading "Join the best in business" [level=1] [ref=e781]
+          - paragraph [ref=e784]: Trusted by leading OEMs, rental companies, contractors, and partners to unlock the full value of their fleets and equipment.
+        - generic [ref=e792]:
+          - region "Carousel" [ref=e795]:
+            - generic [ref=e796]:
+              - group "1 of 3" [ref=e797]:
+                - generic [ref=e799]:
+                  - generic [ref=e802]:
+                    - heading "Joel Särkkä" [level=2] [ref=e805]
+                    - heading "CIO, Renta" [level=2] [ref=e808]
+                  - generic [ref=e810]:
+                    - heading "“Digitization has been an integral part of being able to scale the business. It forces us to think outside of the box and come up with new solutions. But we always keep in mind that the solutions we create should serve the people using them.”" [level=3] [ref=e813]
+                    - img "A blurred image with white lowercase letters on a light gray background, possibly spelling \"renta,\" related to fleet management." [ref=e816]
+              - group "2 of 3" [ref=e817]:
+                - generic [ref=e819]:
+                  - generic [ref=e822]:
+                    - heading "Roger Rotés" [level=2] [ref=e825]
+                    - heading "Product Manager, AUSA" [level=2] [ref=e828]
+                  - generic [ref=e830]:
+                    - heading "\"We launched the AUSAnow solution together with Trackunit during 2021,” Roger Rotés, Product Manager at AUSA says. “The partnership between AUSA and Trackunit exemplifies the power of collaboration in driving operational excellence and customer satisfaction.\"" [level=3] [ref=e833]
+                    - img "White bold capital letters AUSA on a transparent background, relating to construction equipment tracking." [ref=e836]
+              - group "3 of 3" [ref=e837]:
+                - generic [ref=e839]:
+                  - generic [ref=e842]:
+                    - heading "Jenna Reed" [level=2] [ref=e845]
+                    - heading "Director, Sunbelt Rentals" [level=2] [ref=e848]
+                  - generic [ref=e850]:
+                    - heading "\"Through our partnership with Trackunit, we are enabling a better end-to-end experience for our customers through data. Having robust equipment data from Trackunit Manager, which pulls in critical information from our IoT devices, is critical to our operations.\"" [level=3] [ref=e853]
+                    - img "White Sunbelt Rentals logo with a sun icon left of bold SUNBELT RENTALS text on a light background." [ref=e856]
+          - generic [ref=e857]:
+            - img [ref=e862]
+            - img [ref=e870]
+        - paragraph [ref=e884]: Request a demo
+        - generic [ref=e890]:
+          - generic [ref=e894]: Resources
+          - heading "Dig deeper into Fleet Management" [level=2] [ref=e897]
+          - paragraph [ref=e900]: Keep up to date on news and articles surrounding the platform’s capabilities, development, and the technology behind it.
+          - region "Carousel" [ref=e903]:
+            - generic [ref=e904]:
+              - group "1 of 3" [ref=e905]:
+                - generic [ref=e907]:
+                  - img "Boom lifts and cherry pickers lined up in a lot on a sunny day, workers in safety vests nearby; shows fleet management." [ref=e910]
+                  - paragraph [ref=e913]: Article
+                  - heading "Your full guide to understanding Fleet Management" [level=3] [ref=e916]
+                  - link "Read article" [ref=e920] [cursor=pointer]:
+                    - /url: https://trackunit.com/articles/fleet-management-guide/
+                    - generic [ref=e922]: Read article
+              - group "2 of 3" [ref=e923]:
+                - generic [ref=e926]:
+                  - img "Aerial view of a construction site with a yellow bulldozer and two workers in safety vests, showing connected jobsite activity." [ref=e929]
+                  - paragraph [ref=e932]: Article
+                  - heading "How construction equipment theft happens & how to prevent it" [level=3] [ref=e935]
+                  - link "Read article" [ref=e939] [cursor=pointer]:
+                    - /url: https://trackunit.com/articles/preventing-theft/
+                    - generic [ref=e941]: Read article
+              - group "3 of 3" [ref=e942]:
+                - generic [ref=e945]:
+                  - img "A construction worker stands by a suspended steel beam at sunset on a connected jobsite, with cranes and city buildings in the background." [ref=e948]
+                  - paragraph [ref=e951]: Success Story
+                  - heading "True visibility, better decisions, and continuous improvement" [level=3] [ref=e954]
+                  - link "Read story" [ref=e958] [cursor=pointer]:
+                    - /url: https://trackunit.com/articles/gammon-construction-trackunit/
+                    - generic [ref=e960]: Read story
+  - contentinfo [ref=e961]:
+    - generic [ref=e963]:
+      - generic [ref=e964]:
+        - link "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e968] [cursor=pointer]:
+          - /url: https://trackunit.com
+          - img "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e969]
+        - generic [ref=e970]:
+          - generic [ref=e972]: Platform
+          - link "Trackunit IrisX" [ref=e976] [cursor=pointer]:
+            - /url: https://trackunit.com/irisx
+          - generic [ref=e982]: Software
+          - link "Trackunit Manager" [ref=e986] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-manager/
+          - link "Trackunit Go" [ref=e990] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-go/
+          - link "Trackunit On" [ref=e994] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-on/
+          - generic [ref=e1000]: Integrations
+          - link "Marketplace" [ref=e1004] [cursor=pointer]:
+            - /url: https://new.manager.trackunit.com/marketplace
+          - link "About Marketplace" [ref=e1008] [cursor=pointer]:
+            - /url: https://trackunit.com/marketplace/
+          - link "OEM Integrations" [ref=e1012] [cursor=pointer]:
+            - /url: https://trackunit.com/oem-integrations/
+          - generic [ref=e1018]: IoT & Telematics
+          - link "Trackunit Raw" [ref=e1022] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-raw/
+          - link "Trackunit Spot" [ref=e1026] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-spot/
+          - link "Trackunit Pass" [ref=e1030] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-pass/
+          - link "Trackunit Kin" [ref=e1034] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-kin/
+          - link "Trackunit Beam" [ref=e1038] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-beam/
+        - generic [ref=e1039]:
+          - generic [ref=e1041]: Industries
+          - link "OEM" [ref=e1045] [cursor=pointer]:
+            - /url: https://trackunit.com/oem/
+          - link "Rental" [ref=e1049] [cursor=pointer]:
+            - /url: https://trackunit.com/rental/
+          - link "Contractor" [ref=e1053] [cursor=pointer]:
+            - /url: https://trackunit.com/contractor/
+          - generic [ref=e1059]: Solutions
+          - link "Construction Telematics" [ref=e1063] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/telematics/
+          - link "Fleet Management" [ref=e1067] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/fleet-management/
+          - link "Digital jobsites" [ref=e1071] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/sites/
+          - link "Fleet Utilization" [ref=e1075] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/fleet-utilization/
+          - link "Equipment Maintenance" [ref=e1079] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/equipment-maintenance/
+          - link "Theft Defense" [ref=e1083] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/theft-protection/
+          - link "Unlock Sustainability" [ref=e1087] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/sustainability/
+          - link "Digital Access Management" [ref=e1091] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/access-management/
+          - link "Specialty Equipment Solutions" [ref=e1095] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/specialty-equipment-solutions/
+          - generic [ref=e1101]: Network
+          - link "Trackunit Network" [ref=e1105] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-network/
+        - generic [ref=e1106]:
+          - generic [ref=e1108]: Customer Support
+          - link "Help Center" [ref=e1112] [cursor=pointer]:
+            - /url: https://help.trackunit.com/en/
+          - link "Customer Success" [ref=e1116] [cursor=pointer]:
+            - /url: https://trackunit.com/customer-success/
+          - link "Video Tutorials" [ref=e1120] [cursor=pointer]:
+            - /url: https://trackunit.com/section/mastering-manager/
+          - link "Contact Support" [ref=e1124] [cursor=pointer]:
+            - /url: https://help.trackunit.com/en/articles/238021-how-to-contact-customer-support-through-the-messenger
+          - generic [ref=e1130]: Document Library
+          - link "Flyers" [ref=e1134] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#catalogue
+          - link "Installation Guides" [ref=e1138] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#guides
+          - link "Regulations & Safety" [ref=e1142] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#regulations
+          - link "EU Data Act" [ref=e1146] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#key-documents
+          - generic [ref=e1152]: Development
+          - link "Developer" [ref=e1156] [cursor=pointer]:
+            - /url: https://developers.trackunit.com/
+          - link "Platform Status" [ref=e1160] [cursor=pointer]:
+            - /url: https://status.trackunit.com/
+        - generic [ref=e1165]:
+          - generic [ref=e1167]: Events & Webinar
+          - link "Video Library" [ref=e1171] [cursor=pointer]:
+            - /url: https://trackunit.com/webinars/
+          - link "Webinars & events" [ref=e1175] [cursor=pointer]:
+            - /url: https://trackunit.com/events/
+          - generic [ref=e1181]: General
+          - link "Customer Stories" [ref=e1185] [cursor=pointer]:
+            - /url: https://trackunit.com/section/success-stories/
+          - link "Product Updates" [ref=e1189] [cursor=pointer]:
+            - /url: https://trackunit.com/section/product-updates/
+          - link "Product Portal" [ref=e1193] [cursor=pointer]:
+            - /url: https://trackunit.com/product-portal/
+      - generic [ref=e1198]:
+        - navigation "Menu" [ref=e1202]:
+          - list [ref=e1203]:
+            - listitem [ref=e1204]:
+              - link "English" [ref=e1205] [cursor=pointer]:
+                - /url: https://trackunit.com/solutions/fleet-management/
+                - generic [ref=e1206]: English
+        - generic [ref=e1207]:
+          - generic [ref=e1209]: About
+          - link "The Trackunit Story" [ref=e1213] [cursor=pointer]:
+            - /url: https://trackunit.com/about/
+          - link "Purpose" [ref=e1217] [cursor=pointer]:
+            - /url: https://trackunit.com/about/purpose/
+          - link "Leadership & Board" [ref=e1221] [cursor=pointer]:
+            - /url: https://trackunit.com/leadership-and-board/
+          - link "Press Release" [ref=e1225] [cursor=pointer]:
+            - /url: https://trackunit.com/press-releases/
+          - link "Media Library" [ref=e1229] [cursor=pointer]:
+            - /url: https://trackunit.com/media-library/
+          - link "Contact" [ref=e1233] [cursor=pointer]:
+            - /url: https://trackunit.com/about/contact/
+        - generic [ref=e1234]:
+          - generic [ref=e1236]: Careers
+          - link "Working at Trackunit" [ref=e1240] [cursor=pointer]:
+            - /url: https://trackunit.com/careers/
+          - link "Career Hub" [ref=e1244] [cursor=pointer]:
+            - /url: https://careers.trackunit.com/
+          - link "Open Positions" [ref=e1248] [cursor=pointer]:
+            - /url: https://careers.trackunit.com/jobs
+          - generic [ref=e1254]: Partner
+          - link "Become a partner" [ref=e1258] [cursor=pointer]:
+            - /url: https://trackunit.com/become-a-partner/
+        - generic [ref=e1259]:
+          - generic [ref=e1261]: Social
+          - link "Linkedin" [ref=e1265] [cursor=pointer]:
+            - /url: http://linkedin.com/company/trackunit-a-s/
+          - link "Facebook" [ref=e1269] [cursor=pointer]:
+            - /url: https://www.facebook.com/Trackunit.official/
+          - link "Instagram" [ref=e1273] [cursor=pointer]:
+            - /url: https://www.instagram.com/trackunit/
+          - link "YouTube" [ref=e1277] [cursor=pointer]:
+            - /url: https://www.youtube.com/c/Trackunit_Official
+        - generic [ref=e1282]:
+          - generic [ref=e1284]: Pricing
+          - link "Get a Quote" [ref=e1288] [cursor=pointer]:
+            - /url: https://trackunit.com/get-a-quote/
+          - link "Get Contacted" [ref=e1292] [cursor=pointer]:
+            - /url: https://trackunit.com/get-contacted/
+          - link "Pricing Plans" [ref=e1296] [cursor=pointer]:
+            - /url: https://trackunit.com/pricing/
+          - link "Schedule a Demo" [ref=e1300] [cursor=pointer]:
+            - /url: https://trackunit.com/request-demo/
+      - generic [ref=e1301]:
+        - link "© 2026 Trackunit Corporation. All rights reserved." [ref=e1306] [cursor=pointer]:
+          - /url: https://trackunit.com/irisx
+        - generic [ref=e1307]:
+          - link "Terms & Conditions" [ref=e1311] [cursor=pointer]:
+            - /url: https://trackunit.com/terms-and-conditions/
+          - link "Privacy" [ref=e1315] [cursor=pointer]:
+            - /url: https://trackunit.com/privacy/
+          - link "Cookie Policy" [ref=e1319] [cursor=pointer]:
+            - /url: https://trackunit.com/cookie-policy/
+          - link "Modern Slavery Policy" [ref=e1323] [cursor=pointer]:
+            - /url: https://content.trackunit.com/hubfs/PDF%20Assets/Legal%20Documents/Trackunit%20%7C%20Policy%20%7C%20Modern%20Slavery%20%7C%20EN.pdf
+          - link "Communication Policy" [ref=e1327] [cursor=pointer]:
+            - /url: https://trackunit.com/communication-policy/

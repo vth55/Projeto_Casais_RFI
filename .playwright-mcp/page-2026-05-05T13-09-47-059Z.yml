@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "My Apps" [ref=e9] [cursor=pointer]:
+        - /url: /developers
+      - link "Docs" [ref=e10] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e11] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e12] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e13]:
+      - link "Help" [ref=e14] [cursor=pointer]:
+        - /url: /support
+        - img [ref=e15]
+      - img "Bell Outline" [ref=e23] [cursor=pointer]
+      - link "VI" [ref=e29] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e31]:
+    - banner [ref=e32]:
+      - button "Create a New App" [ref=e35] [cursor=pointer]:
+        - generic [ref=e37]: Create a New App
+    - generic [ref=e38]:
+      - heading "My Apps" [level=2] [ref=e39]
+      - 'link "Casais Fleet Intelligence Updated: 04-17-2026" [ref=e42] [cursor=pointer]':
+        - /url: /developer_apps/bb391c31-1589-4bc0-a9ec-dc783e673274
+        - generic [ref=e44]:
+          - img [ref=e46]
+          - generic [ref=e47]:
+            - heading "Casais Fleet Intelligence" [level=3] [ref=e48]
+            - generic [ref=e49]: "Updated: 04-17-2026"
+  - contentinfo [ref=e51]:
+    - generic [ref=e52]: © 2026 Procore. All rights reserved
+    - generic [ref=e53]:
+      - link "System Status" [ref=e54] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e55] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e56] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e57] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9

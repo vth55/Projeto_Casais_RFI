@@ -1,0 +1,137 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "My Apps" [ref=e9] [cursor=pointer]:
+        - /url: /developers
+      - link "Docs" [ref=e10] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e11] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e12] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e13]:
+      - link "Help" [ref=e14] [cursor=pointer]:
+        - /url: /support
+        - img [ref=e15]
+      - generic [ref=e22] [cursor=pointer]:
+        - img "Bell Outline" [ref=e23]
+        - generic [ref=e26]: "1"
+      - link "VI" [ref=e32] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e33]:
+    - generic [ref=e35]:
+      - generic:
+        - generic:
+          - img "Loading"
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - navigation [ref=e40]:
+            - navigation "Breadcrumb" [ref=e41]:
+              - link "Apps" [ref=e42] [cursor=pointer]:
+                - /url: /developer_apps
+                - generic [ref=e43]: Apps
+              - img [ref=e45]
+              - link "Casais Fleet Intelligence" [ref=e47] [cursor=pointer]:
+                - /url: /developer_apps/bb391c31-1589-4bc0-a9ec-dc783e673274
+                - generic [ref=e48]: Casais Fleet Intelligence
+          - heading "Casais Fleet Intelligence" [level=1] [ref=e50]
+        - generic [ref=e52]:
+          - generic [ref=e55]:
+            - heading "App Management" [level=3] [ref=e56]
+            - generic [ref=e57]:
+              - generic [ref=e61] [cursor=pointer]: Configuration Builder
+              - generic [ref=e65] [cursor=pointer]: Versions
+              - generic [ref=e69] [cursor=pointer]: App Settings
+              - generic [ref=e73] [cursor=pointer]: OAuth Credentials
+              - generic [ref=e77] [cursor=pointer]: Collaborators
+              - generic [ref=e81] [cursor=pointer]: Performance Metrics
+          - generic [ref=e219]:
+            - generic [ref=e220]:
+              - heading "View Manifests" [level=2] [ref=e221]
+              - img [ref=e222] [cursor=pointer]
+            - table [ref=e225]:
+              - rowgroup [ref=e226]:
+                - row "Version Created App Version Key Published to Marketplace" [ref=e227]:
+                  - columnheader "Version" [ref=e228]:
+                    - generic [ref=e230]: Version
+                  - columnheader "Created" [ref=e231]:
+                    - generic [ref=e233]: Created
+                  - columnheader "App Version Key" [ref=e234]:
+                    - generic [ref=e236]: App Version Key
+                  - columnheader "Published to Marketplace" [ref=e237]:
+                    - generic [ref=e239]: Published to Marketplace
+              - rowgroup [ref=e240]:
+                - row "0.2.0 Sandbox 2026-04-20 11:21:35 UTC c5a68b6e-343c-43df-9e47-ce944d64102e" [ref=e241]:
+                  - cell "0.2.0 Sandbox" [ref=e242]:
+                    - generic [ref=e244]:
+                      - link "0.2.0" [ref=e245] [cursor=pointer]:
+                        - /url: javascript:;
+                      - generic [ref=e246]: Sandbox
+                  - cell "2026-04-20 11:21:35 UTC" [ref=e247]:
+                    - generic [ref=e248]: 2026-04-20 11:21:35 UTC
+                  - cell "c5a68b6e-343c-43df-9e47-ce944d64102e" [ref=e249]:
+                    - generic [ref=e250]: c5a68b6e-343c-43df-9e47-ce944d64102e
+                  - cell [ref=e251]
+                - row "0.1.0 Sandbox 2026-04-20 10:28:09 UTC c323f7ef-7a27-400b-abbf-1f96a3e9fbc6" [ref=e252]:
+                  - cell "0.1.0 Sandbox" [ref=e253]:
+                    - generic [ref=e255]:
+                      - link "0.1.0" [ref=e256] [cursor=pointer]:
+                        - /url: javascript:;
+                      - generic [ref=e257]: Sandbox
+                  - cell "2026-04-20 10:28:09 UTC" [ref=e258]:
+                    - generic [ref=e259]: 2026-04-20 10:28:09 UTC
+                  - cell "c323f7ef-7a27-400b-abbf-1f96a3e9fbc6" [ref=e260]:
+                    - generic [ref=e261]: c323f7ef-7a27-400b-abbf-1f96a3e9fbc6
+                  - cell [ref=e262]
+    - text:                                                        
+  - contentinfo [ref=e174]:
+    - generic [ref=e175]: © 2026 Procore. All rights reserved
+    - generic [ref=e176]:
+      - link "System Status" [ref=e177] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e178] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e179] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e180] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9
+  - generic [ref=e263]:
+    - dialog:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - button "Close" [active]
+      - region:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading "0.2.0 Manifest" [level=1]
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Easily transfer the code to a code editor by copying it to your clipboard.
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "{ \"schema_version\": \"4.1\", \"permissions\": { \"uuid\": \"fa1ba449-5f20-4ec5-aa8f-ee1f7954b7f2\", \"company\": { \"admin\": \"admin\", \"directory\": \"readonly\" }, \"project\": { \"daily_log\": \"standard\", \"managed_equipment\": \"readonly\" } } }"
+              - generic:
+                - generic:
+                  - button "Copy Code":
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Copy Code

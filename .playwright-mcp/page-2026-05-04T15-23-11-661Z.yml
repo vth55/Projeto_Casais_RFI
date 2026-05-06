@@ -1,0 +1,208 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e7]:
+      - complementary [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: C
+          - generic [ref=e14]:
+            - text: CASAIS
+            - generic [ref=e15]: Fleet Intelligence
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - img [ref=e20]
+              - generic [ref=e22]: Ativas
+            - paragraph [ref=e23]: "0"
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - img [ref=e26]
+              - generic [ref=e31]: Equip.
+            - paragraph [ref=e32]: "10"
+        - navigation [ref=e33]:
+          - list [ref=e34]:
+            - listitem [ref=e35]:
+              - button "Dashboard" [ref=e36] [cursor=pointer]:
+                - generic [ref=e37]:
+                  - img [ref=e38]
+                  - generic [ref=e43]: Dashboard
+            - listitem [ref=e44]:
+              - button "Obras" [ref=e45] [cursor=pointer]:
+                - generic [ref=e46]:
+                  - img [ref=e47]
+                  - generic [ref=e51]: Obras
+                - img [ref=e52]
+              - list [ref=e767]:
+                - listitem [ref=e768]:
+                  - button "Todas" [ref=e769] [cursor=pointer]
+                - listitem [ref=e770]:
+                  - button "Em Curso" [ref=e771] [cursor=pointer]
+                - listitem [ref=e772]:
+                  - button "Planeadas" [ref=e773] [cursor=pointer]
+                - listitem [ref=e774]:
+                  - button "Concluídas" [ref=e775] [cursor=pointer]
+            - listitem [ref=e54]:
+              - button "Equipamentos" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]:
+                  - img [ref=e57]
+                  - generic [ref=e62]: Equipamentos
+            - listitem [ref=e63]:
+              - button "Operadores" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]:
+                  - img [ref=e66]
+                  - generic [ref=e71]: Operadores
+            - listitem [ref=e72]:
+              - button "Sessões" [ref=e73] [cursor=pointer]:
+                - generic [ref=e74]:
+                  - img [ref=e75]
+                  - generic [ref=e78]: Sessões
+                - img [ref=e79]
+            - listitem [ref=e81]:
+              - button "Manutenção" [ref=e82] [cursor=pointer]:
+                - generic [ref=e83]:
+                  - img [ref=e84]
+                  - generic [ref=e86]: Manutenção
+                - img [ref=e87]
+            - listitem [ref=e89]:
+              - button "Financeiro" [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]:
+                  - img [ref=e92]
+                  - generic [ref=e95]: Financeiro
+                - img [ref=e96]
+            - listitem [ref=e98]:
+              - button "Análises" [ref=e99] [cursor=pointer]:
+                - generic [ref=e100]:
+                  - img [ref=e101]
+                  - generic [ref=e103]: Análises
+            - listitem [ref=e104]:
+              - button "Relatórios" [ref=e105] [cursor=pointer]:
+                - generic [ref=e106]:
+                  - img [ref=e107]
+                  - generic [ref=e110]: Relatórios
+            - listitem [ref=e111]:
+              - button "Configurações" [ref=e112] [cursor=pointer]:
+                - generic [ref=e113]:
+                  - img [ref=e114]
+                  - generic [ref=e117]: Configurações
+        - generic [ref=e119]:
+          - generic [ref=e121]: VH
+          - generic [ref=e122]:
+            - paragraph [ref=e123]: Vitor Hugo
+            - generic [ref=e124]:
+              - img [ref=e125]
+              - generic [ref=e127]: Administrador
+          - button "Terminar sessão" [ref=e128] [cursor=pointer]:
+            - img [ref=e129]
+      - generic [ref=e132]:
+        - banner [ref=e133]:
+          - heading "Dashboard" [level=1] [ref=e776]
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - img [ref=e140]
+              - generic [ref=e144]: Online
+            - button [ref=e145] [cursor=pointer]:
+              - img [ref=e146]
+            - button [ref=e149] [cursor=pointer]:
+              - img [ref=e150]
+        - main [ref=e154]:
+          - generic [ref=e1160]:
+            - generic [ref=e1161]:
+              - generic [ref=e1162]:
+                - button "Voltar" [ref=e1163] [cursor=pointer]:
+                  - img [ref=e1164]
+                  - text: Voltar
+                - generic [ref=e1166]:
+                  - generic [ref=e1167]:
+                    - heading "Sandbox Test Project" [level=2] [ref=e1168]
+                    - generic [ref=e1169]:
+                      - img [ref=e1170]
+                      - text: Em Curso
+                  - paragraph [ref=e1173]:
+                    - img [ref=e1174]
+                    - text: 6309 Carpinteria Avenue, Carpinteria
+              - generic [ref=e1177]:
+                - button "Ver Mapa" [ref=e1178] [cursor=pointer]:
+                  - img [ref=e1179]
+                  - text: Ver Mapa
+                - button "Editar" [ref=e1181] [cursor=pointer]:
+                  - img [ref=e1182]
+                  - text: Editar
+                - button [ref=e1184] [cursor=pointer]:
+                  - img [ref=e1185]
+            - generic [ref=e1188]:
+              - generic [ref=e1191]:
+                - generic [ref=e1192]:
+                  - img [ref=e1194]
+                  - generic [ref=e1199]: Equipamentos
+                - generic [ref=e1201]: "0"
+              - generic [ref=e1204]:
+                - generic [ref=e1205]:
+                  - img [ref=e1207]
+                  - generic [ref=e1209]: Ativos Agora
+                - generic [ref=e1211]: "0"
+              - generic [ref=e1214]:
+                - generic [ref=e1215]:
+                  - img [ref=e1217]
+                  - generic [ref=e1222]: Operadores
+                - generic [ref=e1224]: "0"
+              - generic [ref=e1227]:
+                - generic [ref=e1228]:
+                  - img [ref=e1230]
+                  - generic [ref=e1233]: Sessões Ativas
+                - generic [ref=e1235]: "0"
+              - generic [ref=e1238]:
+                - generic [ref=e1239]:
+                  - img [ref=e1241]
+                  - generic [ref=e1243]: Horas Total
+                - generic [ref=e1244]:
+                  - generic [ref=e1245]: "0"
+                  - generic [ref=e1246]: h
+            - generic [ref=e1247]:
+              - generic [ref=e1248]:
+                - generic [ref=e1251]:
+                  - img [ref=e1252]
+                  - heading "Equipamentos na Obra" [level=3] [ref=e1257]
+                - generic [ref=e1258]:
+                  - img [ref=e1259]
+                  - paragraph [ref=e1264]: Nenhum equipamento nesta obra
+              - generic [ref=e1265]:
+                - generic [ref=e1268]:
+                  - img [ref=e1269]
+                  - heading "Operadores Atribuídos" [level=3] [ref=e1274]
+                - generic [ref=e1275]:
+                  - img [ref=e1276]
+                  - paragraph [ref=e1281]: Nenhum operador atribuído
+            - generic [ref=e1282]:
+              - heading "Informações da Obra" [level=3] [ref=e1285]
+              - generic [ref=e1286]:
+                - generic [ref=e1287]:
+                  - paragraph [ref=e1288]: Código
+                  - paragraph [ref=e1289]: "1234"
+                - generic [ref=e1290]:
+                  - paragraph [ref=e1291]: Data Fim (Prevista)
+                  - paragraph [ref=e1292]: 08/05/2019
+            - generic [ref=e1293]:
+              - generic [ref=e1295]:
+                - generic [ref=e1296]:
+                  - img [ref=e1297]
+                  - heading "Cartões RFID de Localização" [level=3] [ref=e1299]
+                - paragraph [ref=e1300]: Cartões que movem equipamentos automaticamente para esta obra
+              - generic [ref=e1301]:
+                - generic [ref=e1302]:
+                  - generic [ref=e1303]: LOC_
+                  - textbox "ID_DO_CARTAO" [ref=e1304]
+                - button "Criar" [disabled] [ref=e1305]:
+                  - img [ref=e1306]
+                  - text: Criar
+              - generic [ref=e1307]:
+                - img [ref=e1308]
+                - paragraph [ref=e1310]: Nenhum cartão de localização
+                - paragraph [ref=e1311]: Crie um cartão para mover equipamentos facilmente para esta obra
+              - generic [ref=e1312]:
+                - paragraph [ref=e1313]: "Como usar:"
+                - list [ref=e1314]:
+                  - listitem [ref=e1315]: "• Escreva o ID no cartão RFID físico (ex: LOC_PORTO_01)"
+                  - listitem [ref=e1316]: • Quando o cartão for lido numa máquina, ela move para esta obra
+                  - listitem [ref=e1317]: • Ideal para entrada/saída de equipamentos no estaleiro
+    - button "DevTools - Ferramentas de Desenvolvimento" [ref=e680] [cursor=pointer]:
+      - img [ref=e681]
+  - generic [ref=e683]: "150"

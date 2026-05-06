@@ -3,7 +3,7 @@ import requests
 import time
 
 # --- CONFIGURAÇÃO ---
-# Mude para a porta do seu Arduino (COM3, COM4, etc.)
+# Muda para a porta do seu Arduino (COM3, COM4, etc.)
 SERIAL_PORT = 'COM4' 
 BAUD_RATE = 9600
 

@@ -1,0 +1,155 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "My Apps" [ref=e9] [cursor=pointer]:
+        - /url: /developers
+      - link "Docs" [ref=e10] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e11] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e12] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e13]:
+      - link "Help" [ref=e14] [cursor=pointer]:
+        - /url: /developer_support
+        - img [ref=e15]
+      - generic [ref=e22] [cursor=pointer]:
+        - img "Bell Outline" [ref=e23]
+        - generic [ref=e26]: "1"
+      - link "VI" [ref=e32] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e33]:
+    - generic [ref=e35]:
+      - generic:
+        - generic:
+          - img "Loading"
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - navigation [ref=e45]:
+            - navigation "Breadcrumb" [ref=e46]:
+              - link "Apps" [ref=e47] [cursor=pointer]:
+                - /url: /developer_apps
+                - generic [ref=e48]: Apps
+              - img [ref=e50]
+              - link "Casais Fleet Intelligence" [ref=e71] [cursor=pointer]:
+                - /url: /developer_apps/bb391c31-1589-4bc0-a9ec-dc783e673274
+                - generic [ref=e72]: Casais Fleet Intelligence
+          - heading "Casais Fleet Intelligence" [level=1] [ref=e73]
+        - generic [ref=e74]:
+          - generic [ref=e77]:
+            - heading "App Management" [level=3] [ref=e78]
+            - generic [ref=e79]:
+              - generic [ref=e83] [cursor=pointer]: Configuration Builder
+              - generic [ref=e87] [cursor=pointer]: Versions
+              - generic [ref=e91] [cursor=pointer]: App Settings
+              - generic [ref=e95] [cursor=pointer]: OAuth Credentials
+              - generic [ref=e99] [cursor=pointer]: Collaborators
+              - generic [ref=e103] [cursor=pointer]: Performance Metrics
+          - generic [ref=e198]:
+            - heading "OAuth Credentials" [level=2] [ref=e200]
+            - generic [ref=e202]:
+              - generic [ref=e204]:
+                - generic [ref=e205]:
+                  - generic [ref=e206]:
+                    - generic [ref=e208]:
+                      - generic [ref=e212]:
+                        - text: Client ID
+                        - img [ref=e213] [cursor=pointer]
+                      - textbox "Client ID" [ref=e215]: CwEYF1kaZGLtqULfIooOxfjXjZAhUVqNYzdQsgK7BiA
+                    - generic [ref=e217]:
+                      - generic [ref=e221]:
+                        - text: Redirect URI
+                        - img [ref=e222] [cursor=pointer]
+                      - textbox [ref=e224]: http://localhost
+                  - generic [ref=e227]:
+                    - generic [ref=e230]: Client Secret
+                    - button "Reset client secret" [active] [ref=e232] [cursor=pointer]:
+                      - generic [ref=e234]: Reset client secret
+                - generic [ref=e237]:
+                  - text: Use one line per URI.
+                  - text: http://localhost is the only acceptable non-HTTPS URI.
+                  - text: Use urn:ietf:wg:oauth:2.0:oob for redirectless OAuth.
+              - contentinfo [ref=e238]:
+                - generic [ref=e240]:
+                  - generic [ref=e241]: "*Required Field"
+                  - button "Update" [disabled]:
+                    - generic:
+                      - generic: Update
+            - generic [ref=e243]:
+              - generic:
+                - generic:
+                  - img "Loading"
+              - generic [ref=e244]:
+                - heading "Sandbox OAuth Credentials" [level=2] [ref=e246]
+                - generic [ref=e249]:
+                  - generic [ref=e250]:
+                    - generic [ref=e252]:
+                      - generic [ref=e256]:
+                        - text: Client ID
+                        - img [ref=e257] [cursor=pointer]
+                      - textbox "Client ID" [ref=e259]: 9-uhcKdhgWwh5E9IeIef2qGVqgB8C4LiVWfAhi_-n_0
+                    - generic [ref=e261]:
+                      - generic [ref=e264]: Sandbox URL
+                      - textbox "Sandbox URL" [ref=e265]: https://sandbox.procore.com/4283171/company/home
+                    - generic [ref=e267]:
+                      - generic [ref=e271]:
+                        - text: Redirect URI
+                        - img [ref=e272] [cursor=pointer]
+                      - textbox [ref=e274]: https://casais-rfid.web.app/api/procore/callback
+                    - emphasis [ref=e276]:
+                      - text: Use one line per URI.
+                      - text: http://localhost is the only acceptable non-HTTPS URI.
+                  - generic [ref=e277]:
+                    - generic [ref=e279]:
+                      - generic [ref=e282]: Client Secret
+                      - textbox "Client Secret" [ref=e283]: dswpLRVZ_7GfEGrD-Aao48nTRcCxTcZOuY2fZ8Om59E
+                    - generic [ref=e285]:
+                      - generic [ref=e288]: Client Secret
+                      - button "Reset client secret" [ref=e290] [cursor=pointer]:
+                        - generic [ref=e292]: Reset client secret
+                - contentinfo [ref=e293]:
+                  - generic [ref=e295]:
+                    - generic [ref=e296]: "*Required Field"
+                    - button "Update" [disabled]:
+                      - generic:
+                        - generic: Update
+    - text:                                                        
+  - contentinfo [ref=e64]:
+    - generic [ref=e65]: © 2026 Procore. All rights reserved
+    - generic [ref=e66]:
+      - link "System Status" [ref=e67] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e68] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e69] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e70] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9
+  - generic [ref=e301]:
+    - generic:
+      - generic:
+        - img "Loading"
+    - generic [ref=e302]:
+      - generic [ref=e303]: Reset Client Secret
+      - button "Close" [ref=e305] [cursor=pointer]:
+        - generic [ref=e306]:
+          - img
+    - region "Reset Client Secret" [ref=e307]:
+      - paragraph [ref=e308]: Here you may reset the client secret for your app.
+      - paragraph [ref=e309]: Important! The Client Secret for your App is only shown here once, ever. You will not be able to retrieve the same Client Secret from your Developer Portal account, ever. Therefore, it is imperative that you immediately store the displayed Client Secret in a safe and secure location. In the event the Client Secret is lost, you must generate a new one which invalidates the old one and may cause a temporary loss of functionality. In addition, your users will be required to re-authenticate before they are allowed to continue using your App.
+      - generic [ref=e310]:
+        - checkbox [ref=e312]
+        - generic [ref=e317]: I understand that generating a new secret will revoke my previous secret and all tokens generated using it.
+    - generic [ref=e319]:
+      - button "Cancel" [ref=e320] [cursor=pointer]:
+        - generic [ref=e322]: Cancel
+      - button "Reset My Client Secret" [disabled]:
+        - generic:
+          - generic: Reset My Client Secret

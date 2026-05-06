@@ -1,0 +1,11 @@
+- generic [ref=e2]:
+  - generic [ref=e3]: "404"
+  - generic [ref=e4]:
+    - text: We're sorry. This page is lost.
+    - text: "\"What happened?\""
+    - link "Learn more" [ref=e5] [cursor=pointer]:
+      - /url: https://support.procore.com/faq/why-did-i-receive-an-error-message-in-procore#404_-_File_not_found
+  - generic [ref=e6]:
+    - text: "If this problem persists, please contact us at:"
+    - link "support@procore.com" [ref=e7] [cursor=pointer]:
+      - /url: mailto:support@procore.com

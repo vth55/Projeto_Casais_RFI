@@ -1,0 +1,163 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e35]:
+      - link "Skip to main content" [ref=e5] [cursor=pointer]:
+        - /url: "#mount-point"
+      - banner [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - link "Company Home" [ref=e39] [cursor=pointer]:
+              - /url: /4283171/company/home
+              - img "Casais Fleet Intelligence"
+            - button "Casais Fleet Intelligence Select a Project" [ref=e41]:
+              - generic:
+                - generic: Casais Fleet Intelligence
+                - generic: Select a Project
+              - generic:
+                - img
+            - button "Company Tools Admin" [ref=e42]:
+              - generic:
+                - generic: Company Tools
+                - generic: Admin
+              - generic:
+                - img
+            - generic [ref=e44]:
+              - img [ref=e46]
+              - generic [ref=e48]:
+                - generic [ref=e49]: Favorites
+                - navigation "Favorites":
+                  - list
+            - button "Apps Select an App" [ref=e51]:
+              - generic:
+                - generic: Apps
+                - generic: Select an App
+              - generic:
+                - img
+          - generic [ref=e52]:
+            - button "Support & Feedback" [ref=e53]:
+              - img [ref=e54]
+            - button "Announcements" [ref=e56]:
+              - img [ref=e57]
+            - button "Account & Profile" [ref=e60]:
+              - generic [ref=e62]: VI
+    - main [ref=e6]:
+      - region "main" [ref=e7]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - navigation [ref=e64]:
+              - navigation "Breadcrumb" [ref=e65]:
+                - list [ref=e66]:
+                  - listitem [ref=e67]:
+                    - link "Casais Fleet Intelligence" [ref=e68] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/4283171/company/home
+                    - img [ref=e70]
+                  - listitem [ref=e72]:
+                    - link "App Management" [ref=e73] [cursor=pointer]:
+                      - /url: /webclients/host/companies/4283171/tools/app-installations
+                    - img [ref=e75]
+                  - listitem [ref=e77]: Casais Fleet Intelligence
+            - heading "C Casais Fleet Intelligence Update Available Uninstall" [level=1] [ref=e78]:
+              - generic [ref=e81]:
+                - generic [ref=e84]: C
+                - heading "Casais Fleet Intelligence" [level=1] [ref=e89]
+                - generic [ref=e90]:
+                  - button "Update Available" [ref=e91] [cursor=pointer]:
+                    - generic [ref=e93]: Update Available
+                  - button "Uninstall" [ref=e94] [cursor=pointer]:
+                    - generic [ref=e96]: Uninstall
+            - group [ref=e19]:
+              - generic [ref=e20]:
+                - generic [ref=e23] [cursor=pointer]: App Info
+                - generic [ref=e99] [cursor=pointer]: Setup Instructions
+                - generic [ref=e102] [cursor=pointer]: Permissions
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - heading "Description" [level=4] [ref=e109]
+              - paragraph [ref=e110]: This developer has not provided a description.
+            - generic [ref=e111]:
+              - generic [ref=e112]:
+                - text: Built By
+                - paragraph [ref=e113]: None
+              - generic [ref=e114]:
+                - text: Procore Marketplace
+                - paragraph [ref=e115]: None
+              - generic [ref=e116]:
+                - text: Email
+                - paragraph [ref=e117]: None
+              - generic [ref=e118]:
+                - text: Website
+                - paragraph [ref=e119]: None
+    - contentinfo [ref=e28]:
+      - generic [ref=e29]:
+        - link "Terms of Service" [ref=e30] [cursor=pointer]:
+          - /url: https://www.procore.com/fine-print/terms
+        - link "Privacy Policy" [ref=e31] [cursor=pointer]:
+          - /url: https://www.procore.com/fine-print/privacy-policy
+      - generic [ref=e32]:
+        - text: Powered By
+        - link "Procore Company Logo" [ref=e33] [cursor=pointer]:
+          - /url: http://www.procore.com
+          - img "Procore Company Logo" [ref=e34]
+  - dialog "Install App" [ref=e120]:
+    - generic [ref=e123]:
+      - generic [ref=e124]:
+        - generic [ref=e127]: Install App
+        - button "Close" [ref=e129] [cursor=pointer]:
+          - generic [ref=e130]:
+            - img
+      - region "Install App" [active] [ref=e131]:
+        - generic [ref=e133]:
+          - paragraph [ref=e134]:
+            - text: You are about to install Casais Fleet Intelligence to Casais Fleet Intelligence, with the following permissions.
+            - link "Learn more." [ref=e135] [cursor=pointer]:
+              - /url: https://support.procore.com/faq/what-is-developer-managed-service-account
+          - table [ref=e137]:
+            - rowgroup [ref=e138]:
+              - row "Tool Permission Level" [ref=e139]:
+                - columnheader "Tool" [ref=e140]:
+                  - generic [ref=e142]: Tool
+                - columnheader "Permission" [ref=e143]:
+                  - generic [ref=e145]: Permission
+                - columnheader "Level" [ref=e146]:
+                  - generic [ref=e148]: Level
+            - rowgroup [ref=e149]:
+              - row "Admin Admin Company" [ref=e150]:
+                - cell "Admin" [ref=e151]:
+                  - generic [ref=e152]: Admin
+                - cell "Admin" [ref=e153]:
+                  - generic [ref=e154]: Admin
+                - cell "Company" [ref=e155]:
+                  - generic [ref=e156]: Company
+              - row "Directory Read-Only Company" [ref=e157]:
+                - cell "Directory" [ref=e158]:
+                  - generic [ref=e159]: Directory
+                - cell "Read-Only" [ref=e160]:
+                  - generic [ref=e161]: Read-Only
+                - cell "Company" [ref=e162]:
+                  - generic [ref=e163]: Company
+              - row "Equipment Read-Only Company" [ref=e164]:
+                - cell "Equipment" [ref=e165]:
+                  - generic [ref=e166]: Equipment
+                - cell "Read-Only" [ref=e167]:
+                  - generic [ref=e168]: Read-Only
+                - cell "Company" [ref=e169]:
+                  - generic [ref=e170]: Company
+              - row "Daily Log Standard Project" [ref=e171]:
+                - cell "Daily Log" [ref=e172]:
+                  - generic [ref=e173]: Daily Log
+                - cell "Standard" [ref=e174]:
+                  - generic [ref=e175]: Standard
+                - cell "Project" [ref=e176]:
+                  - generic [ref=e177]: Project
+              - row "Equipment Read-Only Project" [ref=e178]:
+                - cell "Equipment" [ref=e179]:
+                  - generic [ref=e180]: Equipment
+                - cell "Read-Only" [ref=e181]:
+                  - generic [ref=e182]: Read-Only
+                - cell "Project" [ref=e183]:
+                  - generic [ref=e184]: Project
+      - generic [ref=e186]:
+        - button "Cancel" [ref=e187] [cursor=pointer]:
+          - generic [ref=e189]: Cancel
+        - button "Install" [ref=e190] [cursor=pointer]:
+          - generic [ref=e192]: Install

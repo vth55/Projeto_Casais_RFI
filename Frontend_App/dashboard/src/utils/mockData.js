@@ -277,30 +277,93 @@ export const createMockSessions = async () => {
   return results;
 };
 
-/**
- * Criar todos os dados mock
- */
+const generateValidationToken = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 32; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
+  return token;
+};
+
+export const createMockAlerts = async () => {
+  const now = Date.now();
+  const HOUR = 60 * 60 * 1000;
+
+  const fixtures = [
+    { type: 'LONG_SESSION', ageHours: 4, machineId: 'M_ESC_01', machineName: 'Escavadora 01 - Obra Porto', operatorId: 'OP_001', operatorName: 'João Silva', operatorEmail: 'joao.silva@casais.pt', obraId: 'obra_porto_2025', obraName: 'Obra Porto 2025', durationHours: 6.4 },
+    { type: 'LONG_SESSION', ageHours: 30, machineId: 'M_GRU_02', machineName: 'Grua 02 - Obra Lisboa', operatorId: 'OP_002', operatorName: 'Maria Santos', operatorEmail: 'maria.santos@casais.pt', obraId: 'obra_lisboa_2025', obraName: 'Obra Lisboa 2025', durationHours: 7.8 },
+    { type: 'AUTO_CLOSE', ageHours: 56, machineId: 'M_ESC_01', machineName: 'Escavadora 01 - Obra Porto', operatorId: 'OP_003', operatorName: 'Pedro Costa', operatorEmail: 'pedro.costa@casais.pt', obraId: 'obra_porto_2025', obraName: 'Obra Porto 2025', durationHours: 14.0 },
+  ];
+
+  const results = [];
+  for (const f of fixtures) {
+    const createdAt = new Date(now - f.ageHours * HOUR);
+    const startTime = new Date(createdAt.getTime() - f.durationHours * HOUR);
+    const id = `alert_${createdAt.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
+    const alert = {
+      id,
+      validationToken: generateValidationToken(),
+      type: f.type,
+      status: 'PENDING',
+      sessionId: `mock_session_${id}`,
+      machineId: f.machineId,
+      machineName: f.machineName,
+      operatorId: f.operatorId,
+      operatorName: f.operatorName,
+      operatorEmail: f.operatorEmail,
+      obraId: f.obraId,
+      obraName: f.obraName,
+      originalStartTime: Timestamp.fromDate(startTime),
+      originalEndTime: Timestamp.fromDate(createdAt),
+      originalDurationHours: f.durationHours,
+      correctedStartTime: null,
+      correctedEndTime: null,
+      correctedDurationHours: null,
+      createdAt: Timestamp.fromDate(createdAt),
+      validatedAt: null,
+      validatedBy: null,
+      emailSentAt: Timestamp.fromDate(createdAt),
+      emailResendCount: 0,
+      lastEmailResendAt: null,
+      operatorNotes: '',
+      auditLog: [
+        { action: 'CREATED', timestamp: Timestamp.fromDate(createdAt), details: `Alerta criado: ${f.type}` },
+      ],
+    };
+    try {
+      await setDoc(doc(db, `${BASE_PATH}/alerts`, id), alert);
+      results.push({ id, success: true });
+    } catch (error) {
+      results.push({ success: false, error: error.message });
+    }
+  }
+  return results;
+};
+
 export const createAllMockData = async () => {
-  console.log('🚀 A criar dados mock...');
+  console.log('A criar dados mock...');
 
   try {
     const machines = await createMockMachines();
-    console.log(`✅ ${machines.filter((m) => m.success).length} máquinas criadas`);
+    console.log(`${machines.filter((m) => m.success).length} máquinas criadas`);
 
     const operators = await createMockOperators();
-    console.log(`✅ ${operators.filter((o) => o.success).length} operadores criados`);
+    console.log(`${operators.filter((o) => o.success).length} operadores criados`);
 
     const sessions = await createMockSessions();
-    console.log(`✅ ${sessions.filter((s) => s.success).length} sessões criadas`);
+    console.log(`${sessions.filter((s) => s.success).length} sessões criadas`);
+
+    const alerts = await createMockAlerts();
+    console.log(`${alerts.filter((a) => a.success).length} alertas pendentes criados`);
 
     return {
       success: true,
       machines: machines.filter((m) => m.success).length,
       operators: operators.filter((o) => o.success).length,
       sessions: sessions.filter((s) => s.success).length,
+      alerts: alerts.filter((a) => a.success).length,
     };
   } catch (error) {
-    console.error('❌ Erro ao criar dados mock:', error);
+    console.error('Erro ao criar dados mock:', error);
     return {
       success: false,
       error: error.message,

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, Truck, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
-  Activity, Building2, Shield, ChevronLeft, ChevronRight,
+  Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -18,6 +18,7 @@ const navigation = [
     ],
   },
   { id: 'maquinas',    label: 'Equipamentos',   icon: Truck },
+  { id: 'estaleiro',   label: 'Estaleiro',      icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
     submenu: [
@@ -77,6 +78,7 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
 
   const activeSessions = sessions.filter(s => s.status === 'OPEN').length;
   const totalMachines = machines.length;
+  const estaleiroCount = machines.filter(m => m.obraId === 'estaleiro' || (!m.obraId && !m.location)).length;
 
   const userInitials = currentUser?.name
     ?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -224,6 +226,11 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
                   <div className="flex items-center gap-3">
                     <item.icon className={`w-4.5 h-4.5 ${itemActive ? 'text-primary-400' : 'text-slate-500'}`} style={{ width: '18px', height: '18px' }} />
                     <span>{item.label}</span>
+                    {item.id === 'estaleiro' && estaleiroCount > 0 && (
+                      <span className="ml-auto mr-1 min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        {estaleiroCount}
+                      </span>
+                    )}
                   </div>
                   {hasSubmenu && (
                     <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${menuExpanded ? 'rotate-180' : ''}`} />

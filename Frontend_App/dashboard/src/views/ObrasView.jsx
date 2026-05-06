@@ -822,23 +822,26 @@ const ObrasView = () => {
 
   // Garantir que obras existe
   const obrasList = obras || [];
+  // Separar obras reais do Estaleiro (virtual)
+  const estaleiro = obrasList.find(o => o.id === 'estaleiro');
+  const realObras = obrasList.filter(o => !o.isVirtual && o.id !== 'estaleiro');
 
   const filteredObras = useMemo(() => {
-    return obrasList.filter(obra => {
+    return realObras.filter(obra => {
       const matchesSearch = obra.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            obra.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            obra.city?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = filterStatus === 'all' || obra.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
-  }, [obrasList, searchTerm, filterStatus]);
+  }, [realObras, searchTerm, filterStatus]);
 
   const stats = useMemo(() => ({
-    total: obrasList.length,
-    active: obrasList.filter(o => o.status === 'ACTIVE').length,
-    planned: obrasList.filter(o => o.status === 'PLANNED').length,
-    completed: obrasList.filter(o => o.status === 'COMPLETED').length,
-  }), [obrasList]);
+    total: realObras.length,
+    active: realObras.filter(o => o.status === 'ACTIVE').length,
+    planned: realObras.filter(o => o.status === 'PLANNED').length,
+    completed: realObras.filter(o => o.status === 'COMPLETED').length,
+  }), [realObras]);
 
   const handleSave = async (data) => {
     if (editingObra) {
@@ -1048,30 +1051,47 @@ const ObrasView = () => {
           })()}
         </div>
       ) : (
-        filteredObras.length === 0 ? (
-          <EmptyState
-            icon={Building2}
-            title="Sem obras"
-            description="Adicione a primeira obra para começar a gerir localizações."
-            actionLabel="Adicionar Obra"
-            onAction={() => setShowModal(true)}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredObras.map(obra => (
-              <ObraCard
-                key={obra.id}
-                obra={obra}
-                machines={machines}
-                operators={operators}
-                procoreProject={matchObraToProcore(obra).procoreProject}
-                onViewDetails={handleViewDetails}
-                onEdit={handleEdit}
-                onOpenMap={handleOpenMap}
-              />
-            ))}
-          </div>
-        )
+        <>
+          {filteredObras.length === 0 ? (
+            <EmptyState
+              icon={Building2}
+              title="Sem obras"
+              description="Adicione a primeira obra para começar a gerir localizações."
+              actionLabel="Adicionar Obra"
+              onAction={() => setShowModal(true)}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredObras.map(obra => (
+                <ObraCard
+                  key={obra.id}
+                  obra={obra}
+                  machines={machines}
+                  operators={operators}
+                  procoreProject={matchObraToProcore(obra).procoreProject}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleEdit}
+                  onOpenMap={handleOpenMap}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Link discreto para o Estaleiro */}
+          {(() => {
+            const estCount = machines.filter(m => m.obraId === 'estaleiro' || (!m.obraId && !m.location)).length;
+            if (estCount === 0) return null;
+            return (
+              <button
+                onClick={() => setActiveView('estaleiro')}
+                className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 text-sm text-amber-700 hover:bg-amber-50 hover:border-amber-400 transition-colors"
+              >
+                <span className="text-base">🏭</span>
+                <span>{estCount} equipamento{estCount !== 1 ? 's' : ''} no Estaleiro →</span>
+              </button>
+            );
+          })()}
+        </>
       )}
 
       {/* Modal de Formulário */}

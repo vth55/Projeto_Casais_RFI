@@ -1,0 +1,1099 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "My Apps" [ref=e9] [cursor=pointer]:
+        - /url: /developers
+      - link "Docs" [ref=e10] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e11] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e12] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e13]:
+      - link "Help" [ref=e14] [cursor=pointer]:
+        - /url: /support
+        - img [ref=e15]
+      - generic [ref=e22] [cursor=pointer]:
+        - img "Bell Outline" [ref=e23]
+        - generic [ref=e26]: "1"
+      - link "VI" [ref=e32] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e33]:
+    - generic [ref=e35]:
+      - generic:
+        - generic:
+          - img "Loading"
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - navigation [ref=e40]:
+            - navigation "Breadcrumb" [ref=e41]:
+              - link "Apps" [ref=e42] [cursor=pointer]:
+                - /url: /developer_apps
+                - generic [ref=e43]: Apps
+              - img [ref=e45]
+              - link "Casais Fleet Intelligence" [ref=e47] [cursor=pointer]:
+                - /url: /developer_apps/bb391c31-1589-4bc0-a9ec-dc783e673274
+                - generic [ref=e48]: Casais Fleet Intelligence
+          - heading "Casais Fleet Intelligence" [level=1] [ref=e50]
+        - generic [ref=e52]:
+          - generic [ref=e55]:
+            - heading "App Management" [level=3] [ref=e56]
+            - generic [ref=e57]:
+              - generic [ref=e61] [cursor=pointer]: Configuration Builder
+              - generic [ref=e65] [cursor=pointer]: Versions
+              - generic [ref=e69] [cursor=pointer]: App Settings
+              - generic [ref=e73] [cursor=pointer]: OAuth Credentials
+              - generic [ref=e77] [cursor=pointer]: Collaborators
+              - generic [ref=e81] [cursor=pointer]: Performance Metrics
+          - generic [ref=e300]:
+            - generic:
+              - generic:
+                - img "Loading"
+            - generic [ref=e301]:
+              - generic [ref=e302]:
+                - generic [ref=e303]:
+                  - generic [ref=e304]: Version 0.2.0
+                  - generic [ref=e305]: Ready for Testing
+                - generic [ref=e306]:
+                  - button "View Manifest" [ref=e307] [cursor=pointer]:
+                    - generic [ref=e309]: View Manifest
+                  - button "Promote Version" [ref=e311] [cursor=pointer]:
+                    - generic [ref=e313]: Promote Version
+                  - button "Save Version" [ref=e315] [cursor=pointer]:
+                    - generic [ref=e317]: Save Version
+              - generic [ref=e319]:
+                - text: Installation Keys
+                - generic [ref=e320]: Use these keys to do a custom installation of your app on Procore.
+                - generic [ref=e321]:
+                  - generic [ref=e323]:
+                    - generic [ref=e324]: "Sandbox App Version Key (v0.2.0):"
+                    - generic [ref=e325]:
+                      - text: c5a68b6e-343c-43df-9e47-ce944d64102e
+                      - button [ref=e326] [cursor=pointer]:
+                        - generic [ref=e327]:
+                          - img
+                  - generic [ref=e329]:
+                    - generic [ref=e330]: Sandbox URL
+                    - generic [ref=e331]:
+                      - link "sandbox.procore.com" [ref=e332] [cursor=pointer]:
+                        - /url: https://sandbox.procore.com/4283171/company/home
+                      - button [ref=e333] [cursor=pointer]:
+                        - generic [ref=e334]:
+                          - img
+              - generic [ref=e337]:
+                - generic [ref=e338]:
+                  - img [ref=e340]
+                  - generic [ref=e342]:
+                    - generic [ref=e343]: Embedded Components
+                    - generic [ref=e344]: Customize the display of your application by adding components.
+                - generic [ref=e346]:
+                  - img [ref=e349]
+                  - generic [ref=e364]:
+                    - generic [ref=e365]: Components determine your app's display. Choose Side panel, full-screen, or both. Apps without components sync data between Procore and external systems.
+                    - button "Add Component" [ref=e367] [cursor=pointer]:
+                      - generic [ref=e369]: Add Component
+              - generic [ref=e372]:
+                - generic [ref=e373]:
+                  - img [ref=e390]
+                  - generic [ref=e377]:
+                    - generic [ref=e378]: Data Connector Components
+                    - generic [ref=e379]: Choose the appropriate method for your data connection app based on your authentication and access requirements.
+                - generic [ref=e392]:
+                  - table [ref=e394]:
+                    - rowgroup [ref=e395]:
+                      - row "Component Type" [ref=e396]:
+                        - columnheader "Component Type" [ref=e397]:
+                          - generic [ref=e399]: Component Type
+                    - rowgroup [ref=e400]:
+                      - row "User Level Authentication" [ref=e401]:
+                        - cell "User Level Authentication" [ref=e402]:
+                          - generic [ref=e403]: User Level Authentication
+                      - row "Service Account Authentication" [ref=e404]:
+                        - cell "Service Account Authentication" [ref=e405]:
+                          - generic [ref=e406]: Service Account Authentication
+                  - navigation [ref=e408]:
+                    - generic [ref=e409]:
+                      - generic [ref=e412] [cursor=pointer]: Company Level
+                      - generic [ref=e415] [cursor=pointer]: Project Level
+                  - table [ref=e417]:
+                    - rowgroup [ref=e418]:
+                      - row "Tool Read-only Standard Admin" [ref=e419]:
+                        - columnheader "Tool" [ref=e420]:
+                          - generic [ref=e422]: Tool
+                        - columnheader "Read-only" [ref=e423]:
+                          - generic [ref=e426]: Read-only
+                        - columnheader "Standard" [ref=e427]:
+                          - generic [ref=e430]: Standard
+                        - columnheader "Admin" [ref=e431]:
+                          - generic [ref=e434]: Admin
+                    - rowgroup [ref=e435]:
+                      - row "Admin" [ref=e436]:
+                        - cell "Admin" [ref=e437]:
+                          - generic [ref=e438]: Admin
+                        - cell [ref=e439]
+                        - cell [ref=e440]
+                        - cell [ref=e441]:
+                          - img [ref=e444]
+                      - row "Directory" [ref=e446]:
+                        - cell "Directory" [ref=e447]:
+                          - generic [ref=e448]: Directory
+                        - cell [ref=e449]:
+                          - img [ref=e452]
+                        - cell [ref=e454]
+                        - cell [ref=e455]
+                      - row "Equipment" [ref=e1558]:
+                        - cell "Equipment" [ref=e1559]:
+                          - generic [ref=e1560]: Equipment
+                        - cell [ref=e1561]:
+                          - img [ref=e1564]
+                        - cell [ref=e1566]
+                        - cell [ref=e1567]
+                  - button "Edit Permissions" [ref=e457] [cursor=pointer]:
+                    - generic [ref=e459]: Edit Permissions
+              - generic [ref=e383]:
+                - img [ref=e385]
+                - generic [ref=e387]:
+                  - generic [ref=e388]: Instructions and Post Installation Notes
+                  - generic [ref=e389]: Give specific instructions that must be carried out by the Procore user when installing and setting up the App.
+    - text:                                                        
+  - contentinfo [ref=e174]:
+    - generic [ref=e175]: © 2026 Procore. All rights reserved
+    - generic [ref=e176]:
+      - link "System Status" [ref=e177] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e178] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e179] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e180] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9
+  - generic:
+    - generic:
+      - dialog:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button "Close"
+        - region:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading "Data Connector Components" [level=1]
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - heading "Add Data Connector Component" [level=2]
+                              - generic: Data Connector App enables you to create, update, and read data from Procore to the connected platform through a Client ID and Client Secret
+                        - generic:
+                          - generic:
+                            - heading "Component Type*" [level=3]:
+                              - text: Component Type
+                              - generic: "*"
+                            - img
+                          - generic:
+                            - checkbox "User Level Authentication | The integration will interact on behalf of a user and limit the API response body based on their Procore permissions." [checked] [disabled]
+                            - generic: User Level Authentication | The integration will interact on behalf of a user and limit the API response body based on their Procore permissions.
+                          - generic:
+                            - checkbox "Service Account Authentication | The integration will use a service account to interact with Procore items." [checked]
+                            - generic: Service Account Authentication | The integration will use a service account to interact with Procore items.
+                        - generic:
+                          - heading "Permissions for Service Account" [level=2]
+                          - generic:
+                            - text: Determine how your app interacts with Procore tools. Select the Permissions that are required to install and use your app.
+                            - link "Click here for more information.":
+                              - /url: /documentation/developer-managed-service-accounts
+                        - generic:
+                          - navigation:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Company Level
+                              - generic:
+                                - generic:
+                                  - generic: Project Level
+                        - generic:
+                          - table:
+                            - rowgroup:
+                              - row "Tool None Read-only Standard Admin":
+                                - columnheader "Tool":
+                                  - generic:
+                                    - generic: Tool
+                                - columnheader "None":
+                                  - generic:
+                                    - generic:
+                                      - generic: None
+                                - columnheader "Read-only":
+                                  - generic:
+                                    - generic:
+                                      - generic: Read-only
+                                - columnheader "Standard":
+                                  - generic:
+                                    - generic:
+                                      - generic: Standard
+                                - columnheader "Admin":
+                                  - generic:
+                                    - generic:
+                                      - generic: Admin
+                            - rowgroup:
+                              - row "Account Onboarding":
+                                - cell "Account Onboarding":
+                                  - generic: Account Onboarding
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Admin":
+                                - cell "Admin":
+                                  - generic: Admin
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                              - row "Analytics":
+                                - cell "Analytics":
+                                  - generic: Analytics
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "App Management":
+                                - cell "App Management":
+                                  - generic: App Management
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Assets":
+                                - cell "Assets":
+                                  - generic: Assets
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Assignable QR Codes":
+                                - cell "Assignable QR Codes":
+                                  - generic: Assignable QR Codes
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Bid Board":
+                                - cell "Bid Board":
+                                  - generic: Bid Board
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Capital Planning":
+                                - cell "Capital Planning":
+                                  - generic: Capital Planning
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Concierge":
+                                - cell "Concierge":
+                                  - generic: Concierge
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Connection Manager":
+                                - cell "Connection Manager":
+                                  - generic: Connection Manager
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Cost Catalog":
+                                - cell "Cost Catalog":
+                                  - generic: Cost Catalog
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Cost Modeling":
+                                - cell "Cost Modeling":
+                                  - generic: Cost Modeling
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Custom Project Tools":
+                                - cell "Custom Project Tools":
+                                  - generic: Custom Project Tools
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Developer Studio":
+                                - cell "Developer Studio":
+                                  - generic: Developer Studio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Direct Costs":
+                                - cell "Direct Costs":
+                                  - generic: Direct Costs
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Directory":
+                                - cell "Directory":
+                                  - generic: Directory
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Document Management":
+                                - cell "Document Management":
+                                  - generic: Document Management
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Documents":
+                                - cell "Documents":
+                                  - generic: Documents
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "ERP Integrations":
+                                - cell "ERP Integrations":
+                                  - generic: ERP Integrations
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Equipment":
+                                - cell "Equipment":
+                                  - generic: Equipment
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Functions":
+                                - cell "Functions":
+                                  - generic: Functions
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Funding Sources":
+                                - cell "Funding Sources":
+                                  - generic: Funding Sources
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Insights":
+                                - cell "Insights":
+                                  - generic: Insights
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Inspections":
+                                - cell "Inspections":
+                                  - generic: Inspections
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Kiosk":
+                                - cell "Kiosk":
+                                  - generic: Kiosk
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Link":
+                                - cell "Link":
+                                  - generic: Link
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Maps":
+                                - cell "Maps":
+                                  - generic: Maps
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Payments":
+                                - cell "Payments":
+                                  - generic: Payments
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Permissions":
+                                - cell "Permissions":
+                                  - generic: Permissions
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Planroom":
+                                - cell "Planroom":
+                                  - generic: Planroom
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Portfolio":
+                                - cell "Portfolio":
+                                  - generic: Portfolio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Prequalification Portal":
+                                - cell "Prequalification Portal":
+                                  - generic: Prequalification Portal
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Prequalifications":
+                                - cell "Prequalifications":
+                                  - generic: Prequalifications
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Programs":
+                                - cell "Programs":
+                                  - generic: Programs
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Project Status Snapshots":
+                                - cell "Project Status Snapshots":
+                                  - generic: Project Status Snapshots
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                              - row "Qualifications":
+                                - cell "Qualifications":
+                                  - generic: Qualifications
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Rates":
+                                - cell "Rates":
+                                  - generic: Rates
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Reports":
+                                - cell "Reports":
+                                  - generic: Reports
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Schedules":
+                                - cell "Schedules":
+                                  - generic: Schedules
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Timecard":
+                                - cell "Timecard":
+                                  - generic: Timecard
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Timesheets":
+                                - cell "Timesheets":
+                                  - generic: Timesheets
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Webhooks API":
+                                - cell "Webhooks API":
+                                  - generic: Webhooks API
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [disabled]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Workflows":
+                                - cell "Workflows":
+                                  - generic: Workflows
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                              - row "Workforce Planning":
+                                - cell "Workforce Planning":
+                                  - generic: Workforce Planning
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio [checked]
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - radio
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - button "Cancel":
+                            - generic:
+                              - generic: Cancel
+                        - button "Save Component" [active]:
+                          - generic:
+                            - generic: Save Component

@@ -1,0 +1,53 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e101]:
+    - link "Skip to main content" [ref=e102] [cursor=pointer]:
+      - /url: "#mount-point"
+    - banner [ref=e103]:
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - link "Company Home" [ref=e106] [cursor=pointer]:
+            - /url: /4283171/company/home
+            - img "Casais Fleet Intelligence"
+          - button "Casais Fleet Intelligence Select a Project" [ref=e108] [cursor=pointer]:
+            - generic:
+              - generic: Casais Fleet Intelligence
+              - generic: Select a Project
+            - generic:
+              - img
+          - button "Company Tools Equipment" [ref=e109] [cursor=pointer]:
+            - generic:
+              - generic: Company Tools
+              - generic: Equipment
+            - generic:
+              - img
+          - generic [ref=e111]:
+            - img [ref=e113]
+            - generic [ref=e115]:
+              - generic [ref=e116]: Favorites
+              - navigation "Favorites":
+                - list
+          - button "Apps Select an App" [ref=e118] [cursor=pointer]:
+            - generic:
+              - generic: Apps
+              - generic: Select an App
+            - generic:
+              - img
+        - generic [ref=e119]:
+          - button "Support & Feedback" [ref=e120] [cursor=pointer]:
+            - img [ref=e121]
+          - button "Announcements" [ref=e123] [cursor=pointer]:
+            - img [ref=e124]
+          - button "Account & Profile" [ref=e127] [cursor=pointer]:
+            - generic [ref=e129]: VI
+  - main [ref=e3]:
+    - img [ref=e135]
+  - contentinfo [ref=e94]:
+    - link "Terms of Service" [ref=e95] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e96] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e98]:
+      - text: Powered By
+      - link "Procore" [ref=e99] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e100]

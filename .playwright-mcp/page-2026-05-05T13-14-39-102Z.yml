@@ -1,0 +1,23 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e5] [cursor=pointer]:
+    - /url: "#mount-point"
+  - main [ref=e6]:
+    - region "main" [ref=e7]:
+      - generic [ref=e12]:
+        - img "Loading" [ref=e13]
+        - generic [ref=e15]:
+          - img "Loading" [ref=e16]
+          - img "Loading" [ref=e17]
+        - group [ref=e19]:
+          - generic [ref=e23] [cursor=pointer]: App Info
+  - contentinfo [ref=e28]:
+    - generic [ref=e29]:
+      - link "Terms of Service" [ref=e30] [cursor=pointer]:
+        - /url: https://www.procore.com/fine-print/terms
+      - link "Privacy Policy" [ref=e31] [cursor=pointer]:
+        - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e32]:
+      - text: Powered By
+      - link "Procore Company Logo" [ref=e33] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore Company Logo" [ref=e34]

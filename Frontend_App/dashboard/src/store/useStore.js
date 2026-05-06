@@ -938,10 +938,12 @@ const useStore = create((set, get) => ({
     if (!db) return { success: false, error: 'DB não inicializado' };
     try {
       const { obras } = get();
-      const obra = obras.find(o => o.id === obraId);
+      const isEstaleiro = obraId === 'estaleiro' || !obraId;
+      const obra = isEstaleiro ? null : obras.find(o => o.id === obraId);
 
       for (const machineId of machineIds) {
         await updateDoc(doc(db, `${basePath}/machines`, machineId), {
+          obraId: isEstaleiro ? 'estaleiro' : (obra?.id || obraId),
           location: obra ? {
             workId: obra.id,
             workName: obra.name,

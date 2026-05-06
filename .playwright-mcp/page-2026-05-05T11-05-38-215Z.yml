@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e15] [cursor=pointer]:
+            - img
+          - heading "Equipment" [level=1] [ref=e16]
+          - navigation [ref=e18]:
+            - generic [ref=e19]:
+              - generic [ref=e22]: Registry
+              - generic [ref=e25] [cursor=pointer]: Recycle Bin
+        - generic [ref=e27]:
+          - button "Import" [ref=e29] [cursor=pointer]:
+            - generic [ref=e31]: Import
+          - button "Create" [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - img
+              - generic [ref=e36]: Create
+      - generic [ref=e37]:
+        - generic [ref=e39]:
+          - textbox "Search" [ref=e40]
+          - button [ref=e43] [cursor=pointer]:
+            - generic [ref=e44]:
+              - img
+        - generic [ref=e47]:
+          - button "Add Filter " [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: Add Filter
+            - generic [ref=e51]: 
+          - generic:
+            - generic:
+              - generic [ref=e52] [cursor=pointer]: Category
+              - generic [ref=e53] [cursor=pointer]: Make
+              - generic [ref=e54] [cursor=pointer]: Model
+              - generic [ref=e55] [cursor=pointer]: Project
+              - generic [ref=e56] [cursor=pointer]: Status
+              - generic [ref=e57] [cursor=pointer]: Type
+              - generic [ref=e58] [cursor=pointer]: Year
+              - generic [ref=e59] [cursor=pointer]: Next Service Date
+              - generic [ref=e60] [cursor=pointer]: Last Service Date
+      - button "Bulk Actions" [ref=e63] [cursor=pointer]:
+        - generic: Bulk Actions
+      - generic [ref=e68]:
+        - generic [ref=e70]:
+          - img [ref=e72]
+          - generic [ref=e74]: Loading...
+        - generic [ref=e75]:
+          - img [ref=e77]
+          - generic [ref=e92]: There is no equipment to display right now. Once your team adds equipment, you can access them here.
+  - contentinfo [ref=e94]:
+    - link "Terms of Service" [ref=e95] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e96] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e98]:
+      - text: Powered By
+      - link "Procore" [ref=e99] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e100]

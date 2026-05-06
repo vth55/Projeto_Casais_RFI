@@ -1,0 +1,5 @@
+- generic [ref=e2]:
+  - heading "Procore conectado" [level=1] [ref=e3]
+  - paragraph [ref=e4]: A integração com o Procore foi estabelecida com sucesso. Já podes voltar à app Casais Fleet Intelligence.
+  - link "Voltar à app" [ref=e5] [cursor=pointer]:
+    - /url: https://casais-rfid.web.app

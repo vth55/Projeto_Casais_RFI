@@ -89,6 +89,8 @@ export default defineConfig({
     }),
   ],
   build: {
+    outDir: '../../Backend_Cloud/public',
+    emptyOutDir: true,
     // Aumentar limite de aviso para 600KB
     chunkSizeWarningLimit: 600,
     rollupOptions: {

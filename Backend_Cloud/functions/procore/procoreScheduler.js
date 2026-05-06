@@ -21,6 +21,7 @@ const {
     PROCORE_CLIENT_SECRET,
     PROCORE_COMPANY_ID,
 } = require('./procoreBridge');
+const { projectProcoreToPwa } = require('./procorePwaProjector');
 
 const APP_ID = 'casais-rfid';
 const INTEGRATION_DOC_PATH = `artifacts/${APP_ID}/public/data/integrations/procore`;
@@ -104,6 +105,15 @@ const procoreScheduledSync = onSchedule(
                     `projects=${result.projects}, equipment=${result.equipment}, directory=${result.directory}`
                 );
             }
+
+            // Projectar dados Procore → PWA (machine stubs + pending_operators)
+            try {
+                const proj = await projectProcoreToPwa();
+                console.log(`[procoreScheduler] projection done — ${JSON.stringify(proj)}`);
+            } catch (projErr) {
+                console.error('[procoreScheduler] projection error (não crítico):', projErr.message);
+            }
+
             return null;
         } catch (err) {
             console.error('[procoreScheduler] sync top-level error:', err);

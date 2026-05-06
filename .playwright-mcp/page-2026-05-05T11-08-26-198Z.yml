@@ -1,0 +1,21 @@
+- generic [active] [ref=e1]:
+  - main [ref=e5]:
+    - generic [ref=e12]:
+      - navigation [ref=e14]:
+        - generic [ref=e15] [cursor=pointer]: Equipment
+        - img [ref=e17]
+        - generic [ref=e19]: New Equipment
+      - heading "Create Equipment" [level=1] [ref=e22]
+      - generic [ref=e27]:
+        - img [ref=e29]
+        - generic [ref=e31]: Loading...
+  - contentinfo [ref=e32]:
+    - link "Terms of Service" [ref=e33] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e34] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e36]:
+      - text: Powered By
+      - link "Procore" [ref=e37] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e38]

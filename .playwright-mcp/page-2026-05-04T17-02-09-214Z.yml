@@ -1,0 +1,225 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - dialog "Cookie Information banner" [active] [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - heading "The website uses cookies" [level=2] [ref=e7]
+          - generic [ref=e8]:
+            - text: The details regarding the types of cookies, their purpose and the third parties involved are described below in our Cookie Policy.
+            - text: Please click on “Accept All” to consent to our usage of cookies as described in the Cookie Policy in order to have the best possible experience on our websites.
+            - text: You can also set your preferences or reject cookies (except for strictly necessary cookies).
+            - link "Read more about cookies" [ref=e9] [cursor=pointer]:
+              - /url: javascript:TogglePage(this, 'coiPage-3');
+            - link "Google privacy policy opens in new tab" [ref=e10] [cursor=pointer]:
+              - /url: https://business.safety.google/privacy/
+              - text: Google privacy policy
+              - generic [ref=e11]: opens in new tab
+          - button "Show details" [ref=e13] [cursor=pointer]
+        - navigation "menu" [ref=e14]:
+          - generic [ref=e15]:
+            - button "Decline all" [ref=e16] [cursor=pointer]
+            - button "Accept all" [ref=e17] [cursor=pointer]
+          - generic [ref=e18]:
+            - generic [ref=e21]:
+              - checkbox "Necessary" [checked] [disabled] [ref=e22]
+              - text: Necessary
+            - generic [ref=e26]:
+              - checkbox "Functional" [ref=e27] [cursor=pointer]
+              - text: Functional
+            - generic [ref=e31]:
+              - checkbox "Statistical" [ref=e32] [cursor=pointer]
+              - text: Statistical
+            - generic [ref=e36]:
+              - checkbox "Marketing" [ref=e37] [cursor=pointer]
+              - text: Marketing
+      - text: ", ,"
+  - banner [ref=e39]:
+    - banner [ref=e40]:
+      - generic [ref=e41]:
+        - link "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e45] [cursor=pointer]:
+          - /url: https://trackunit.com
+          - img "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e46]
+        - navigation "Menu" [ref=e50]:
+          - button "Menu Toggle" [ref=e51] [cursor=pointer]:
+            - img [ref=e53]
+            - img [ref=e55]
+  - generic [ref=e63]:
+    - img "Large, stylized numbers 404 in blue, orange, and red on a light gray background, suggesting modern construction IoT design." [ref=e66]
+    - heading "Looks like You are Lost" [level=1] [ref=e69]
+    - paragraph [ref=e76]: Sorry, the page you are looking for doesn’t exist or has been moved.
+    - link "Return Home" [ref=e80] [cursor=pointer]:
+      - /url: https://trackunit.com/
+      - generic [ref=e82]: Return Home
+  - contentinfo [ref=e83]:
+    - generic [ref=e85]:
+      - generic [ref=e86]:
+        - link "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e90] [cursor=pointer]:
+          - /url: https://trackunit.com
+          - img "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e91]
+        - generic [ref=e92]:
+          - generic [ref=e94]: Platform
+          - link "Trackunit IrisX" [ref=e98] [cursor=pointer]:
+            - /url: https://trackunit.com/irisx
+          - generic [ref=e104]: Software
+          - link "Trackunit Manager" [ref=e108] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-manager/
+          - link "Trackunit Go" [ref=e112] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-go/
+          - link "Trackunit On" [ref=e116] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-on/
+          - generic [ref=e122]: Integrations
+          - link "Marketplace" [ref=e126] [cursor=pointer]:
+            - /url: https://new.manager.trackunit.com/marketplace
+          - link "About Marketplace" [ref=e130] [cursor=pointer]:
+            - /url: https://trackunit.com/marketplace/
+          - link "OEM Integrations" [ref=e134] [cursor=pointer]:
+            - /url: https://trackunit.com/oem-integrations/
+          - generic [ref=e140]: IoT & Telematics
+          - link "Trackunit Raw" [ref=e144] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-raw/
+          - link "Trackunit Spot" [ref=e148] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-spot/
+          - link "Trackunit Pass" [ref=e152] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-pass/
+          - link "Trackunit Kin" [ref=e156] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-kin/
+          - link "Trackunit Beam" [ref=e160] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-beam/
+        - generic [ref=e161]:
+          - generic [ref=e163]: Industries
+          - link "OEM" [ref=e167] [cursor=pointer]:
+            - /url: https://trackunit.com/oem/
+          - link "Rental" [ref=e171] [cursor=pointer]:
+            - /url: https://trackunit.com/rental/
+          - link "Contractor" [ref=e175] [cursor=pointer]:
+            - /url: https://trackunit.com/contractor/
+          - generic [ref=e181]: Solutions
+          - link "Construction Telematics" [ref=e185] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/telematics/
+          - link "Fleet Management" [ref=e189] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/fleet-management/
+          - link "Digital jobsites" [ref=e193] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/sites/
+          - link "Fleet Utilization" [ref=e197] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/fleet-utilization/
+          - link "Equipment Maintenance" [ref=e201] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/equipment-maintenance/
+          - link "Theft Defense" [ref=e205] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/theft-protection/
+          - link "Unlock Sustainability" [ref=e209] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/sustainability/
+          - link "Digital Access Management" [ref=e213] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/access-management/
+          - link "Specialty Equipment Solutions" [ref=e217] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/specialty-equipment-solutions/
+          - generic [ref=e223]: Network
+          - link "Trackunit Network" [ref=e227] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-network/
+        - generic [ref=e228]:
+          - generic [ref=e230]: Customer Support
+          - link "Help Center" [ref=e234] [cursor=pointer]:
+            - /url: https://help.trackunit.com/en/
+          - link "Customer Success" [ref=e238] [cursor=pointer]:
+            - /url: https://trackunit.com/customer-success/
+          - link "Video Tutorials" [ref=e242] [cursor=pointer]:
+            - /url: https://trackunit.com/section/mastering-manager/
+          - link "Contact Support" [ref=e246] [cursor=pointer]:
+            - /url: https://help.trackunit.com/en/articles/238021-how-to-contact-customer-support-through-the-messenger
+          - generic [ref=e252]: Document Library
+          - link "Flyers" [ref=e256] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#catalogue
+          - link "Installation Guides" [ref=e260] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#guides
+          - link "Regulations & Safety" [ref=e264] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#regulations
+          - link "EU Data Act" [ref=e268] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#key-documents
+          - generic [ref=e274]: Development
+          - link "Developer" [ref=e278] [cursor=pointer]:
+            - /url: https://developers.trackunit.com/
+          - link "Platform Status" [ref=e282] [cursor=pointer]:
+            - /url: https://status.trackunit.com/
+        - generic [ref=e287]:
+          - generic [ref=e289]: Events & Webinar
+          - link "Video Library" [ref=e293] [cursor=pointer]:
+            - /url: https://trackunit.com/webinars/
+          - link "Webinars & events" [ref=e297] [cursor=pointer]:
+            - /url: https://trackunit.com/events/
+          - generic [ref=e303]: General
+          - link "Customer Stories" [ref=e307] [cursor=pointer]:
+            - /url: https://trackunit.com/section/success-stories/
+          - link "Product Updates" [ref=e311] [cursor=pointer]:
+            - /url: https://trackunit.com/section/product-updates/
+          - link "Product Portal" [ref=e315] [cursor=pointer]:
+            - /url: https://trackunit.com/product-portal/
+      - generic [ref=e320]:
+        - generic [ref=e323]:
+          - navigation "Menu" [ref=e324]:
+            - list [ref=e325]:
+              - listitem [ref=e326]:
+                - link "English" [ref=e327] [cursor=pointer]:
+                  - /url: https://trackunit.com/
+                  - generic [ref=e328]: English
+                  - generic [ref=e329]:
+                    - generic: 
+          - text: 
+        - generic [ref=e330]:
+          - generic [ref=e332]: About
+          - link "The Trackunit Story" [ref=e336] [cursor=pointer]:
+            - /url: https://trackunit.com/about/
+          - link "Purpose" [ref=e340] [cursor=pointer]:
+            - /url: https://trackunit.com/about/purpose/
+          - link "Leadership & Board" [ref=e344] [cursor=pointer]:
+            - /url: https://trackunit.com/leadership-and-board/
+          - link "Press Release" [ref=e348] [cursor=pointer]:
+            - /url: https://trackunit.com/press-releases/
+          - link "Media Library" [ref=e352] [cursor=pointer]:
+            - /url: https://trackunit.com/media-library/
+          - link "Contact" [ref=e356] [cursor=pointer]:
+            - /url: https://trackunit.com/about/contact/
+        - generic [ref=e357]:
+          - generic [ref=e359]: Careers
+          - link "Working at Trackunit" [ref=e363] [cursor=pointer]:
+            - /url: https://trackunit.com/careers/
+          - link "Career Hub" [ref=e367] [cursor=pointer]:
+            - /url: https://careers.trackunit.com/
+          - link "Open Positions" [ref=e371] [cursor=pointer]:
+            - /url: https://careers.trackunit.com/jobs
+          - generic [ref=e377]: Partner
+          - link "Become a partner" [ref=e381] [cursor=pointer]:
+            - /url: https://trackunit.com/become-a-partner/
+        - generic [ref=e382]:
+          - generic [ref=e384]: Social
+          - link "Linkedin" [ref=e388] [cursor=pointer]:
+            - /url: http://linkedin.com/company/trackunit-a-s/
+          - link "Facebook" [ref=e392] [cursor=pointer]:
+            - /url: https://www.facebook.com/Trackunit.official/
+          - link "Instagram" [ref=e396] [cursor=pointer]:
+            - /url: https://www.instagram.com/trackunit/
+          - link "YouTube" [ref=e400] [cursor=pointer]:
+            - /url: https://www.youtube.com/c/Trackunit_Official
+        - generic [ref=e405]:
+          - generic [ref=e407]: Pricing
+          - link "Get a Quote" [ref=e411] [cursor=pointer]:
+            - /url: https://trackunit.com/get-a-quote/
+          - link "Get Contacted" [ref=e415] [cursor=pointer]:
+            - /url: https://trackunit.com/get-contacted/
+          - link "Pricing Plans" [ref=e419] [cursor=pointer]:
+            - /url: https://trackunit.com/pricing/
+          - link "Schedule a Demo" [ref=e423] [cursor=pointer]:
+            - /url: https://trackunit.com/request-demo/
+      - generic [ref=e424]:
+        - link "© 2026 Trackunit Corporation. All rights reserved." [ref=e429] [cursor=pointer]:
+          - /url: https://trackunit.com/irisx
+        - generic [ref=e430]:
+          - link "Terms & Conditions" [ref=e434] [cursor=pointer]:
+            - /url: https://trackunit.com/terms-and-conditions/
+          - link "Privacy" [ref=e438] [cursor=pointer]:
+            - /url: https://trackunit.com/privacy/
+          - link "Cookie Policy" [ref=e442] [cursor=pointer]:
+            - /url: https://trackunit.com/cookie-policy/
+          - link "Modern Slavery Policy" [ref=e446] [cursor=pointer]:
+            - /url: https://content.trackunit.com/hubfs/PDF%20Assets/Legal%20Documents/Trackunit%20%7C%20Policy%20%7C%20Modern%20Slavery%20%7C%20EN.pdf
+          - link "Communication Policy" [ref=e450] [cursor=pointer]:
+            - /url: https://trackunit.com/communication-policy/
+  - generic [ref=e451]: mobile

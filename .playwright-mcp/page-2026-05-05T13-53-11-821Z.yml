@@ -1,0 +1,216 @@
+- generic [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e9]:
+          - link "" [ref=e11]:
+            - /url: /4283171/company/home/configure_tab
+            - generic [ref=e12]: 
+          - heading "Portfolio" [level=1] [ref=e14]
+          - list [ref=e15]:
+            - listitem [ref=e16]:
+              - generic [ref=e17]: Projects
+            - listitem [ref=e18]:
+              - link "Executive Dashboard" [ref=e19] [cursor=pointer]:
+                - /url: /4283171/company/home/executive_dashboard
+                - generic "Executive Dashboard" [ref=e20]
+            - listitem [ref=e21]:
+              - link "Health Dashboard" [ref=e22] [cursor=pointer]:
+                - /url: /4283171/company/home/health_dashboard
+                - generic "Health Dashboard" [ref=e23]
+            - listitem [ref=e24]:
+              - link "My Open Items" [ref=e25] [cursor=pointer]:
+                - /url: /4283171/company/home/my_open_items
+                - generic "My Open Items" [ref=e26]
+            - listitem [ref=e27]:
+              - generic [ref=e30] [cursor=pointer]:
+                - text: Financial Views
+                - generic [ref=e32]: 
+          - complementary [ref=e34]:
+            - generic [ref=e37] [cursor=pointer]: Export
+        - generic [ref=e39]:
+          - generic [ref=e41]:
+            - generic [ref=e43]:
+              - textbox "Search projects" [active] [ref=e44]
+              - button "" [ref=e45] [cursor=pointer]:
+                - generic [ref=e46]: 
+            - generic [ref=e47]:
+              - generic [ref=e48]: "Group By:"
+              - combobox [ref=e50] [cursor=pointer]:
+                - generic [ref=e52]:
+                  - text: 
+                  - generic [ref=e53]: open dropdown
+                - generic [ref=e54]: None
+            - generic [ref=e55]:
+              - generic [ref=e60] [cursor=pointer]:
+                - generic [ref=e61]: Add Filters
+                - generic [ref=e63]: 
+              - generic [ref=e64]: Clear All
+          - generic [ref=e66]:
+            - img [ref=e67]
+            - link [ref=e68]:
+              - /url: /4283171/company/home/thumbnail
+              - img [ref=e69]
+            - link [ref=e70]:
+              - /url: /4283171/company/home/portfolio
+              - img [ref=e71]
+            - link [ref=e72]:
+              - /url: /4283171/company/home/map
+              - img [ref=e73]
+        - generic [ref=e74]:
+          - text: Loading
+          - generic [ref=e75]:
+            - emphasis [ref=e77]: Displaying 1 - 4 of 4
+            - table [ref=e79]:
+              - rowgroup [ref=e80]:
+                - row "Name  Project Number Address City State ZIP Phone Program Status Stage Type Department Notes" [ref=e81]:
+                  - columnheader [ref=e82]
+                  - columnheader "Name " [ref=e83]:
+                    - link "Name" [ref=e84] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=name&sort%5Bdirection%5D=desc
+                    - generic [ref=e85]: 
+                  - columnheader "Project Number" [ref=e86]:
+                    - link "Project Number" [ref=e87] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=number&sort%5Bdirection%5D=asc
+                  - columnheader "Address" [ref=e88]:
+                    - link "Address" [ref=e89] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=address&sort%5Bdirection%5D=asc
+                  - columnheader "City" [ref=e90]:
+                    - link "City" [ref=e91] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=city&sort%5Bdirection%5D=asc
+                  - columnheader "State" [ref=e92]:
+                    - link "State" [ref=e93] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=state&sort%5Bdirection%5D=asc
+                  - columnheader "ZIP" [ref=e94]:
+                    - link "ZIP" [ref=e95] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=zip&sort%5Bdirection%5D=asc
+                  - columnheader "Phone" [ref=e96]:
+                    - link "Phone" [ref=e97] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=phone&sort%5Bdirection%5D=asc
+                  - columnheader "Program" [ref=e98]:
+                    - link "Program" [ref=e99] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=program&sort%5Bdirection%5D=asc
+                  - columnheader "Status" [ref=e100]:
+                    - link "Status" [ref=e101] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=status&sort%5Bdirection%5D=asc
+                  - columnheader "Stage" [ref=e102]:
+                    - link "Stage" [ref=e103] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=stage&sort%5Bdirection%5D=asc
+                  - columnheader "Type" [ref=e104]:
+                    - link "Type" [ref=e105] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=type&sort%5Bdirection%5D=asc
+                  - columnheader "Department" [ref=e106]:
+                    - link "Department" [ref=e107] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=department&sort%5Bdirection%5D=asc
+                  - columnheader "Notes" [ref=e108]
+              - rowgroup [ref=e109]:
+                - row "Sandbox Test Project  1234 6309 Carpinteria Avenue Carpinteria California 93013 Active (edit)" [ref=e110]:
+                  - cell [ref=e111]
+                  - cell "Sandbox Test Project " [ref=e113]:
+                    - link "Sandbox Test Project" [ref=e114] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/326308
+                    - generic [ref=e116]: 
+                  - cell "1234" [ref=e117]:
+                    - link "1234" [ref=e118] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/326308
+                  - cell "6309 Carpinteria Avenue" [ref=e119]
+                  - cell "Carpinteria" [ref=e120]
+                  - cell "California" [ref=e121]
+                  - cell "93013" [ref=e122]
+                  - cell [ref=e123]
+                  - cell [ref=e124]
+                  - cell "Active" [ref=e125]
+                  - cell [ref=e126]
+                  - cell [ref=e127]
+                  - cell [ref=e128]
+                  - cell "(edit)" [ref=e129]
+                - row "Torre Boavista — Porto CSI-2024-001 Avenida da Boavista, 1200 Porto 4100-115 +351 222 100 200 Active Course of Construction (edit)" [ref=e130]:
+                  - cell [ref=e131]
+                  - cell "Torre Boavista — Porto" [ref=e133]:
+                    - link "Torre Boavista — Porto" [ref=e134] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328122
+                  - cell "CSI-2024-001" [ref=e135]:
+                    - link "CSI-2024-001" [ref=e136] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328122
+                  - cell "Avenida da Boavista, 1200" [ref=e137]
+                  - cell "Porto" [ref=e138]
+                  - cell [ref=e139]
+                  - cell "4100-115" [ref=e140]
+                  - cell "+351 222 100 200" [ref=e141]
+                  - cell [ref=e142]
+                  - cell "Active" [ref=e143]
+                  - cell "Course of Construction" [ref=e144]
+                  - cell [ref=e145]
+                  - cell [ref=e146]
+                  - cell "(edit)" [ref=e147]
+                - row "Urbanização Gaia Norte CSI-2025-003 Rua de Serralves, 45 Vila Nova de Gaia 4400-260 +351 223 745 000 Active (edit)" [ref=e148]:
+                  - cell [ref=e149]
+                  - cell "Urbanização Gaia Norte" [ref=e151]:
+                    - link "Urbanização Gaia Norte" [ref=e152] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328124
+                  - cell "CSI-2025-003" [ref=e153]:
+                    - link "CSI-2025-003" [ref=e154] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328124
+                  - cell "Rua de Serralves, 45" [ref=e155]
+                  - cell "Vila Nova de Gaia" [ref=e156]
+                  - cell [ref=e157]
+                  - cell "4400-260" [ref=e158]
+                  - cell "+351 223 745 000" [ref=e159]
+                  - cell [ref=e160]
+                  - cell "Active" [ref=e161]
+                  - cell [ref=e162]
+                  - cell [ref=e163]
+                  - cell [ref=e164]
+                  - cell "(edit)" [ref=e165]
+                - row "Viaduto IP2 — Trancoso CSI-2024-002 IP2, km 47 Trancoso 6420-000 +351 271 811 000 Active (edit)" [ref=e166]:
+                  - cell [ref=e167]
+                  - cell "Viaduto IP2 — Trancoso" [ref=e169]:
+                    - link "Viaduto IP2 — Trancoso" [ref=e170] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328123
+                  - cell "CSI-2024-002" [ref=e171]:
+                    - link "CSI-2024-002" [ref=e172] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328123
+                  - cell "IP2, km 47" [ref=e173]
+                  - cell "Trancoso" [ref=e174]
+                  - cell [ref=e175]
+                  - cell "6420-000" [ref=e176]
+                  - cell "+351 271 811 000" [ref=e177]
+                  - cell [ref=e178]
+                  - cell "Active" [ref=e179]
+                  - cell [ref=e180]
+                  - cell [ref=e181]
+                  - cell [ref=e182]
+                  - cell "(edit)" [ref=e183]
+            - emphasis [ref=e185]: Displaying 1 - 4 of 4
+      - generic [ref=e186]:
+        - link "Toggle Sidebar" [ref=e187] [cursor=pointer]:
+          - /url: javascript:;
+          - text:  
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - generic [ref=e195]:
+              - button "Loading" [disabled]:
+                - generic:
+                  - img "Loading"
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - text: Custom Reports
+                - link "+ New" [ref=e198] [cursor=pointer]:
+                  - /url: /4283171/company/portfolio_custom_reports/new
+              - generic:
+                - list
+          - button "Minimize Sidebar" [ref=e199] [cursor=pointer]:
+            - text: Minimize Sidebar
+            - generic [ref=e200]:
+              - generic [ref=e201]: 
+              - generic [ref=e202]: 
+  - contentinfo [ref=e203]:
+    - link "Terms of Service" [ref=e204] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e205] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e207]:
+      - text: Powered By
+      - link "Procore" [ref=e208] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e209]

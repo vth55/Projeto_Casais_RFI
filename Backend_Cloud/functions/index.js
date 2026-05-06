@@ -25,6 +25,8 @@ const {
     PROCORE_CLIENT_ID: _PCI,
     PROCORE_CLIENT_SECRET: _PCS,
     PROCORE_COMPANY_ID: _PCID,
+    associateEquipmentToProject,
+    removeEquipmentFromProject,
 } = require('./procore/procoreBridge');
 
 if (!admin.apps.length) {
@@ -1260,5 +1262,70 @@ exports.onSessionCorrected = onDocumentUpdated(
             console.error(`[onSessionCorrected] re-export failed for ${event.params.sessionId}:`, err.message);
             return null;
         }
+    }
+);
+
+/**
+ * Trigger: quando obraId de uma machine muda na PWA, sincroniza com Procore (best-effort).
+ * Anti-loop: ignora alterações com lastSyncSource === 'procore'.
+ */
+exports.onMachineObraChanged = onDocumentUpdated(
+    {
+        document: `${MACHINES_PATH}/{machineId}`,
+        secrets: [_PCI, _PCS, _PCID],
+        region: 'us-central1',
+    },
+    async (event) => {
+        const before = event.data.before.data();
+        const after = event.data.after.data();
+
+        // Ignorar se obraId não mudou
+        if (before.obraId === after.obraId) return null;
+        // Ignorar se a mudança veio do Procore (evitar loop)
+        if (after.lastSyncSource === 'procore') return null;
+
+        const machineId = event.params.machineId;
+        const procoreEquipmentId = after.procoreEquipmentId;
+
+        // Marcar como pendente de sync
+        await event.data.after.ref.update({
+            lastSyncedObraId: after.obraId,
+            lastSyncSource: 'pwa',
+            lastSyncAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Se não há ID Procore, não há nada a sincronizar
+        if (!procoreEquipmentId) return null;
+
+        console.log(`[onMachineObraChanged] ${machineId}: ${before.obraId} → ${after.obraId}`);
+
+        // Resolver procoreProjectId da obra anterior
+        const oldObraId = before.obraId;
+        const newObraId = after.obraId;
+
+        try {
+            // Remover da obra anterior no Procore (se não era Estaleiro)
+            const obrasBase = `artifacts/${APP_ID}/public/data/obras`;
+            if (oldObraId && oldObraId !== 'estaleiro') {
+                const oldObraSnap = await db.doc(`${obrasBase}/${oldObraId}`).get();
+                const oldProcoreProjectId = oldObraSnap.data()?.procoreProjectId;
+                if (oldProcoreProjectId) {
+                    await removeEquipmentFromProject(procoreEquipmentId, oldProcoreProjectId);
+                }
+            }
+
+            // Associar à nova obra no Procore (se não é Estaleiro)
+            if (newObraId && newObraId !== 'estaleiro') {
+                const newObraSnap = await db.doc(`${obrasBase}/${newObraId}`).get();
+                const newProcoreProjectId = newObraSnap.data()?.procoreProjectId;
+                if (newProcoreProjectId) {
+                    await associateEquipmentToProject(procoreEquipmentId, newProcoreProjectId);
+                }
+            }
+        } catch (err) {
+            console.error(`[onMachineObraChanged] Procore sync failed (non-critical):`, err.message);
+        }
+
+        return null;
     }
 );

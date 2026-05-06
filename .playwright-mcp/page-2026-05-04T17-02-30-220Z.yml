@@ -1,0 +1,277 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e8] [cursor=pointer]:
+          - /url: https://trackunit.com
+          - img "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e9]
+        - navigation "Menu" [ref=e13]:
+          - button "Menu Toggle" [ref=e14] [cursor=pointer]:
+            - img [ref=e16]
+            - img [ref=e18]
+  - main [ref=e22]:
+    - article [ref=e23]:
+      - generic [ref=e25]:
+        - generic [ref=e28]:
+          - generic [ref=e32]: Solutions
+          - 'heading "From insights to action: Explore Trackunit’s solutions" [level=1] [ref=e35]'
+          - paragraph [ref=e38]: Discover the solutions that can help unlock the value of your machine and equipment data in new ways, and accelerate your journey to eliminate downtime.
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - link "A man in a white shirt uses a laptop in a modern office with digital overlays of truck and forklift status for fleet management." [ref=e45] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/fleet-management/
+              - img "A man in a white shirt uses a laptop in a modern office with digital overlays of truck and forklift status for fleet management." [ref=e46]
+            - paragraph [ref=e49]: Fleet Management
+            - heading "Total fleet management, powered by insights" [level=3] [ref=e52]
+            - paragraph [ref=e55]: Cut the guesswork, reduce costs and drive uptime for any make, model or type of construction equipment using Trackunit’s industry-leading mixed-fleet platform.
+            - link "Learn more" [ref=e59] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/fleet-management/
+              - generic [ref=e61]: Learn more
+          - generic [ref=e62]:
+            - link "Aerial view of a construction site with labeled equipment and digital overlays tracking assets, highlighting connected jobsite." [ref=e65] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/telematics/
+              - img "Aerial view of a construction site with labeled equipment and digital overlays tracking assets, highlighting connected jobsite." [ref=e66]
+            - paragraph [ref=e69]: Construction Telematics
+            - heading "Telematics system to connect your entire fleet" [level=3] [ref=e72]
+            - generic [ref=e74]: Achieve full fleet connectivity to unlock complete visibility and efficiently manage all your equipment and assets.
+            - link "Learn more" [ref=e78] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/telematics/
+              - generic [ref=e80]: Learn more
+          - generic [ref=e81]:
+            - link "Aerial view of a construction site with three excavators, digital machine status info, and a fleet utilization bar graph; construction IoT." [ref=e84] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/fleet-utilization/
+              - img "Aerial view of a construction site with three excavators, digital machine status info, and a fleet utilization bar graph; construction IoT." [ref=e85]
+            - paragraph [ref=e88]: Fleet Utilization
+            - heading "Turn utilization insight into profits and productivity" [level=3] [ref=e91]
+            - paragraph [ref=e94]: Bring all your utilization equipment data into one view. Turn fragmented insights into clear actions that reduce idle time, right-size your fleet, and increase productivity across your operations.
+            - link "Learn more" [ref=e98] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/fleet-utilization/
+              - generic [ref=e100]: Learn more
+          - generic [ref=e101]:
+            - link "A man uses a laptop by industrial equipment with two service alerts overlaid, showing maintenance details for connected jobsite." [ref=e104] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/equipment-maintenance/
+              - img "A man uses a laptop by industrial equipment with two service alerts overlaid, showing maintenance details for connected jobsite." [ref=e105]
+            - paragraph [ref=e108]: Equipment Maintenance
+            - heading "Maximize uptime and fleet life with actionable health insights" [level=3] [ref=e111]
+            - paragraph [ref=e114]: Turn real-time equipment data, fault codes, and service insights into proactive maintenance. Keep your fleet running, eliminating costly downtime and extending equipment life.
+            - link "Learn more" [ref=e118] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/equipment-maintenance/
+              - generic [ref=e120]: Learn more
+          - generic [ref=e121]:
+            - link "Night aerial view of a construction site with a digital theft alert about assets leaving Denver, highlighting connected jobsite." [ref=e124] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/theft-protection/
+              - img "Night aerial view of a construction site with a digital theft alert about assets leaving Denver, highlighting connected jobsite." [ref=e125]
+            - paragraph [ref=e128]: Theft Defense
+            - heading "Prevent loss fast and act faster when it happens" [level=3] [ref=e131]
+            - paragraph [ref=e134]: Construction equipment theft prevention with layered trackers, access control and real-time alerts that speed recovery.
+            - link "Learn more" [ref=e138] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/theft-protection/
+              - generic [ref=e140]: Learn more
+          - generic [ref=e141]:
+            - link "Satellite map of San Francisco Bay Area with three site markers; inset lists Oakland construction sites and a detailed connected jobsite map." [ref=e144] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/sites/
+              - img "Satellite map of San Francisco Bay Area with three site markers; inset lists Oakland construction sites and a detailed connected jobsite map." [ref=e145]
+            - paragraph [ref=e148]: Digital Jobsites
+            - heading "Every site has a unique story to tell" [level=3] [ref=e151]
+            - generic [ref=e153]: Sites seamlessly blend live machine data with site applications to optimize your business processes, giving you a complete picture.
+            - link "Learn more" [ref=e157] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/sites/
+              - generic [ref=e159]: Learn more
+          - generic [ref=e160]:
+            - link "A yellow bulldozer on a sandy site, seen from above, with green digital patterns showing its area, illustrating construction IoT." [ref=e163] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/sustainability/
+              - img "A yellow bulldozer on a sandy site, seen from above, with green digital patterns showing its area, illustrating construction IoT." [ref=e164]
+            - paragraph [ref=e167]: Unlock Sustainability
+            - heading "Let data lead the way to sustainability outcomes" [level=3] [ref=e170]
+            - generic [ref=e172]: Trackunit offers automated, usage-based tracking that unifies emissions data from every machine, site, and region.
+            - link "Learn more" [ref=e176] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/sustainability/
+              - generic [ref=e178]: Learn more
+          - generic [ref=e179]:
+            - link "A construction worker checks a smartphone near heavy machinery; on-screen, asset location and digital key info highlight construction IoT." [ref=e182] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/access-management/
+              - img "A construction worker checks a smartphone near heavy machinery; on-screen, asset location and digital key info highlight construction IoT." [ref=e183]
+            - paragraph [ref=e186]: Digital Access Management
+            - heading "The key to safe equipment access" [level=3] [ref=e189]
+            - generic [ref=e191]: With digital Access Management, Trackunit is leading a new era of streamlined and safe operator access for mixed fleets across construction sites.
+            - link "Learn more" [ref=e195] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/access-management/
+              - generic [ref=e197]: Learn more
+          - generic [ref=e198]:
+            - link "A large white generator at a waterfront construction site shows digital overlays for status and maintenance—construction IoT." [ref=e201] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/specialty-equipment-solutions/
+              - img "A large white generator at a waterfront construction site shows digital overlays for status and maintenance—construction IoT." [ref=e202]
+            - paragraph [ref=e205]: Specialty Equipment Solutions
+            - heading "Complete your fleet with specialty equipment solutions" [level=3] [ref=e208]
+            - paragraph [ref=e211]: Drive increased uptime, smarter operations, and elevated profitability with 100% coverage for all your mission-critical Specialty Equipment applications.
+            - link "Learn more" [ref=e215] [cursor=pointer]:
+              - /url: https://trackunit.com/solutions/specialty-equipment-solutions/
+              - generic [ref=e217]: Learn more
+  - contentinfo [ref=e218]:
+    - generic [ref=e220]:
+      - generic [ref=e221]:
+        - link "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e225] [cursor=pointer]:
+          - /url: https://trackunit.com
+          - img "Red Trackunit logo featuring a stylized T icon beside bold red Trackunit text on a light gray background." [ref=e226]
+        - generic [ref=e227]:
+          - generic [ref=e229]: Platform
+          - link "Trackunit IrisX" [ref=e233] [cursor=pointer]:
+            - /url: https://trackunit.com/irisx
+          - generic [ref=e239]: Software
+          - link "Trackunit Manager" [ref=e243] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-manager/
+          - link "Trackunit Go" [ref=e247] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-go/
+          - link "Trackunit On" [ref=e251] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-on/
+          - generic [ref=e257]: Integrations
+          - link "Marketplace" [ref=e261] [cursor=pointer]:
+            - /url: https://new.manager.trackunit.com/marketplace
+          - link "About Marketplace" [ref=e265] [cursor=pointer]:
+            - /url: https://trackunit.com/marketplace/
+          - link "OEM Integrations" [ref=e269] [cursor=pointer]:
+            - /url: https://trackunit.com/oem-integrations/
+          - generic [ref=e275]: IoT & Telematics
+          - link "Trackunit Raw" [ref=e279] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-raw/
+          - link "Trackunit Spot" [ref=e283] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-spot/
+          - link "Trackunit Pass" [ref=e287] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-pass/
+          - link "Trackunit Kin" [ref=e291] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-kin/
+          - link "Trackunit Beam" [ref=e295] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-beam/
+        - generic [ref=e296]:
+          - generic [ref=e298]: Industries
+          - link "OEM" [ref=e302] [cursor=pointer]:
+            - /url: https://trackunit.com/oem/
+          - link "Rental" [ref=e306] [cursor=pointer]:
+            - /url: https://trackunit.com/rental/
+          - link "Contractor" [ref=e310] [cursor=pointer]:
+            - /url: https://trackunit.com/contractor/
+          - generic [ref=e316]: Solutions
+          - link "Construction Telematics" [ref=e320] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/telematics/
+          - link "Fleet Management" [ref=e324] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/fleet-management/
+          - link "Digital jobsites" [ref=e328] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/sites/
+          - link "Fleet Utilization" [ref=e332] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/fleet-utilization/
+          - link "Equipment Maintenance" [ref=e336] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/equipment-maintenance/
+          - link "Theft Defense" [ref=e340] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/theft-protection/
+          - link "Unlock Sustainability" [ref=e344] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/sustainability/
+          - link "Digital Access Management" [ref=e348] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/access-management/
+          - link "Specialty Equipment Solutions" [ref=e352] [cursor=pointer]:
+            - /url: https://trackunit.com/solutions/specialty-equipment-solutions/
+          - generic [ref=e358]: Network
+          - link "Trackunit Network" [ref=e362] [cursor=pointer]:
+            - /url: https://trackunit.com/trackunit-network/
+        - generic [ref=e363]:
+          - generic [ref=e365]: Customer Support
+          - link "Help Center" [ref=e369] [cursor=pointer]:
+            - /url: https://help.trackunit.com/en/
+          - link "Customer Success" [ref=e373] [cursor=pointer]:
+            - /url: https://trackunit.com/customer-success/
+          - link "Video Tutorials" [ref=e377] [cursor=pointer]:
+            - /url: https://trackunit.com/section/mastering-manager/
+          - link "Contact Support" [ref=e381] [cursor=pointer]:
+            - /url: https://help.trackunit.com/en/articles/238021-how-to-contact-customer-support-through-the-messenger
+          - generic [ref=e387]: Document Library
+          - link "Flyers" [ref=e391] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#catalogue
+          - link "Installation Guides" [ref=e395] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#guides
+          - link "Regulations & Safety" [ref=e399] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#regulations
+          - link "EU Data Act" [ref=e403] [cursor=pointer]:
+            - /url: https://trackunit.com/library/#key-documents
+          - generic [ref=e409]: Development
+          - link "Developer" [ref=e413] [cursor=pointer]:
+            - /url: https://developers.trackunit.com/
+          - link "Platform Status" [ref=e417] [cursor=pointer]:
+            - /url: https://status.trackunit.com/
+        - generic [ref=e422]:
+          - generic [ref=e424]: Events & Webinar
+          - link "Video Library" [ref=e428] [cursor=pointer]:
+            - /url: https://trackunit.com/webinars/
+          - link "Webinars & events" [ref=e432] [cursor=pointer]:
+            - /url: https://trackunit.com/events/
+          - generic [ref=e438]: General
+          - link "Customer Stories" [ref=e442] [cursor=pointer]:
+            - /url: https://trackunit.com/section/success-stories/
+          - link "Product Updates" [ref=e446] [cursor=pointer]:
+            - /url: https://trackunit.com/section/product-updates/
+          - link "Product Portal" [ref=e450] [cursor=pointer]:
+            - /url: https://trackunit.com/product-portal/
+      - generic [ref=e455]:
+        - navigation "Menu" [ref=e459]:
+          - list [ref=e460]:
+            - listitem [ref=e461]:
+              - link "English" [ref=e462] [cursor=pointer]:
+                - /url: https://trackunit.com/solutions/
+                - generic [ref=e463]: English
+        - generic [ref=e464]:
+          - generic [ref=e466]: About
+          - link "The Trackunit Story" [ref=e470] [cursor=pointer]:
+            - /url: https://trackunit.com/about/
+          - link "Purpose" [ref=e474] [cursor=pointer]:
+            - /url: https://trackunit.com/about/purpose/
+          - link "Leadership & Board" [ref=e478] [cursor=pointer]:
+            - /url: https://trackunit.com/leadership-and-board/
+          - link "Press Release" [ref=e482] [cursor=pointer]:
+            - /url: https://trackunit.com/press-releases/
+          - link "Media Library" [ref=e486] [cursor=pointer]:
+            - /url: https://trackunit.com/media-library/
+          - link "Contact" [ref=e490] [cursor=pointer]:
+            - /url: https://trackunit.com/about/contact/
+        - generic [ref=e491]:
+          - generic [ref=e493]: Careers
+          - link "Working at Trackunit" [ref=e497] [cursor=pointer]:
+            - /url: https://trackunit.com/careers/
+          - link "Career Hub" [ref=e501] [cursor=pointer]:
+            - /url: https://careers.trackunit.com/
+          - link "Open Positions" [ref=e505] [cursor=pointer]:
+            - /url: https://careers.trackunit.com/jobs
+          - generic [ref=e511]: Partner
+          - link "Become a partner" [ref=e515] [cursor=pointer]:
+            - /url: https://trackunit.com/become-a-partner/
+        - generic [ref=e516]:
+          - generic [ref=e518]: Social
+          - link "Linkedin" [ref=e522] [cursor=pointer]:
+            - /url: http://linkedin.com/company/trackunit-a-s/
+          - link "Facebook" [ref=e526] [cursor=pointer]:
+            - /url: https://www.facebook.com/Trackunit.official/
+          - link "Instagram" [ref=e530] [cursor=pointer]:
+            - /url: https://www.instagram.com/trackunit/
+          - link "YouTube" [ref=e534] [cursor=pointer]:
+            - /url: https://www.youtube.com/c/Trackunit_Official
+        - generic [ref=e539]:
+          - generic [ref=e541]: Pricing
+          - link "Get a Quote" [ref=e545] [cursor=pointer]:
+            - /url: https://trackunit.com/get-a-quote/
+          - link "Get Contacted" [ref=e549] [cursor=pointer]:
+            - /url: https://trackunit.com/get-contacted/
+          - link "Pricing Plans" [ref=e553] [cursor=pointer]:
+            - /url: https://trackunit.com/pricing/
+          - link "Schedule a Demo" [ref=e557] [cursor=pointer]:
+            - /url: https://trackunit.com/request-demo/
+      - generic [ref=e558]:
+        - link "© 2026 Trackunit Corporation. All rights reserved." [ref=e563] [cursor=pointer]:
+          - /url: https://trackunit.com/irisx
+        - generic [ref=e564]:
+          - link "Terms & Conditions" [ref=e568] [cursor=pointer]:
+            - /url: https://trackunit.com/terms-and-conditions/
+          - link "Privacy" [ref=e572] [cursor=pointer]:
+            - /url: https://trackunit.com/privacy/
+          - link "Cookie Policy" [ref=e576] [cursor=pointer]:
+            - /url: https://trackunit.com/cookie-policy/
+          - link "Modern Slavery Policy" [ref=e580] [cursor=pointer]:
+            - /url: https://content.trackunit.com/hubfs/PDF%20Assets/Legal%20Documents/Trackunit%20%7C%20Policy%20%7C%20Modern%20Slavery%20%7C%20EN.pdf
+          - link "Communication Policy" [ref=e584] [cursor=pointer]:
+            - /url: https://trackunit.com/communication-policy/

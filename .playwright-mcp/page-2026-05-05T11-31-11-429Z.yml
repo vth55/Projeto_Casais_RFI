@@ -1,0 +1,310 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#mount-point"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Company Home" [ref=e8] [cursor=pointer]:
+            - /url: /4283171/company/home
+            - img "Casais Fleet Intelligence"
+          - button "Casais Fleet Intelligence Select a Project" [ref=e10] [cursor=pointer]:
+            - generic:
+              - generic: Casais Fleet Intelligence
+              - generic: Select a Project
+            - generic:
+              - img
+          - button "Company Tools Equipment" [ref=e11] [cursor=pointer]:
+            - generic:
+              - generic: Company Tools
+              - generic: Equipment
+            - generic:
+              - img
+          - generic [ref=e13]:
+            - img [ref=e15]
+            - generic [ref=e17]:
+              - generic [ref=e18]: Favorites
+              - navigation "Favorites":
+                - list
+          - button "Apps Select an App" [ref=e20] [cursor=pointer]:
+            - generic:
+              - generic: Apps
+              - generic: Select an App
+            - generic:
+              - img
+        - generic [ref=e21]:
+          - button "Support & Feedback" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+          - button "Announcements" [ref=e25] [cursor=pointer]:
+            - img [ref=e26]
+          - button "Account & Profile" [ref=e29] [cursor=pointer]:
+            - generic [ref=e31]: VI
+  - main [ref=e33]:
+    - generic [ref=e40]:
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e45] [cursor=pointer]:
+            - img
+          - heading "Equipment" [level=1] [ref=e46]
+          - navigation [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e52]: Registry
+              - generic [ref=e55] [cursor=pointer]: Recycle Bin
+        - generic [ref=e57]:
+          - button "Import" [ref=e59] [cursor=pointer]:
+            - generic [ref=e61]: Import
+          - button "Create" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]:
+              - generic [ref=e65]:
+                - img
+              - generic [ref=e66]: Create
+      - generic [ref=e67]:
+        - generic [ref=e69]:
+          - textbox "Search" [ref=e70]
+          - button [ref=e73] [cursor=pointer]:
+            - generic [ref=e74]:
+              - img
+        - generic [ref=e77]:
+          - button "Add Filter " [ref=e78] [cursor=pointer]:
+            - generic [ref=e79]: Add Filter
+            - generic [ref=e81]: 
+          - generic:
+            - generic:
+              - generic [ref=e82] [cursor=pointer]: Category
+              - generic [ref=e83] [cursor=pointer]: Make
+              - generic [ref=e84] [cursor=pointer]: Model
+              - generic [ref=e85] [cursor=pointer]: Project
+              - generic [ref=e86] [cursor=pointer]: Status
+              - generic [ref=e87] [cursor=pointer]: Type
+              - generic [ref=e88] [cursor=pointer]: Year
+              - generic [ref=e89] [cursor=pointer]: Next Service Date
+              - generic [ref=e90] [cursor=pointer]: Last Service Date
+      - generic [ref=e91]:
+        - button "Bulk Actions" [ref=e93] [cursor=pointer]:
+          - generic: Bulk Actions
+        - generic [ref=e98]:
+          - generic [ref=e100]: 1-5 of 5
+          - generic [ref=e101]: "Page:"
+          - generic [ref=e102]:
+            - button "1" [disabled]:
+              - generic:
+                - generic: "1"
+                - img
+          - generic [ref=e103]:
+            - button [disabled]:
+              - generic:
+                - img
+          - generic [ref=e104]:
+            - button [disabled]:
+              - generic:
+                - img
+      - generic [ref=e107]:
+        - generic:
+          - generic:
+            - img
+          - generic: Loading...
+        - table [ref=e110]:
+          - rowgroup [ref=e111]:
+            - 'row "ID # Display Name Project Status Category Type Make Model Year Serial # Next Service Date Last Service Date" [ref=e112]':
+              - columnheader [ref=e113]:
+                - checkbox [ref=e117] [cursor=pointer]
+              - 'columnheader "ID #" [ref=e119] [cursor=pointer]':
+                - generic [ref=e120]:
+                  - generic [ref=e121]: "ID #"
+                  - generic [ref=e122]:
+                    - generic [ref=e123]:
+                      - img
+                    - generic [ref=e124]:
+                      - img
+              - columnheader "Display Name" [ref=e125]:
+                - generic [ref=e127]: Display Name
+              - columnheader "Project" [ref=e128]:
+                - generic [ref=e130]: Project
+              - columnheader "Status" [ref=e131]:
+                - generic [ref=e133]: Status
+              - columnheader "Category" [ref=e134]:
+                - generic [ref=e136]: Category
+              - columnheader "Type" [ref=e137]:
+                - generic [ref=e139]: Type
+              - columnheader "Make" [ref=e140]:
+                - generic [ref=e142]: Make
+              - columnheader "Model" [ref=e143]:
+                - generic [ref=e145]: Model
+              - columnheader "Year" [ref=e146]:
+                - generic [ref=e148]: Year
+              - 'columnheader "Serial #" [ref=e149]':
+                - generic [ref=e151]: "Serial #"
+              - columnheader "Next Service Date" [ref=e152]:
+                - generic [ref=e154]: Next Service Date
+              - columnheader "Last Service Date" [ref=e155]:
+                - generic [ref=e157]: Last Service Date
+              - columnheader [ref=e158]:
+                - button [ref=e161] [cursor=pointer]:
+                  - generic [ref=e162]:
+                    - generic [ref=e163]:
+                      - img
+                    - img
+          - rowgroup [ref=e164]:
+            - row "View Edit CAV-001 Escavadora Volvo EC220D Available Construction Hydraulic Excavator Volvo EC220D EC220-001-PT" [ref=e165]:
+              - cell "View Edit" [ref=e166]:
+                - generic [ref=e167]:
+                  - checkbox [ref=e170] [cursor=pointer]
+                  - button "View" [ref=e173] [cursor=pointer]:
+                    - generic [ref=e175]: View
+                  - button "Edit" [ref=e177] [cursor=pointer]:
+                    - generic [ref=e179]: Edit
+              - cell "CAV-001" [ref=e180]:
+                - generic [ref=e181]: CAV-001
+              - cell "Escavadora Volvo EC220D" [ref=e182]:
+                - generic [ref=e183]: Escavadora Volvo EC220D
+              - cell [ref=e184]
+              - cell "Available" [ref=e185]:
+                - generic [ref=e186]: Available
+              - cell "Construction" [ref=e187]:
+                - generic [ref=e188]: Construction
+              - cell "Hydraulic Excavator" [ref=e189]:
+                - generic [ref=e190]: Hydraulic Excavator
+              - cell "Volvo" [ref=e191]:
+                - generic [ref=e192]: Volvo
+              - cell "EC220D" [ref=e193]:
+                - generic [ref=e194]: EC220D
+              - cell [ref=e195]
+              - cell "EC220-001-PT" [ref=e196]:
+                - generic [ref=e197]: EC220-001-PT
+              - cell [ref=e198]
+              - cell [ref=e199]
+              - cell [ref=e200]
+            - row "View Edit Grua Torre Liebherr TC400 Lifting & Material Handling Tower Crane Liebherr TC400 TC400-002-PT" [ref=e202]:
+              - cell "View Edit" [ref=e203]:
+                - generic [ref=e204]:
+                  - checkbox [ref=e207] [cursor=pointer]
+                  - button "View" [ref=e210] [cursor=pointer]:
+                    - generic [ref=e212]: View
+                  - button "Edit" [ref=e214] [cursor=pointer]:
+                    - generic [ref=e216]: Edit
+              - cell [ref=e217]
+              - cell "Grua Torre Liebherr TC400" [ref=e218]:
+                - generic [ref=e219]: Grua Torre Liebherr TC400
+              - cell [ref=e220]
+              - cell [ref=e221]
+              - cell "Lifting & Material Handling" [ref=e222]:
+                - generic [ref=e223]: Lifting & Material Handling
+              - cell "Tower Crane" [ref=e224]:
+                - generic [ref=e225]: Tower Crane
+              - cell "Liebherr" [ref=e226]:
+                - generic [ref=e227]: Liebherr
+              - cell "TC400" [ref=e228]:
+                - generic [ref=e229]: TC400
+              - cell [ref=e230]
+              - cell "TC400-002-PT" [ref=e231]:
+                - generic [ref=e232]: TC400-002-PT
+              - cell [ref=e233]
+              - cell [ref=e234]
+              - cell [ref=e235]
+            - 'row "View Edit Escavadora Volvo EC220D #2 Construction Hydraulic Excavator Volvo EC220D EC220-003-PT" [ref=e237]':
+              - cell "View Edit" [ref=e238]:
+                - generic [ref=e239]:
+                  - checkbox [ref=e242] [cursor=pointer]
+                  - button "View" [ref=e245] [cursor=pointer]:
+                    - generic [ref=e247]: View
+                  - button "Edit" [ref=e249] [cursor=pointer]:
+                    - generic [ref=e251]: Edit
+              - cell [ref=e252]
+              - 'cell "Escavadora Volvo EC220D #2" [ref=e253]':
+                - generic [ref=e254]: "Escavadora Volvo EC220D #2"
+              - cell [ref=e255]
+              - cell [ref=e256]
+              - cell "Construction" [ref=e257]:
+                - generic [ref=e258]: Construction
+              - cell "Hydraulic Excavator" [ref=e259]:
+                - generic [ref=e260]: Hydraulic Excavator
+              - cell "Volvo" [ref=e261]:
+                - generic [ref=e262]: Volvo
+              - cell "EC220D" [ref=e263]:
+                - generic [ref=e264]: EC220D
+              - cell [ref=e265]
+              - cell "EC220-003-PT" [ref=e266]:
+                - generic [ref=e267]: EC220-003-PT
+              - cell [ref=e268]
+              - cell [ref=e269]
+              - cell [ref=e270]
+            - row "View Edit Buldozer Caterpillar D60S Construction Hydraulic Excavator Caterpillar D60S-7 D60-004-PT" [ref=e272]:
+              - cell "View Edit" [ref=e273]:
+                - generic [ref=e274]:
+                  - checkbox [ref=e277] [cursor=pointer]
+                  - button "View" [ref=e280] [cursor=pointer]:
+                    - generic [ref=e282]: View
+                  - button "Edit" [ref=e284] [cursor=pointer]:
+                    - generic [ref=e286]: Edit
+              - cell [ref=e287]
+              - cell "Buldozer Caterpillar D60S" [ref=e288]:
+                - generic [ref=e289]: Buldozer Caterpillar D60S
+              - cell [ref=e290]
+              - cell [ref=e291]
+              - cell "Construction" [ref=e292]:
+                - generic [ref=e293]: Construction
+              - cell "Hydraulic Excavator" [ref=e294]:
+                - generic [ref=e295]: Hydraulic Excavator
+              - cell "Caterpillar" [ref=e296]:
+                - generic [ref=e297]: Caterpillar
+              - cell "D60S-7" [ref=e298]:
+                - generic [ref=e299]: D60S-7
+              - cell [ref=e300]
+              - cell "D60-004-PT" [ref=e301]:
+                - generic [ref=e302]: D60-004-PT
+              - cell [ref=e303]
+              - cell [ref=e304]
+              - cell [ref=e305]
+            - row "View Edit Retroescavadora JCB 3CX Construction Hydraulic Excavator JCB 3CX ECO CONTRACTOR JCB-005-PT" [ref=e307]:
+              - cell "View Edit" [ref=e308]:
+                - generic [ref=e309]:
+                  - checkbox [ref=e312] [cursor=pointer]
+                  - button "View" [ref=e315] [cursor=pointer]:
+                    - generic [ref=e317]: View
+                  - button "Edit" [ref=e319] [cursor=pointer]:
+                    - generic [ref=e321]: Edit
+              - cell [ref=e322]
+              - cell "Retroescavadora JCB 3CX" [ref=e323]:
+                - generic [ref=e324]: Retroescavadora JCB 3CX
+              - cell [ref=e325]
+              - cell [ref=e326]
+              - cell "Construction" [ref=e327]:
+                - generic [ref=e328]: Construction
+              - cell "Hydraulic Excavator" [ref=e329]:
+                - generic [ref=e330]: Hydraulic Excavator
+              - cell "JCB" [ref=e331]:
+                - generic [ref=e332]: JCB
+              - cell "3CX ECO CONTRACTOR" [ref=e333]:
+                - generic [ref=e334]: 3CX ECO CONTRACTOR
+              - cell [ref=e335]
+              - cell "JCB-005-PT" [ref=e336]:
+                - generic [ref=e337]: JCB-005-PT
+              - cell [ref=e338]
+              - cell [ref=e339]
+              - cell [ref=e340]
+      - generic [ref=e345]:
+        - generic [ref=e347]: 1-5 of 5
+        - generic [ref=e348]: "Page:"
+        - generic [ref=e349]:
+          - button "1" [disabled]:
+            - generic:
+              - generic: "1"
+              - img
+        - generic [ref=e350]:
+          - button [disabled]:
+            - generic:
+              - img
+        - generic [ref=e351]:
+          - button [disabled]:
+            - generic:
+              - img
+  - contentinfo [ref=e352]:
+    - link "Terms of Service" [ref=e353] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e354] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e356]:
+      - text: Powered By
+      - link "Procore" [ref=e357] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e358]

@@ -1,0 +1,142 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e39] [cursor=pointer]:
+      - /url: "#mount-point"
+    - banner [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - link "Company Home" [ref=e43] [cursor=pointer]:
+            - /url: /4283171/company/home
+            - img "Casais Fleet Intelligence"
+          - button "Casais Fleet Intelligence Select a Project" [ref=e45] [cursor=pointer]:
+            - generic:
+              - generic: Casais Fleet Intelligence
+              - generic: Select a Project
+            - generic:
+              - img
+          - button "Company Tools Equipment" [ref=e46] [cursor=pointer]:
+            - generic:
+              - generic: Company Tools
+              - generic: Equipment
+            - generic:
+              - img
+          - generic [ref=e48]:
+            - img [ref=e50]
+            - generic [ref=e52]:
+              - generic [ref=e53]: Favorites
+              - navigation "Favorites":
+                - list
+          - button "Apps Select an App" [ref=e55] [cursor=pointer]:
+            - generic:
+              - generic: Apps
+              - generic: Select an App
+            - generic:
+              - img
+        - generic [ref=e56]:
+          - button "Support & Feedback" [ref=e57] [cursor=pointer]:
+            - img [ref=e58]
+          - button "Announcements" [ref=e60] [cursor=pointer]:
+            - img [ref=e61]
+          - button "Account & Profile" [ref=e64] [cursor=pointer]:
+            - generic [ref=e66]: VI
+  - main [ref=e5]:
+    - generic [ref=e12]:
+      - navigation [ref=e14]:
+        - generic [ref=e15] [cursor=pointer]: Equipment
+        - img [ref=e17]
+        - generic [ref=e19]: New Equipment
+      - heading "Create Equipment" [level=1] [ref=e22]
+      - generic [ref=e25]:
+        - generic:
+          - generic:
+            - img
+          - generic: Loading...
+        - generic [ref=e68]:
+          - heading "General Information" [level=3] [ref=e70]
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e74]:
+                - heading "Equipment Category *" [level=4] [ref=e75]
+                - button "Select Category" [ref=e77] [cursor=pointer]:
+                  - generic: Select Category
+                  - button [ref=e78]:
+                    - generic [ref=e79]:
+                      - img
+              - generic [ref=e83]:
+                - heading "Equipment Type *" [level=4] [ref=e84]
+                - button "Select Type" [ref=e86] [cursor=pointer]:
+                  - generic: Select Type
+                  - button [ref=e87]:
+                    - generic [ref=e88]:
+                      - img
+            - generic [ref=e91]:
+              - generic [ref=e93]:
+                - heading "Make *" [level=4] [ref=e94]
+                - button "Select Make" [ref=e96] [cursor=pointer]:
+                  - generic: Select Make
+                  - button [ref=e97]:
+                    - generic [ref=e98]:
+                      - img
+              - generic [ref=e102]:
+                - heading "Model *" [level=4] [ref=e103]
+                - generic [ref=e104]:
+                  - button "Select Model":
+                    - generic: Select Model
+                    - button:
+                      - generic:
+                        - img
+            - generic [ref=e105]:
+              - generic [ref=e107]:
+                - heading "Year" [level=4] [ref=e108]
+                - button "Year" [ref=e109] [cursor=pointer]:
+                  - generic: Year
+              - generic [ref=e113]:
+                - 'heading "Serial # *" [level=4] [ref=e114]'
+                - textbox [ref=e116]
+            - generic [ref=e117]:
+              - generic [ref=e119]:
+                - 'heading "ID # *" [level=4] [ref=e120]'
+                - textbox [ref=e122]
+              - generic [ref=e124]:
+                - heading "Display Name" [level=4] [ref=e125]
+                - textbox [ref=e127]
+            - generic [ref=e130]:
+              - heading "Description" [level=4] [ref=e131]
+              - textbox [ref=e132]
+            - generic [ref=e135]:
+              - heading "Attachments" [level=4] [ref=e136]
+              - generic [ref=e139] [cursor=pointer]:
+                - button "Choose File" [ref=e140]
+                - generic [ref=e142]: Attach File(s) or Drag and Drop
+      - generic [ref=e143]:
+        - generic [ref=e144]:
+          - text: "*"
+          - generic [ref=e145]: required fields
+        - generic [ref=e146]:
+          - button "Cancel" [ref=e147] [cursor=pointer]:
+            - generic [ref=e149]: Cancel
+          - button "Create" [ref=e150] [cursor=pointer]:
+            - generic [ref=e152]: Create
+  - contentinfo [ref=e32]:
+    - link "Terms of Service" [ref=e33] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e34] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e36]:
+      - text: Powered By
+      - link "Procore" [ref=e37] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e38]
+  - generic [ref=e155]:
+    - generic [ref=e157]:
+      - textbox "Search" [active] [ref=e158]
+      - generic [ref=e160]:
+        - button [disabled]:
+          - generic:
+            - img
+    - grid "grid" [ref=e162]:
+      - rowgroup [ref=e163]:
+        - generic [ref=e165] [cursor=pointer]: Asphalt Aggregate Concrete
+        - generic [ref=e167] [cursor=pointer]: Construction
+        - generic [ref=e169] [cursor=pointer]: Lifting & Material Handling
+        - generic [ref=e171] [cursor=pointer]: Transportation

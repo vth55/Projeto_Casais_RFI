@@ -1,0 +1,201 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e7]:
+      - complementary [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: C
+          - generic [ref=e14]:
+            - text: CASAIS
+            - generic [ref=e15]: Fleet Intelligence
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - img [ref=e20]
+              - generic [ref=e22]: Ativas
+            - paragraph [ref=e23]: "0"
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - img [ref=e26]
+              - generic [ref=e31]: Equip.
+            - paragraph [ref=e32]: "10"
+        - navigation [ref=e33]:
+          - list [ref=e34]:
+            - listitem [ref=e35]:
+              - button "Dashboard" [ref=e36] [cursor=pointer]:
+                - generic [ref=e37]:
+                  - img [ref=e38]
+                  - generic [ref=e43]: Dashboard
+            - listitem [ref=e44]:
+              - button "Obras" [ref=e45] [cursor=pointer]:
+                - generic [ref=e46]:
+                  - img [ref=e47]
+                  - generic [ref=e51]: Obras
+                - img [ref=e52]
+            - listitem [ref=e54]:
+              - button "Equipamentos" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]:
+                  - img [ref=e57]
+                  - generic [ref=e62]: Equipamentos
+            - listitem [ref=e63]:
+              - button "Estaleiro 10" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]:
+                  - img [ref=e66]
+                  - generic [ref=e69]: Estaleiro
+                  - generic [ref=e70]: "10"
+            - listitem [ref=e71]:
+              - button "Operadores" [ref=e72] [cursor=pointer]:
+                - generic [ref=e73]:
+                  - img [ref=e74]
+                  - generic [ref=e79]: Operadores
+            - listitem [ref=e80]:
+              - button "Sessões" [ref=e81] [cursor=pointer]:
+                - generic [ref=e82]:
+                  - img [ref=e83]
+                  - generic [ref=e86]: Sessões
+                - img [ref=e87]
+            - listitem [ref=e89]:
+              - button "Manutenção" [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]:
+                  - img [ref=e92]
+                  - generic [ref=e94]: Manutenção
+                - img [ref=e95]
+            - listitem [ref=e97]:
+              - button "Financeiro" [ref=e98] [cursor=pointer]:
+                - generic [ref=e99]:
+                  - img [ref=e100]
+                  - generic [ref=e103]: Financeiro
+                - img [ref=e104]
+            - listitem [ref=e106]:
+              - button "Análises" [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]:
+                  - img [ref=e109]
+                  - generic [ref=e111]: Análises
+            - listitem [ref=e112]:
+              - button "Relatórios" [ref=e113] [cursor=pointer]:
+                - generic [ref=e114]:
+                  - img [ref=e115]
+                  - generic [ref=e118]: Relatórios
+            - listitem [ref=e119]:
+              - button "Configurações" [ref=e120] [cursor=pointer]:
+                - generic [ref=e121]:
+                  - img [ref=e122]
+                  - generic [ref=e125]: Configurações
+        - generic [ref=e127]:
+          - generic [ref=e129]: VH
+          - generic [ref=e130]:
+            - paragraph [ref=e131]: Vitor Hugo
+            - generic [ref=e132]:
+              - img [ref=e133]
+              - generic [ref=e135]: Administrador
+          - button "Terminar sessão" [ref=e136] [cursor=pointer]:
+            - img [ref=e137]
+      - generic [ref=e140]:
+        - banner [ref=e141]:
+          - generic [ref=e143]:
+            - heading "Configurações" [level=1] [ref=e699]
+            - paragraph [ref=e145]: Configurações do sistema
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - img [ref=e148]
+              - generic [ref=e152]: Online
+            - button [ref=e153] [cursor=pointer]:
+              - img [ref=e154]
+            - button [ref=e157] [cursor=pointer]:
+              - img [ref=e158]
+        - main [ref=e162]:
+          - generic [ref=e700]:
+            - generic [ref=e701]:
+              - heading "Configurações" [level=2] [ref=e702]
+              - paragraph [ref=e703]: Gerir configurações e permissões do sistema
+            - navigation [ref=e705]:
+              - button "Geral" [ref=e706] [cursor=pointer]:
+                - img [ref=e707]
+                - text: Geral
+              - button "Perfis de Acesso" [ref=e710] [cursor=pointer]:
+                - img [ref=e711]
+                - text: Perfis de Acesso
+              - button "Integrações" [active] [ref=e713] [cursor=pointer]:
+                - img [ref=e714]
+                - text: Integrações
+              - button "Modo Demo" [ref=e717] [cursor=pointer]:
+                - img [ref=e718]
+                - text: Modo Demo
+              - button "Notificações" [ref=e723] [cursor=pointer]:
+                - img [ref=e724]
+                - text: Notificações
+              - button "Aparência" [ref=e727] [cursor=pointer]:
+                - img [ref=e728]
+                - text: Aparência
+              - button "Base de Dados" [ref=e734] [cursor=pointer]:
+                - img [ref=e735]
+                - text: Base de Dados
+            - generic [ref=e833]:
+              - generic [ref=e834]:
+                - generic [ref=e835]:
+                  - generic [ref=e836]:
+                    - img [ref=e838]
+                    - generic [ref=e840]:
+                      - generic [ref=e841]:
+                        - heading "Procore" [level=3] [ref=e842]
+                        - generic [ref=e843]: Conectado (com erros)
+                      - paragraph [ref=e844]:
+                        - text: "Sandbox:"
+                        - code [ref=e845]: sandbox.procore.com
+                        - text: "· Company ID:"
+                        - code [ref=e846]: "4283171"
+                  - generic [ref=e847]:
+                    - button "Sincronizar agora" [ref=e848] [cursor=pointer]:
+                      - img [ref=e849]
+                      - text: Sincronizar agora
+                    - button "Desconectar" [ref=e854] [cursor=pointer]:
+                      - img [ref=e855]
+                      - text: Desconectar
+                - generic [ref=e858]:
+                  - generic [ref=e859]:
+                    - paragraph [ref=e860]: Último sync
+                    - paragraph [ref=e861]: 05/05/26, 11:59
+                  - generic [ref=e862]:
+                    - paragraph [ref=e863]: Duração
+                    - paragraph [ref=e864]: 1972ms
+                  - generic [ref=e865]:
+                    - paragraph [ref=e866]: Token expira
+                    - paragraph [ref=e867]: 0 min
+                  - generic [ref=e868]:
+                    - paragraph [ref=e869]: Conectado desde
+                    - paragraph [ref=e870]: 04/05/26, 17:22
+                - generic [ref=e871]:
+                  - paragraph [ref=e872]:
+                    - img [ref=e873]
+                    - text: Erros no último sync
+                  - list [ref=e875]:
+                    - listitem [ref=e876]:
+                      - strong [ref=e877]: "projects:"
+                      - text: "Procore token refresh failed (401): {\"error\":\"invalid_grant\",\"error_description\":\"The provided authorization grant is in"
+                    - listitem [ref=e878]:
+                      - strong [ref=e879]: "equipment:"
+                      - text: "Procore token refresh failed (401): {\"error\":\"invalid_grant\",\"error_description\":\"The provided authorization grant is in"
+                    - listitem [ref=e880]:
+                      - strong [ref=e881]: "directory:"
+                      - text: "Procore token refresh failed (401): {\"error\":\"invalid_grant\",\"error_description\":\"The provided authorization grant is in"
+              - generic [ref=e882]:
+                - generic [ref=e884]:
+                  - generic [ref=e885]:
+                    - paragraph [ref=e886]: Projetos Procore
+                    - paragraph [ref=e887]: "0"
+                    - paragraph [ref=e888]: Mirror read-only
+                  - img [ref=e890]
+                - generic [ref=e895]:
+                  - generic [ref=e896]:
+                    - paragraph [ref=e897]: Equipamentos
+                    - paragraph [ref=e898]: "0"
+                    - paragraph [ref=e899]: Catálogo Procore
+                  - img [ref=e901]
+                - generic [ref=e907]:
+                  - generic [ref=e908]:
+                    - paragraph [ref=e909]: Diretório
+                    - paragraph [ref=e910]: "0"
+                    - paragraph [ref=e911]: Utilizadores
+                  - img [ref=e913]
+    - button "DevTools - Ferramentas de Desenvolvimento" [ref=e695] [cursor=pointer]:
+      - img [ref=e696]
+  - generic [ref=e698]: "150"

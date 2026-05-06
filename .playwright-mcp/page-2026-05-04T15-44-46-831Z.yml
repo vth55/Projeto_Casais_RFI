@@ -1,0 +1,227 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "Docs" [ref=e9] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e10] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e11] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e12]:
+      - link "Help" [ref=e13] [cursor=pointer]:
+        - /url: /developer_support
+        - img [ref=e14]
+      - link "Sign In" [ref=e17] [cursor=pointer]:
+        - /url: /signin
+      - link "Sign Up" [ref=e18] [cursor=pointer]:
+        - /url: /signup
+  - generic [ref=e20]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]: Procore Developer Platform
+        - heading "Build on the platform that runs construction" [level=1] [ref=e25]
+        - paragraph [ref=e26]: Ship integrations. Build apps. Deploy agents. Every workflow on 2 million active construction projects is yours to extend — whether you're writing code, clicking through a guided walkthrough, or pointing an AI at our API.
+        - generic [ref=e27]:
+          - link "Start building" [ref=e28] [cursor=pointer]:
+            - /url: /signup
+          - link "Read the Quickstart" [ref=e29] [cursor=pointer]:
+            - /url: /documentation/quick-start-guide
+            - text: Read the Quickstart
+            - img [ref=e30]
+      - generic [ref=e32]:
+        - generic [ref=e33]: First API Call
+        - generic [ref=e34]: "# Authenticate with OAuth2 $ curl -X POST https://login.procore.com/oauth/token \\ -d grant_type=authorization_code # List projects $ curl https://api.procore.com/rest/v1.0/projects \\ -H \"Authorization: Bearer $TOKEN\" \\ -H \"Procore-Company-Id: 12345\""
+        - generic [ref=e35]: ● 200 OK · 47 projects returned
+    - generic [ref=e37]:
+      - generic [ref=e38]: Choose your path
+      - heading "Build for the Marketplace or connect your own stack" [level=2] [ref=e39]
+      - paragraph [ref=e40]: Whether you're a technology partner shipping a listed app or a customer team wiring Procore into your systems, the same APIs and docs power both paths.
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: For Partners
+          - generic [ref=e44]: Reach 2M+ construction professionals
+          - generic [ref=e45]: Ship apps through the Procore Marketplace. Dedicated partner program, co-marketing, and a platform team that picks up when you call.
+          - link "Become a partner" [ref=e46] [cursor=pointer]:
+            - /url: /partner
+            - text: Become a partner
+            - img [ref=e47]
+        - generic [ref=e49]:
+          - generic [ref=e50]: For Customers
+          - generic [ref=e51]: Connect Procore to your ERP in hours
+          - generic [ref=e52]: Marketplace connectors, integration walkthroughs, and full API access. Pick the path that matches your team — no-code, low-code, or custom.
+          - link "Explore APIs" [ref=e53] [cursor=pointer]:
+            - /url: /reference
+            - text: Explore APIs
+            - img [ref=e54]
+      - generic [ref=e56]:
+        - generic [ref=e57]: Coming Q2 2026
+        - generic [ref=e58]: AI agents and MCP servers — declare agentic components directly through the portal.
+        - link "Learn more" [ref=e59] [cursor=pointer]:
+          - /url: /documentation/agentic-apis
+          - text: Learn more
+          - img [ref=e60]
+    - generic [ref=e63]:
+      - generic [ref=e64]: Platform at a Glance
+      - heading "The numbers behind your next integration" [level=2] [ref=e65]
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]: 3M+
+          - generic [ref=e69]: Active Procore users
+          - generic [ref=e70]: Daily users of the Procore platform
+        - generic [ref=e71]:
+          - generic [ref=e72]: 400+
+          - generic [ref=e73]: Integrations in the Marketplace
+          - generic [ref=e74]: Live and available to every customer
+        - generic [ref=e75]:
+          - generic [ref=e76]: 50%+
+          - generic [ref=e77]: Customers use 5+ integrations
+          - generic [ref=e78]: Real integration stacks, not one-offs
+        - generic [ref=e79]:
+          - generic [ref=e80]: 160+
+          - generic [ref=e81]: Countries with active projects
+          - generic [ref=e82]: Global reach for your integration
+    - generic [ref=e84]:
+      - generic [ref=e85]:
+        - generic [ref=e86]: First API Call
+        - heading "From zero to authenticated in 15 minutes" [level=2] [ref=e87]
+        - paragraph [ref=e88]: Register an app, grab your OAuth credentials, and make your first real API call. The Quickstart walks you through every step — no support call required.
+        - generic [ref=e89]:
+          - link "Read the Quickstart" [ref=e90] [cursor=pointer]:
+            - /url: /documentation/quick-start-guide
+          - link "View API Reference" [ref=e91] [cursor=pointer]:
+            - /url: /reference
+            - text: View API Reference
+            - img [ref=e92]
+      - generic [ref=e94]:
+        - generic [ref=e95]: "curl --request POST \\ --url https://login.procore.com/oauth/token \\ --header 'content-type: application/json' \\ --data '{\"grant_type\":\"authorization_code\",\"client_id\":\"<CLIENT_ID>\",\"client_secret\":\"<CLIENT_SECRET>\",\"code\":\"<AUTH_CODE>\",\"redirect_uri\":\"http://localhost\"}'"
+        - generic [ref=e96]: ● 200 OK · OAuth 2.0 · REST API v1.0
+    - generic [ref=e98]:
+      - generic [ref=e99]: Why Procore
+      - heading "What the platform gives you" [level=2] [ref=e100]
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - generic [ref=e103]: "01"
+          - generic [ref=e104]: Built for construction, not adapted to it
+          - generic [ref=e105]: RFIs, submittals, drawings, cost codes, inspections, daily logs — all as versioned, first-class APIs.
+        - generic [ref=e106]:
+          - generic [ref=e107]: "02"
+          - generic [ref=e108]: Instant sandbox environments
+          - generic [ref=e109]: Spin up a sandbox with seeded project data in seconds. Cost codes, RFIs, submittals, and drawings — enough to validate your integration without touching production.
+        - generic [ref=e110]:
+          - generic [ref=e111]: "03"
+          - generic [ref=e112]: 400+ integrations already in production
+          - generic [ref=e113]: Microsoft, Bluebeam, EarthCam, DroneDeploy, and hundreds more already ship through the Marketplace. 95%+ of Procore customers use at least one integration.
+        - generic [ref=e114]:
+          - generic [ref=e115]: "04"
+          - generic [ref=e116]: Passes procurement on the first try
+          - generic [ref=e117]: SOC 2 Type II, SSO, permission-based OAuth, transparent rate limits, and a documented incident history. Everything your security team will ask for is already written down.
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121]: AI & Agents — Coming 2026
+        - heading "Agentic apps, built on the portal" [level=2] [ref=e122]
+        - paragraph [ref=e123]: Declare MCP servers and AI agents as components of your Procore apps — directly through the Developer Portal. We're building the infrastructure to make every app in the Marketplace agent-ready.
+        - link "Learn what's coming" [ref=e124] [cursor=pointer]:
+          - /url: /documentation/agentic-apis
+      - generic [ref=e125]:
+        - generic [ref=e126]: Declarative Agent Config
+        - generic [ref=e127]: "// procore-app.manifest.json { \"app_id\": \"analytics-app\", \"components\": { \"mcp_server\": { \"tools\": [\"read_projects\", \"read_rfis\"], \"auth\": \"oauth2_permissions\" }, \"agent\": { \"capabilities\": [\"summarize\", \"analyze\"] } } }"
+        - generic [ref=e128]: ◆ Coming Q2 2026
+    - contentinfo [ref=e129]:
+      - generic [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - img "Procore"
+          - paragraph [ref=e134]: Build on the construction industry's leading platform. The Procore Developer Platform gives you the APIs, tools, and support to create apps and integrations that make a real-world difference.
+          - generic [ref=e135]:
+            - link "LinkedIn" [ref=e136] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/procore-technologies
+              - img "LinkedIn" [ref=e137]
+            - link "Facebook" [ref=e138] [cursor=pointer]:
+              - /url: https://www.facebook.com/ProCoreTechnologies
+              - img "Facebook" [ref=e139]
+            - link "Twitter" [ref=e140] [cursor=pointer]:
+              - /url: https://twitter.com/procore
+              - img "Twitter" [ref=e141]
+            - link "Instagram" [ref=e142] [cursor=pointer]:
+              - /url: https://www.instagram.com/procoretech
+              - img "Instagram" [ref=e143]
+            - link "YouTube" [ref=e144] [cursor=pointer]:
+              - /url: https://www.youtube.com/user/ProCoreTech
+              - img "YouTube" [ref=e145]
+          - paragraph [ref=e146]:
+            - text: Call us at
+            - link "(866) 477-6267" [ref=e147] [cursor=pointer]:
+              - /url: tel:8664776267
+            - text: to speak with a product expert.
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]: Platform
+            - list [ref=e151]:
+              - listitem [ref=e152]:
+                - link "Procore Platform" [ref=e153] [cursor=pointer]:
+                  - /url: https://www.procore.com/platform
+              - listitem [ref=e154]:
+                - link "Partner Program" [ref=e155] [cursor=pointer]:
+                  - /url: /partner
+              - listitem [ref=e156]:
+                - link "Marketplace" [ref=e157] [cursor=pointer]:
+                  - /url: https://marketplace.procore.com
+          - generic [ref=e158]:
+            - generic [ref=e159]: Resources
+            - list [ref=e160]:
+              - listitem [ref=e161]:
+                - link "Documentation" [ref=e162] [cursor=pointer]:
+                  - /url: /documentation/introduction
+              - listitem [ref=e163]:
+                - link "API Reference" [ref=e164] [cursor=pointer]:
+                  - /url: /reference
+              - listitem [ref=e165]:
+                - link "Support" [ref=e166] [cursor=pointer]:
+                  - /url: /developer_support
+              - listitem [ref=e167]:
+                - link "Changelog" [ref=e168] [cursor=pointer]:
+                  - /url: /changelog
+          - generic [ref=e169]:
+            - generic [ref=e170]: Company
+            - list [ref=e171]:
+              - listitem [ref=e172]:
+                - link "Procore" [ref=e173] [cursor=pointer]:
+                  - /url: https://www.procore.com
+              - listitem [ref=e174]:
+                - link "Careers" [ref=e175] [cursor=pointer]:
+                  - /url: https://www.procore.com/jobs
+              - listitem [ref=e176]:
+                - link "Jobsite" [ref=e177] [cursor=pointer]:
+                  - /url: https://www.procore.com/jobsite
+              - listitem [ref=e178]:
+                - link "API Support" [ref=e179] [cursor=pointer]:
+                  - /url: /developer_support
+  - contentinfo [ref=e180]:
+    - generic [ref=e181]: © 2026 Procore. All rights reserved
+    - generic [ref=e182]:
+      - link "System Status" [ref=e183] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e184] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e185] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e186] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9
+  - region "Bandeira de biscoitos" [active] [ref=e188]:
+    - dialog "Privacidade" [ref=e189]:
+      - generic [ref=e190]:
+        - generic [ref=e192]:
+          - img "Logótipo da empresa" [ref=e194]
+          - generic [ref=e195]: Ao clicar em "Aceitar todos os cookies", concorda com o armazenamento de cookies no seu dispositivo para melhorar a navegação no site, analisar a utilização do site e ajudar nas nossas iniciativas de marketing.
+        - generic [ref=e197]:
+          - generic [ref=e198]:
+            - button "Aceitar todos os cookies" [ref=e199] [cursor=pointer]
+            - button "Rejeitar Todos" [ref=e200] [cursor=pointer]
+          - button "Definições de cookies, Abre a caixa de diálogo do centro de preferências" [ref=e201] [cursor=pointer]: Definições de cookies

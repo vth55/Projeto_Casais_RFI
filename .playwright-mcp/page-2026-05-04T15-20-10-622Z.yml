@@ -1,0 +1,211 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e26]:
+      - complementary [ref=e28]:
+        - generic [ref=e30]:
+          - generic [ref=e32]: C
+          - generic [ref=e33]:
+            - text: CASAIS
+            - generic [ref=e34]: Fleet Intelligence
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - img [ref=e39]
+              - generic [ref=e41]: Ativas
+            - paragraph [ref=e42]: "0"
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - img [ref=e45]
+              - generic [ref=e50]: Equip.
+            - paragraph [ref=e51]: "10"
+        - navigation [ref=e52]:
+          - list [ref=e53]:
+            - listitem [ref=e54]:
+              - button "Dashboard" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]:
+                  - img [ref=e57]
+                  - generic [ref=e62]: Dashboard
+            - listitem [ref=e63]:
+              - button "Obras" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]:
+                  - img [ref=e66]
+                  - generic [ref=e70]: Obras
+                - img [ref=e71]
+            - listitem [ref=e73]:
+              - button "Equipamentos" [ref=e74] [cursor=pointer]:
+                - generic [ref=e75]:
+                  - img [ref=e76]
+                  - generic [ref=e81]: Equipamentos
+            - listitem [ref=e82]:
+              - button "Operadores" [ref=e83] [cursor=pointer]:
+                - generic [ref=e84]:
+                  - img [ref=e85]
+                  - generic [ref=e90]: Operadores
+            - listitem [ref=e91]:
+              - button "Sessões" [ref=e92] [cursor=pointer]:
+                - generic [ref=e93]:
+                  - img [ref=e94]
+                  - generic [ref=e97]: Sessões
+                - img [ref=e98]
+            - listitem [ref=e100]:
+              - button "Manutenção" [ref=e101] [cursor=pointer]:
+                - generic [ref=e102]:
+                  - img [ref=e103]
+                  - generic [ref=e105]: Manutenção
+                - img [ref=e106]
+            - listitem [ref=e108]:
+              - button "Financeiro" [ref=e109] [cursor=pointer]:
+                - generic [ref=e110]:
+                  - img [ref=e111]
+                  - generic [ref=e114]: Financeiro
+                - img [ref=e115]
+            - listitem [ref=e117]:
+              - button "Análises" [ref=e118] [cursor=pointer]:
+                - generic [ref=e119]:
+                  - img [ref=e120]
+                  - generic [ref=e122]: Análises
+            - listitem [ref=e123]:
+              - button "Relatórios" [ref=e124] [cursor=pointer]:
+                - generic [ref=e125]:
+                  - img [ref=e126]
+                  - generic [ref=e129]: Relatórios
+            - listitem [ref=e130]:
+              - button "Configurações" [ref=e131] [cursor=pointer]:
+                - generic [ref=e132]:
+                  - img [ref=e133]
+                  - generic [ref=e136]: Configurações
+        - generic [ref=e138]:
+          - generic [ref=e140]: VH
+          - generic [ref=e141]:
+            - paragraph [ref=e142]: Vitor Hugo
+            - generic [ref=e143]:
+              - img [ref=e144]
+              - generic [ref=e146]: Administrador
+          - button "Terminar sessão" [ref=e147] [cursor=pointer]:
+            - img [ref=e148]
+      - generic [ref=e151]:
+        - banner [ref=e152]:
+          - generic [ref=e154]:
+            - heading "Configurações" [level=1] [ref=e717]
+            - paragraph [ref=e156]: Configurações do sistema
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - img [ref=e159]
+              - generic [ref=e163]: Online
+            - button [ref=e164] [cursor=pointer]:
+              - img [ref=e165]
+            - button [ref=e168] [cursor=pointer]:
+              - img [ref=e169]
+        - main [ref=e173]:
+          - generic [ref=e718]:
+            - generic [ref=e719]:
+              - heading "Configurações" [level=2] [ref=e720]
+              - paragraph [ref=e721]: Gerir configurações e permissões do sistema
+            - navigation [ref=e723]:
+              - button "Geral" [ref=e724] [cursor=pointer]:
+                - img [ref=e725]
+                - text: Geral
+              - button "Perfis de Acesso" [ref=e728] [cursor=pointer]:
+                - img [ref=e729]
+                - text: Perfis de Acesso
+              - button "Integrações" [active] [ref=e731] [cursor=pointer]:
+                - img [ref=e732]
+                - text: Integrações
+              - button "Modo Demo" [ref=e735] [cursor=pointer]:
+                - img [ref=e736]
+                - text: Modo Demo
+              - button "Notificações" [ref=e741] [cursor=pointer]:
+                - img [ref=e742]
+                - text: Notificações
+              - button "Aparência" [ref=e745] [cursor=pointer]:
+                - img [ref=e746]
+                - text: Aparência
+              - button "Base de Dados" [ref=e752] [cursor=pointer]:
+                - img [ref=e753]
+                - text: Base de Dados
+            - generic [ref=e851]:
+              - generic [ref=e852]:
+                - generic [ref=e853]:
+                  - generic [ref=e854]:
+                    - img [ref=e856]
+                    - generic [ref=e858]:
+                      - generic [ref=e859]:
+                        - heading "Procore" [level=3] [ref=e860]
+                        - generic [ref=e861]: Conectado
+                      - paragraph [ref=e862]:
+                        - text: "Sandbox:"
+                        - code [ref=e863]: sandbox.procore.com
+                        - text: "· Company ID:"
+                        - code [ref=e864]: "4283171"
+                  - generic [ref=e865]:
+                    - button "Sincronizar agora" [ref=e866] [cursor=pointer]:
+                      - img [ref=e867]
+                      - text: Sincronizar agora
+                    - button "Desconectar" [ref=e872] [cursor=pointer]:
+                      - img [ref=e873]
+                      - text: Desconectar
+                - generic [ref=e876]:
+                  - generic [ref=e877]:
+                    - paragraph [ref=e878]: Último sync
+                    - paragraph [ref=e879]: 04/05/26, 15:59
+                  - generic [ref=e880]:
+                    - paragraph [ref=e881]: Duração
+                    - paragraph [ref=e882]: 10195ms
+                  - generic [ref=e883]:
+                    - paragraph [ref=e884]: Token expira
+                    - paragraph [ref=e885]: 42 min
+                  - generic [ref=e886]:
+                    - paragraph [ref=e887]: Conectado desde
+                    - paragraph [ref=e888]: 29/04/26, 11:53
+              - generic [ref=e889]:
+                - generic [ref=e891]:
+                  - generic [ref=e892]:
+                    - paragraph [ref=e893]: Projetos Procore
+                    - paragraph [ref=e894]: "5"
+                    - paragraph [ref=e895]: Mirror read-only
+                  - img [ref=e897]
+                - generic [ref=e902]:
+                  - generic [ref=e903]:
+                    - paragraph [ref=e904]: Equipamentos
+                    - paragraph [ref=e905]: "0"
+                    - paragraph [ref=e906]: Catálogo Procore
+                  - img [ref=e908]
+                - generic [ref=e914]:
+                  - generic [ref=e915]:
+                    - paragraph [ref=e916]: Diretório
+                    - paragraph [ref=e917]: "11"
+                    - paragraph [ref=e918]: Utilizadores
+                  - img [ref=e920]
+              - generic [ref=e925]:
+                - generic [ref=e927]:
+                  - heading "Projetos Sincronizados" [level=4] [ref=e928]:
+                    - img [ref=e929]
+                    - text: Projetos Sincronizados
+                  - paragraph [ref=e931]: Primeiros 5 projetos do mirror Procore
+                - generic [ref=e932]:
+                  - generic [ref=e933]:
+                    - paragraph [ref=e935]: Standard Project Template
+                    - generic [ref=e936]: ID 326304
+                  - generic [ref=e937]:
+                    - generic [ref=e938]:
+                      - paragraph [ref=e939]: Sandbox Test Project
+                      - paragraph [ref=e940]: "#1234"
+                    - generic [ref=e941]: ID 326308
+                  - generic [ref=e942]:
+                    - generic [ref=e943]:
+                      - paragraph [ref=e944]: Torre Boavista — Porto
+                      - paragraph [ref=e945]: "#CSI-2024-001"
+                    - generic [ref=e946]: ID 328122
+                  - generic [ref=e947]:
+                    - generic [ref=e948]:
+                      - paragraph [ref=e949]: Viaduto IP2 — Trancoso
+                      - paragraph [ref=e950]: "#CSI-2024-002"
+                    - generic [ref=e951]: ID 328123
+                  - generic [ref=e952]:
+                    - generic [ref=e953]:
+                      - paragraph [ref=e954]: Urbanização Gaia Norte
+                      - paragraph [ref=e955]: "#CSI-2025-003"
+                    - generic [ref=e956]: ID 328124
+    - button "DevTools - Ferramentas de Desenvolvimento" [ref=e557] [cursor=pointer]:
+      - img [ref=e558]
+  - generic [ref=e560]: "150"

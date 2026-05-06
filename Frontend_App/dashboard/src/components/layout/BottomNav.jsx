@@ -13,6 +13,7 @@ import {
   FileText,
   Settings,
   X,
+  Warehouse,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -28,6 +29,7 @@ const PRIMARY_TABS = [
 // Itens no sheet "Mais"
 const MORE_ITEMS = [
   { id: 'obras',       label: 'Obras',         icon: Building2 },
+  { id: 'estaleiro',   label: 'Estaleiro',      icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'financeiro-custos', label: 'Financeiro', icon: Wallet },
   { id: 'sessoes-validacoes', label: 'Validações',  icon: CheckCircle },

@@ -1,0 +1,336 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e7]:
+      - complementary [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: C
+          - generic [ref=e14]:
+            - text: CASAIS
+            - generic [ref=e15]: Fleet Intelligence
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - img [ref=e20]
+              - generic [ref=e22]: Ativas
+            - paragraph [ref=e23]: "0"
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - img [ref=e26]
+              - generic [ref=e31]: Equip.
+            - paragraph [ref=e32]: "10"
+        - navigation [ref=e33]:
+          - list [ref=e34]:
+            - listitem [ref=e35]:
+              - button "Dashboard" [ref=e36] [cursor=pointer]:
+                - generic [ref=e37]:
+                  - img [ref=e38]
+                  - generic [ref=e43]: Dashboard
+            - listitem [ref=e44]:
+              - button "Obras" [ref=e45] [cursor=pointer]:
+                - generic [ref=e46]:
+                  - img [ref=e47]
+                  - generic [ref=e51]: Obras
+                - img [ref=e52]
+              - list [ref=e684]:
+                - listitem [ref=e685]:
+                  - button "Todas" [active] [ref=e686] [cursor=pointer]
+                - listitem [ref=e687]:
+                  - button "Em Curso" [ref=e688] [cursor=pointer]
+                - listitem [ref=e689]:
+                  - button "Planeadas" [ref=e690] [cursor=pointer]
+                - listitem [ref=e691]:
+                  - button "Concluídas" [ref=e692] [cursor=pointer]
+            - listitem [ref=e54]:
+              - button "Equipamentos" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]:
+                  - img [ref=e57]
+                  - generic [ref=e62]: Equipamentos
+            - listitem [ref=e63]:
+              - button "Operadores" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]:
+                  - img [ref=e66]
+                  - generic [ref=e71]: Operadores
+            - listitem [ref=e72]:
+              - button "Sessões" [ref=e73] [cursor=pointer]:
+                - generic [ref=e74]:
+                  - img [ref=e75]
+                  - generic [ref=e78]: Sessões
+                - img [ref=e79]
+            - listitem [ref=e81]:
+              - button "Manutenção" [ref=e82] [cursor=pointer]:
+                - generic [ref=e83]:
+                  - img [ref=e84]
+                  - generic [ref=e86]: Manutenção
+                - img [ref=e87]
+            - listitem [ref=e89]:
+              - button "Financeiro" [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]:
+                  - img [ref=e92]
+                  - generic [ref=e95]: Financeiro
+                - img [ref=e96]
+            - listitem [ref=e98]:
+              - button "Análises" [ref=e99] [cursor=pointer]:
+                - generic [ref=e100]:
+                  - img [ref=e101]
+                  - generic [ref=e103]: Análises
+            - listitem [ref=e104]:
+              - button "Relatórios" [ref=e105] [cursor=pointer]:
+                - generic [ref=e106]:
+                  - img [ref=e107]
+                  - generic [ref=e110]: Relatórios
+            - listitem [ref=e111]:
+              - button "Configurações" [ref=e112] [cursor=pointer]:
+                - generic [ref=e113]:
+                  - img [ref=e114]
+                  - generic [ref=e117]: Configurações
+        - generic [ref=e119]:
+          - generic [ref=e121]: VH
+          - generic [ref=e122]:
+            - paragraph [ref=e123]: Vitor Hugo
+            - generic [ref=e124]:
+              - img [ref=e125]
+              - generic [ref=e127]: Administrador
+          - button "Terminar sessão" [ref=e128] [cursor=pointer]:
+            - img [ref=e129]
+      - generic [ref=e132]:
+        - banner [ref=e133]:
+          - heading "Dashboard" [level=1] [ref=e136]
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - img [ref=e140]
+              - generic [ref=e144]: Online
+            - button [ref=e145] [cursor=pointer]:
+              - img [ref=e146]
+            - button [ref=e149] [cursor=pointer]:
+              - img [ref=e150]
+        - main [ref=e154]:
+          - generic [ref=e693]:
+            - generic [ref=e694]:
+              - generic [ref=e695]:
+                - heading "Obras" [level=2] [ref=e696]
+                - paragraph [ref=e697]: Gestão de obras e localizações
+              - button "Nova Obra" [ref=e698] [cursor=pointer]:
+                - img [ref=e699]
+                - text: Nova Obra
+            - generic [ref=e700]:
+              - generic [ref=e704] [cursor=pointer]:
+                - generic [ref=e705]:
+                  - img [ref=e707]
+                  - generic [ref=e711]: Total
+                - generic [ref=e713]: "6"
+              - generic [ref=e717] [cursor=pointer]:
+                - generic [ref=e718]:
+                  - img [ref=e720]
+                  - generic [ref=e723]: Em Curso
+                - generic [ref=e725]: "4"
+              - generic [ref=e729] [cursor=pointer]:
+                - generic [ref=e730]:
+                  - img [ref=e732]
+                  - generic [ref=e734]: Planeadas
+                - generic [ref=e736]: "0"
+              - generic [ref=e740] [cursor=pointer]:
+                - generic [ref=e741]:
+                  - img [ref=e743]
+                  - generic [ref=e746]: Concluídas
+                - generic [ref=e748]: "1"
+            - generic [ref=e751]:
+              - img [ref=e752]
+              - textbox "Pesquisar obras..." [ref=e755]
+            - generic [ref=e756]:
+              - generic [ref=e757] [cursor=pointer]:
+                - generic [ref=e759]:
+                  - img [ref=e760]
+                  - text: Concluída
+                - generic [ref=e763]:
+                  - img [ref=e765]
+                  - generic [ref=e769]:
+                    - heading "akjvuc" [level=3] [ref=e770]
+                    - generic [ref=e771]:
+                      - img [ref=e772]
+                      - generic [ref=e775]: Av. da Liberdade 401
+                - generic [ref=e776]:
+                  - generic [ref=e777]:
+                    - img [ref=e779]
+                    - generic [ref=e784]:
+                      - paragraph [ref=e785]: Equipamentos
+                      - paragraph [ref=e786]: "4"
+                  - generic [ref=e787]:
+                    - img [ref=e789]
+                    - generic [ref=e794]:
+                      - paragraph [ref=e795]: Operadores
+                      - paragraph [ref=e796]: "0"
+                - generic [ref=e797]:
+                  - button "Ver Detalhes" [ref=e798]:
+                    - img [ref=e799]
+                    - text: Ver Detalhes
+                  - button [ref=e802]:
+                    - img [ref=e803]
+                  - button [ref=e805]:
+                    - img [ref=e806]
+              - generic [ref=e808] [cursor=pointer]:
+                - generic [ref=e810]:
+                  - img [ref=e811]
+                  - text: Em Curso
+                - generic [ref=e814]:
+                  - img [ref=e816]
+                  - generic [ref=e820]:
+                    - heading "Obra Demo - Ponte Norte" [level=3] [ref=e821]
+                    - generic [ref=e822]:
+                      - img [ref=e823]
+                      - generic [ref=e826]: Sem endereço
+                - generic [ref=e827]:
+                  - generic [ref=e828]:
+                    - img [ref=e830]
+                    - generic [ref=e835]:
+                      - paragraph [ref=e836]: Equipamentos
+                      - paragraph [ref=e837]: "0"
+                  - generic [ref=e838]:
+                    - img [ref=e840]
+                    - generic [ref=e845]:
+                      - paragraph [ref=e846]: Operadores
+                      - paragraph [ref=e847]: "0"
+                - generic [ref=e848]:
+                  - button "Ver Detalhes" [ref=e849]:
+                    - img [ref=e850]
+                    - text: Ver Detalhes
+                  - button [ref=e853]:
+                    - img [ref=e854]
+              - generic [ref=e856] [cursor=pointer]:
+                - generic [ref=e857]:
+                  - 'generic "Sincronizado com Procore: Sandbox Test Project" [ref=e858]':
+                    - img [ref=e859]
+                    - text: Procore
+                  - generic [ref=e862]:
+                    - img [ref=e863]
+                    - text: Em Curso
+                - generic [ref=e866]:
+                  - img [ref=e868]
+                  - generic [ref=e872]:
+                    - heading "Sandbox Test Project" [level=3] [ref=e873]
+                    - generic [ref=e874]:
+                      - img [ref=e875]
+                      - generic [ref=e878]: 6309 Carpinteria Avenue
+                - generic [ref=e879]:
+                  - generic [ref=e880]:
+                    - img [ref=e882]
+                    - generic [ref=e887]:
+                      - paragraph [ref=e888]: Equipamentos
+                      - paragraph [ref=e889]: "0"
+                  - generic [ref=e890]:
+                    - img [ref=e892]
+                    - generic [ref=e897]:
+                      - paragraph [ref=e898]: Operadores
+                      - paragraph [ref=e899]: "0"
+                - generic [ref=e900]:
+                  - button "Ver Detalhes" [ref=e901]:
+                    - img [ref=e902]
+                    - text: Ver Detalhes
+                  - button [ref=e905]:
+                    - img [ref=e906]
+                  - button [ref=e908]:
+                    - img [ref=e909]
+              - generic [ref=e911] [cursor=pointer]:
+                - generic [ref=e912]:
+                  - 'generic "Sincronizado com Procore: Torre Boavista — Porto" [ref=e913]':
+                    - img [ref=e914]
+                    - text: Procore
+                  - generic [ref=e917]:
+                    - img [ref=e918]
+                    - text: Em Curso
+                - generic [ref=e921]:
+                  - img [ref=e923]
+                  - generic [ref=e927]:
+                    - heading "Torre Boavista — Porto" [level=3] [ref=e928]
+                    - generic [ref=e929]:
+                      - img [ref=e930]
+                      - generic [ref=e933]: Avenida da Boavista, 1200
+                - generic [ref=e934]:
+                  - generic [ref=e935]:
+                    - img [ref=e937]
+                    - generic [ref=e942]:
+                      - paragraph [ref=e943]: Equipamentos
+                      - paragraph [ref=e944]: "0"
+                  - generic [ref=e945]:
+                    - img [ref=e947]
+                    - generic [ref=e952]:
+                      - paragraph [ref=e953]: Operadores
+                      - paragraph [ref=e954]: "0"
+                - generic [ref=e955]:
+                  - button "Ver Detalhes" [ref=e956]:
+                    - img [ref=e957]
+                    - text: Ver Detalhes
+                  - button [ref=e960]:
+                    - img [ref=e961]
+                  - button [ref=e963]:
+                    - img [ref=e964]
+              - generic [ref=e966] [cursor=pointer]:
+                - generic [ref=e967]:
+                  - 'generic "Sincronizado com Procore: Viaduto IP2 — Trancoso" [ref=e968]':
+                    - img [ref=e969]
+                    - text: Procore
+                  - generic [ref=e972]:
+                    - img [ref=e973]
+                    - text: Em Curso
+                - generic [ref=e976]:
+                  - img [ref=e978]
+                  - generic [ref=e982]:
+                    - heading "Viaduto IP2 — Trancoso" [level=3] [ref=e983]
+                    - generic [ref=e984]:
+                      - img [ref=e985]
+                      - generic [ref=e988]: IP2, km 47
+                - generic [ref=e989]:
+                  - generic [ref=e990]:
+                    - img [ref=e992]
+                    - generic [ref=e997]:
+                      - paragraph [ref=e998]: Equipamentos
+                      - paragraph [ref=e999]: "0"
+                  - generic [ref=e1000]:
+                    - img [ref=e1002]
+                    - generic [ref=e1007]:
+                      - paragraph [ref=e1008]: Operadores
+                      - paragraph [ref=e1009]: "0"
+                - generic [ref=e1010]:
+                  - button "Ver Detalhes" [ref=e1011]:
+                    - img [ref=e1012]
+                    - text: Ver Detalhes
+                  - button [ref=e1015]:
+                    - img [ref=e1016]
+                  - button [ref=e1018]:
+                    - img [ref=e1019]
+              - generic [ref=e1021] [cursor=pointer]:
+                - generic [ref=e1022]:
+                  - 'generic "Sincronizado com Procore: Urbanização Gaia Norte" [ref=e1023]':
+                    - img [ref=e1024]
+                    - text: Procore
+                  - generic [ref=e1027]:
+                    - img [ref=e1028]
+                    - text: Em Curso
+                - generic [ref=e1031]:
+                  - img [ref=e1033]
+                  - generic [ref=e1037]:
+                    - heading "Urbanização Gaia Norte" [level=3] [ref=e1038]
+                    - generic [ref=e1039]:
+                      - img [ref=e1040]
+                      - generic [ref=e1043]: Rua de Serralves, 45
+                - generic [ref=e1044]:
+                  - generic [ref=e1045]:
+                    - img [ref=e1047]
+                    - generic [ref=e1052]:
+                      - paragraph [ref=e1053]: Equipamentos
+                      - paragraph [ref=e1054]: "0"
+                  - generic [ref=e1055]:
+                    - img [ref=e1057]
+                    - generic [ref=e1062]:
+                      - paragraph [ref=e1063]: Operadores
+                      - paragraph [ref=e1064]: "0"
+                - generic [ref=e1065]:
+                  - button "Ver Detalhes" [ref=e1066]:
+                    - img [ref=e1067]
+                    - text: Ver Detalhes
+                  - button [ref=e1070]:
+                    - img [ref=e1071]
+                  - button [ref=e1073]:
+                    - img [ref=e1074]
+    - button "DevTools - Ferramentas de Desenvolvimento" [ref=e680] [cursor=pointer]:
+      - img [ref=e681]
+  - generic [ref=e683]: "150"

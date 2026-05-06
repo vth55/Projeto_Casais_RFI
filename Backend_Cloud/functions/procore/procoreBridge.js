@@ -36,9 +36,12 @@ const admin = require('firebase-admin');
 const APP_ID = 'casais-rfid';
 const INTEGRATION_DOC_PATH = `artifacts/${APP_ID}/public/data/integrations/procore`;
 
-// Sandbox endpoints. Quando passar a produção, trocar para:
-//   LOGIN_URL → https://login.procore.com
-//   API_URL   → https://api.procore.com
+// Dev Sandbox endpoints — dados estáveis, nunca refresha. Usa Sandbox OAuth credentials.
+// Confirmado em 2026-04-28: production access aprovado, mas demo continua em Dev Sandbox para
+// preservar IDs estáveis (Monthly Sandbox refresha dia 1, partia o matching de obras/operadores).
+// Outras opções:
+//   Monthly Sandbox: 'https://login-sandbox-monthly.procore.com' / 'https://api-monthly.procore.com'
+//   Production real: 'https://login.procore.com'                 / 'https://api.procore.com'
 const PROCORE_LOGIN_URL = 'https://login-sandbox.procore.com';
 const PROCORE_API_URL = 'https://sandbox.procore.com';
 const PROCORE_AUTH_URL = `${PROCORE_LOGIN_URL}/oauth/authorize`;
@@ -288,19 +291,47 @@ async function fetchProjects() {
  */
 async function fetchEquipment() {
     const companyId = process.env.PROCORE_COMPANY_ID;
-    // Tentar primeiro a versão legacy (v1.0)
+
+    // 1. Tentar company-level legacy (v1.0)
     try {
-        return await procoreFetchAll(`${PROCORE_API_VERSION}/companies/${companyId}/equipment`);
-    } catch (legacyErr) {
-        console.log('[procoreBridge] Legacy equipment failed, trying managed equipment (v1.1)...');
-        // Fallback para managed equipment v1.1
-        try {
-            return await procoreFetchAll(`/rest/v1.1/companies/${companyId}/managed_equipment`);
-        } catch (managedErr) {
-            console.error('[procoreBridge] Both equipment endpoints failed');
-            throw legacyErr; // throw original error
+        const items = await procoreFetchAll(`${PROCORE_API_VERSION}/companies/${companyId}/equipment`);
+        if (items.length > 0) return items;
+    } catch (_) { /* continua */ }
+
+    // 2. Tentar company-level managed (v1.1)
+    try {
+        const items = await procoreFetchAll(`/rest/v1.1/companies/${companyId}/managed_equipment`);
+        if (items.length > 0) return items;
+    } catch (_) { /* continua */ }
+
+    // 3. Fallback: agregar equipment de todos os projectos (sandbox frequentemente só tem project-level)
+    console.log('[procoreBridge] Company-level equipment endpoints falhou — a tentar project-level...');
+    const projects = await fetchProjects();
+    const seen = new Set();
+    const all = [];
+
+    for (const project of projects) {
+        // Tentar v1.1 managed_equipment por projecto
+        for (const endpoint of [
+            `/rest/v1.1/projects/${project.id}/managed_equipment`,
+            `${PROCORE_API_VERSION}/projects/${project.id}/equipment`,
+        ]) {
+            try {
+                const items = await procoreFetchAll(endpoint);
+                for (const item of items) {
+                    const key = String(item.id || item.equipment_id);
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        all.push({ ...item, _source_project_id: project.id });
+                    }
+                }
+                break; // se um endpoint funciona, não testar o seguinte para este projecto
+            } catch (_) { /* tentar próximo endpoint */ }
         }
     }
+
+    console.log(`[procoreBridge] fetchEquipment (project-level fallback): ${all.length} items`);
+    return all;
 }
 
 /**
@@ -542,6 +573,56 @@ async function diagnoseEquipment() {
                     });
                 }
             }
+        }
+    }
+
+    // 12. Probes de WRITE (timecard / daily_logs / direct_costs) — descobrir se estão também 404 no sandbox.
+    //      Usamos payloads obviamente de teste e datas no futuro para minimizar pollution se algum POST passar.
+    if (results.project_level?.project_id) {
+        const projectId = results.project_level.project_id;
+        results.write_probes = {};
+
+        const probeDate = '2099-01-01';
+        const probeNote = 'API_PROBE_TEST — please ignore (manifest scope diagnosis)';
+
+        try {
+            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/timecard_entries`, {
+                method: 'POST',
+                body: { timecard_entry: { date: probeDate, hours: '0', description: probeNote } },
+            });
+            results.write_probes.timecard_entries = { status: 'ok', id: data?.id };
+        } catch (err) {
+            results.write_probes.timecard_entries = { status: 'error', error: err.message.slice(0, 300) };
+        }
+
+        try {
+            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/daily_logs/notes_logs`, {
+                method: 'POST',
+                body: [{ date: probeDate, notes: probeNote }],
+            });
+            results.write_probes.daily_logs_notes = { status: 'ok', id: Array.isArray(data) ? data[0]?.id : data?.id };
+        } catch (err) {
+            results.write_probes.daily_logs_notes = { status: 'error', error: err.message.slice(0, 300) };
+        }
+
+        try {
+            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/direct_costs`, {
+                method: 'POST',
+                body: { direct_cost: { date: probeDate, description: probeNote, amount: '0.01', direct_cost_type: 'other' } },
+            });
+            results.write_probes.direct_costs = { status: 'ok', id: data?.id };
+        } catch (err) {
+            results.write_probes.direct_costs = { status: 'error', error: err.message.slice(0, 300) };
+        }
+
+        try {
+            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/users/0`, {
+                method: 'PATCH',
+                body: { user: { custom_field_999999: 'probe' } },
+            });
+            results.write_probes.directory_patch = { status: 'ok', data };
+        } catch (err) {
+            results.write_probes.directory_patch = { status: 'error', error: err.message.slice(0, 300) };
         }
     }
 
@@ -972,6 +1053,32 @@ async function handleProjects(req, res) {
 }
 
 /**
+ * GET /companies → lista empresas acessíveis com o token actual (útil para descobrir Company ID de produção).
+ * Faz fetch directo sem exigir PROCORE_COMPANY_ID.
+ */
+async function handleCompanies(req, res) {
+    try {
+        const accessToken = await getValidAccessToken();
+        const url = `${PROCORE_API_URL}${PROCORE_API_VERSION}/companies`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json',
+            },
+        });
+        const data = await response.json();
+        const companies = Array.isArray(data) ? data : [data];
+        return res.json({
+            count: companies.length,
+            companies: companies.map(c => ({ id: c.id, name: c.name, is_active: c.is_active })),
+        });
+    } catch (err) {
+        console.error('[procoreBridge] /companies exception:', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+/**
  * GET /equipment → JSON com inventário de equipamentos da empresa.
  */
 async function handleEquipment(req, res) {
@@ -1005,6 +1112,205 @@ async function handleDirectory(req, res) {
  * @param {string} [opts.trigger='manual']  rótulo para logs/meta ('manual'|'cron')
  * @returns {Promise<{projects:number, equipment:number, directory:number, errors:object, duration_ms:number, trigger:string}>}
  */
+
+// ============================================
+// CUSTOM FIELDS — discovery & write-back
+// ============================================
+
+/**
+ * Lê os configurable field sets de um tool do Procore.
+ * @param {'equipment'|'directory'} tool
+ */
+async function fetchConfigurableFieldSets(tool) {
+    const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${process.env.PROCORE_COMPANY_ID}/configurable_field_sets`, {
+        query: { tool },
+    });
+    return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Descobre os IDs dos custom fields pelo label esperado.
+ * Retorna mapa { rfidReaderId: {id, label}, pwaMachineId: {id, label}, ... }
+ */
+async function discoverCustomFieldIds(tool, expectedLabels) {
+    const fieldSets = await fetchConfigurableFieldSets(tool);
+    const found = {};
+    for (const fs of fieldSets) {
+        for (const field of (fs.configurable_fields || [])) {
+            const labelNorm = (field.label || '').toLowerCase().trim();
+            for (const [key, expectedLabel] of Object.entries(expectedLabels)) {
+                if (labelNorm === expectedLabel.toLowerCase()) {
+                    found[key] = { id: field.id, label: field.label, data_type: field.data_type };
+                }
+            }
+        }
+    }
+    return found;
+}
+
+/**
+ * Descobre e persiste os IDs dos custom fields no Firestore.
+ * Deve ser chamado uma vez após criação dos campos no portal Procore.
+ */
+async function discoverAndPersistCustomFields() {
+    const EQUIPMENT_LABELS = { rfidReaderId: 'RFID Reader ID', pwaMachineId: 'PWA Machine ID' };
+    const PERSON_LABELS    = { rfidCardId: 'RFID Card ID', pwaOperatorId: 'PWA Operator ID' };
+
+    const [equipmentFields, personFields] = await Promise.all([
+        discoverCustomFieldIds('equipment', EQUIPMENT_LABELS),
+        discoverCustomFieldIds('directory', PERSON_LABELS),
+    ]);
+
+    const missing = [
+        ...Object.entries(EQUIPMENT_LABELS).filter(([k]) => !equipmentFields[k]).map(([,l]) => `Equipment: "${l}"`),
+        ...Object.entries(PERSON_LABELS).filter(([k]) => !personFields[k]).map(([,l]) => `Directory: "${l}"`),
+    ];
+
+    const customFields = {
+        equipment: equipmentFields,
+        person: personFields,
+        discoveredAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await integrationDoc().set({ customFields }, { merge: true });
+    console.log('[procoreBridge] custom fields discovered:', JSON.stringify({ equipment: equipmentFields, person: personFields }));
+
+    return { equipment: equipmentFields, person: personFields, missing };
+}
+
+/**
+ * PATCH de um custom field num equipment do Procore.
+ * fieldKey: 'rfidReaderId' | 'pwaMachineId'
+ */
+async function patchEquipmentCustomField(equipmentId, fieldKey, value) {
+    const snap = await integrationDoc().get();
+    const fieldDef = snap.data()?.customFields?.equipment?.[fieldKey];
+    if (!fieldDef?.id) throw new Error(`CUSTOM_FIELDS_NOT_DISCOVERED: equipment.${fieldKey}`);
+    await procoreFetch(`${PROCORE_API_VERSION}/companies/${process.env.PROCORE_COMPANY_ID}/equipment/${equipmentId}`, {
+        method: 'PATCH',
+        body: { equipment: { [`custom_field_${fieldDef.id}`]: value } },
+    });
+}
+
+/**
+ * PATCH de um custom field numa pessoa do directório Procore.
+ * fieldKey: 'rfidCardId' | 'pwaOperatorId'
+ */
+async function patchDirectoryCustomField(userId, fieldKey, value) {
+    const snap = await integrationDoc().get();
+    const fieldDef = snap.data()?.customFields?.person?.[fieldKey];
+    if (!fieldDef?.id) throw new Error(`CUSTOM_FIELDS_NOT_DISCOVERED: person.${fieldKey}`);
+    await procoreFetch(`${PROCORE_API_VERSION}/companies/${process.env.PROCORE_COMPANY_ID}/users/${userId}`, {
+        method: 'PATCH',
+        body: { user: { [`custom_field_${fieldDef.id}`]: value } },
+    });
+}
+
+// ── Route handlers ────────────────────────────────────────────────────────────
+
+async function handleCustomFieldsDiscover(req, res) {
+    try {
+        const result = await discoverAndPersistCustomFields();
+        return res.status(200).json({ ok: true, ...result });
+    } catch (err) {
+        console.error('[procoreBridge] custom-fields-discover error:', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+async function handleCustomFieldsStatus(req, res) {
+    try {
+        const snap = await integrationDoc().get();
+        const customFields = snap.data()?.customFields || null;
+        return res.status(200).json({ customFields });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+async function handlePairEquipment(req, res) {
+    const { equipmentId, rfidReaderId, pwaMachineId } = req.body || {};
+    if (!equipmentId || !rfidReaderId || !pwaMachineId) {
+        return res.status(400).json({ error: 'equipmentId, rfidReaderId e pwaMachineId são obrigatórios' });
+    }
+    try {
+        // Escrever em Procore
+        await Promise.all([
+            patchEquipmentCustomField(equipmentId, 'rfidReaderId', String(rfidReaderId)),
+            patchEquipmentCustomField(equipmentId, 'pwaMachineId', String(pwaMachineId)),
+        ]);
+        // Actualizar machine stub na PWA
+        const machineRef = db().doc(`artifacts/casais-rfid/public/data/machines/${pwaMachineId}`);
+        await machineRef.set({
+            rfidReaderId: String(rfidReaderId),
+            pairingStatus: 'paired',
+            pairedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        console.log(`[procoreBridge] paired equipment ${equipmentId} ↔ RFID ${rfidReaderId} (${pwaMachineId})`);
+        return res.status(200).json({ ok: true });
+    } catch (err) {
+        if (err.message.startsWith('CUSTOM_FIELDS_NOT_DISCOVERED')) {
+            return res.status(412).json({
+                error: err.message,
+                hint: 'Cria os custom fields no Procore Admin e corre /api/procore/custom-fields-discover',
+            });
+        }
+        console.error('[procoreBridge] pair-equipment error:', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+async function handlePairOperator(req, res) {
+    const { procoreUserId, cardId } = req.body || {};
+    if (!procoreUserId || !cardId) {
+        return res.status(400).json({ error: 'procoreUserId e cardId são obrigatórios' });
+    }
+    const firestore = db();
+    const pendingRef = firestore.doc(`artifacts/casais-rfid/public/data/pending_operators/${procoreUserId}`);
+    const operatorRef = firestore.doc(`artifacts/casais-rfid/public/data/operators/${cardId}`);
+    try {
+        await firestore.runTransaction(async (tx) => {
+            const pendingSnap = await tx.get(pendingRef);
+            if (!pendingSnap.exists) throw new Error('PENDING_OPERATOR_NOT_FOUND');
+            const existingOp = await tx.get(operatorRef);
+            if (existingOp.exists) throw new Error('ALREADY_PAIRED: cardId já associado a um operador');
+
+            const pending = pendingSnap.data();
+            tx.set(operatorRef, {
+                name: pending.name,
+                email: pending.email,
+                registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+                procoreUserId: pending.procoreUserId,
+                source: 'procore',
+                pairingStatus: 'paired',
+                pairedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            tx.delete(pendingRef);
+        });
+
+        // Escrever em Procore (fora da transação — falha não é crítica)
+        try {
+            await Promise.all([
+                patchDirectoryCustomField(procoreUserId, 'rfidCardId', String(cardId)),
+                patchDirectoryCustomField(procoreUserId, 'pwaOperatorId', String(cardId)),
+            ]);
+        } catch (patchErr) {
+            console.warn(`[procoreBridge] pair-operator Procore PATCH failed (não crítico): ${patchErr.message}`);
+        }
+
+        console.log(`[procoreBridge] paired operator ${procoreUserId} ↔ cardId ${cardId}`);
+        return res.status(200).json({ ok: true });
+    } catch (err) {
+        if (err.message.startsWith('CUSTOM_FIELDS_NOT_DISCOVERED')) {
+            return res.status(412).json({ error: err.message, hint: 'Corre /api/procore/custom-fields-discover' });
+        }
+        if (err.message === 'PENDING_OPERATOR_NOT_FOUND') return res.status(404).json({ error: err.message });
+        if (err.message.startsWith('ALREADY_PAIRED')) return res.status(409).json({ error: err.message });
+        console.error('[procoreBridge] pair-operator error:', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
 async function runFullSync({ trigger = 'manual' } = {}) {
     const startedAt = Date.now();
     const summary = {
@@ -1018,6 +1324,17 @@ async function runFullSync({ trigger = 'manual' } = {}) {
     try {
         const projects = await fetchProjects();
         summary.projects = await persistCollection('projects', projects);
+        // Auto-set default project when only one exists (covers sandbox demos and new installs)
+        if (projects.length === 1) {
+            const intSnap = await integrationDoc().get();
+            if (!intSnap.data()?.defaultProcoreProjectId) {
+                await integrationDoc().set({
+                    defaultProcoreProjectId: projects[0].id,
+                    defaultProcoreProjectName: projects[0].name,
+                }, { merge: true });
+                console.log(`[procoreSync:${trigger}] auto-set default project: ${projects[0].name} (${projects[0].id})`);
+            }
+        }
     } catch (err) {
         console.error(`[procoreSync:${trigger}] projects error:`, err);
         summary.errors.projects = err.message;
@@ -1025,6 +1342,9 @@ async function runFullSync({ trigger = 'manual' } = {}) {
 
     try {
         const equipment = await fetchEquipment();
+        // TODO (Phase 2): filtrar só ownership_type === 'owned' antes de persistir.
+        // Maquinas Rented/Subcontracted não têm sensor RFID e não devem gerar sessões na PWA.
+        // Ex: const ownedEquipment = equipment.filter(e => e.ownership_type === 'owned');
         summary.equipment = await persistCollection('equipment', equipment);
     } catch (err) {
         console.error(`[procoreSync:${trigger}] equipment error:`, err);
@@ -1075,7 +1395,16 @@ async function runFullSync({ trigger = 'manual' } = {}) {
  */
 async function handleSync(req, res) {
     try {
+        const { projectProcoreToPwa } = require('./procorePwaProjector');
         const result = await runFullSync({ trigger: 'manual' });
+        // Projectar Procore → PWA após sync manual também
+        try {
+            const proj = await projectProcoreToPwa();
+            result.projection = proj;
+        } catch (projErr) {
+            console.error('[procoreBridge] projection error (não crítico):', projErr.message);
+            result.projectionError = projErr.message;
+        }
         const hasErrors = Object.keys(result.errors).length > 0;
         return res.status(hasErrors ? 207 : 200).json(result);
     } catch (err) {
@@ -1412,6 +1741,9 @@ const procoreBridge = onRequest(
                 return await handleDisconnect(req, res);
             }
             // Chunk 1B — leitura da API REST
+            if (req.method === 'GET' && action === 'companies') {
+                return await handleCompanies(req, res);
+            }
             if (req.method === 'GET' && action === 'projects') {
                 return await handleProjects(req, res);
             }
@@ -1442,10 +1774,22 @@ const procoreBridge = onRequest(
             if (req.method === 'POST' && action === 'writeback') {
                 return await handleWriteback(req, res);
             }
-
+            // Bidirectional sync — custom fields & pairing
+            if (req.method === 'GET' && action === 'custom-fields-discover') {
+                return await handleCustomFieldsDiscover(req, res);
+            }
+            if (req.method === 'GET' && action === 'custom-fields-status') {
+                return await handleCustomFieldsStatus(req, res);
+            }
+            if (req.method === 'POST' && action === 'pair-equipment') {
+                return await handlePairEquipment(req, res);
+            }
+            if (req.method === 'POST' && action === 'pair-operator') {
+                return await handlePairOperator(req, res);
+            }
             return res.status(404).json({
                 error: 'Unknown procore action',
-                hint: 'Try /api/procore/{authorize|callback|status|disconnect|projects|equipment|equipment-diagnose|equipment-create|equipment-bulk|directory|sync|daily-log|writeback}',
+                hint: 'Try /api/procore/{authorize|callback|status|disconnect|companies|projects|equipment|equipment-diagnose|equipment-create|equipment-bulk|directory|sync|daily-log|writeback|custom-fields-discover|custom-fields-status|pair-equipment|pair-operator}',
                 received: { method: req.method, path: req.path, action },
             });
         } catch (err) {
@@ -1454,6 +1798,41 @@ const procoreBridge = onRequest(
         }
     }
 );
+
+/**
+ * Associa um equipamento a um projecto Procore.
+ * POST /rest/v1.0/projects/{projectId}/equipment
+ * Retorna false (sem throw) se o Equipment API não estiver disponível (sandbox 404).
+ */
+async function associateEquipmentToProject(procoreEquipmentId, procoreProjectId) {
+    try {
+        await procoreFetch(`${PROCORE_API_VERSION}/projects/${procoreProjectId}/equipment`, {
+            method: 'POST',
+            body: { equipment: { equipment_id: procoreEquipmentId } },
+        });
+        return true;
+    } catch (err) {
+        console.warn(`[procoreBridge] associateEquipmentToProject failed (expected in sandbox):`, err.message);
+        return false;
+    }
+}
+
+/**
+ * Remove a associação de um equipamento a um projecto Procore.
+ * DELETE /rest/v1.0/projects/{projectId}/equipment/{id}
+ * Retorna false (sem throw) se o Equipment API não estiver disponível.
+ */
+async function removeEquipmentFromProject(procoreEquipmentId, procoreProjectId) {
+    try {
+        await procoreFetch(`${PROCORE_API_VERSION}/projects/${procoreProjectId}/equipment/${procoreEquipmentId}`, {
+            method: 'DELETE',
+        });
+        return true;
+    } catch (err) {
+        console.warn(`[procoreBridge] removeEquipmentFromProject failed (expected in sandbox):`, err.message);
+        return false;
+    }
+}
 
 module.exports = {
     procoreBridge,
@@ -1471,6 +1850,13 @@ module.exports = {
     // Equipment setup
     diagnoseEquipment,
     createEquipment,
+    // Bidirectional sync — custom fields & pairing
+    discoverAndPersistCustomFields,
+    patchEquipmentCustomField,
+    patchDirectoryCustomField,
+    // Bidirectional obra assignment
+    associateEquipmentToProject,
+    removeEquipmentFromProject,
     // Write-back (Phase 2 + 3)
     createTimecardEntry,
     createDailyLog,

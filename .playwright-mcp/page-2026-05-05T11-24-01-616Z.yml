@@ -1,0 +1,375 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e7]:
+      - complementary [ref=e9]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: C
+          - generic [ref=e14]:
+            - text: CASAIS
+            - generic [ref=e15]: Fleet Intelligence
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - img [ref=e20]
+              - generic [ref=e22]: Ativas
+            - paragraph [ref=e23]: "0"
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - img [ref=e26]
+              - generic [ref=e31]: Equip.
+            - paragraph [ref=e32]: "10"
+        - navigation [ref=e33]:
+          - list [ref=e34]:
+            - listitem [ref=e35]:
+              - button "Dashboard" [ref=e36] [cursor=pointer]:
+                - generic [ref=e37]:
+                  - img [ref=e38]
+                  - generic [ref=e43]: Dashboard
+            - listitem [ref=e44]:
+              - button "Obras" [ref=e45] [cursor=pointer]:
+                - generic [ref=e46]:
+                  - img [ref=e47]
+                  - generic [ref=e51]: Obras
+                - img [ref=e52]
+            - listitem [ref=e54]:
+              - button "Equipamentos" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]:
+                  - img [ref=e57]
+                  - generic [ref=e62]: Equipamentos
+            - listitem [ref=e63]:
+              - button "Estaleiro 10" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]:
+                  - img [ref=e66]
+                  - generic [ref=e69]: Estaleiro
+                  - generic [ref=e70]: "10"
+            - listitem [ref=e71]:
+              - button "Operadores" [ref=e72] [cursor=pointer]:
+                - generic [ref=e73]:
+                  - img [ref=e74]
+                  - generic [ref=e79]: Operadores
+            - listitem [ref=e80]:
+              - button "Sessões" [ref=e81] [cursor=pointer]:
+                - generic [ref=e82]:
+                  - img [ref=e83]
+                  - generic [ref=e86]: Sessões
+                - img [ref=e87]
+            - listitem [ref=e89]:
+              - button "Manutenção" [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]:
+                  - img [ref=e92]
+                  - generic [ref=e94]: Manutenção
+                - img [ref=e95]
+            - listitem [ref=e97]:
+              - button "Financeiro" [ref=e98] [cursor=pointer]:
+                - generic [ref=e99]:
+                  - img [ref=e100]
+                  - generic [ref=e103]: Financeiro
+                - img [ref=e104]
+            - listitem [ref=e106]:
+              - button "Análises" [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]:
+                  - img [ref=e109]
+                  - generic [ref=e111]: Análises
+            - listitem [ref=e112]:
+              - button "Relatórios" [ref=e113] [cursor=pointer]:
+                - generic [ref=e114]:
+                  - img [ref=e115]
+                  - generic [ref=e118]: Relatórios
+            - listitem [ref=e119]:
+              - button "Configurações" [ref=e120] [cursor=pointer]:
+                - generic [ref=e121]:
+                  - img [ref=e122]
+                  - generic [ref=e125]: Configurações
+        - generic [ref=e127]:
+          - generic [ref=e129]: VH
+          - generic [ref=e130]:
+            - paragraph [ref=e131]: Vitor Hugo
+            - generic [ref=e132]:
+              - img [ref=e133]
+              - generic [ref=e135]: Administrador
+          - button "Terminar sessão" [ref=e136] [cursor=pointer]:
+            - img [ref=e137]
+      - generic [ref=e140]:
+        - banner [ref=e141]:
+          - generic [ref=e143]:
+            - heading "Dashboard" [level=1] [ref=e144]
+            - paragraph [ref=e145]: Visão geral do sistema
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - img [ref=e148]
+              - generic [ref=e152]: Online
+            - button [ref=e153] [cursor=pointer]:
+              - img [ref=e154]
+            - button [ref=e157] [cursor=pointer]:
+              - img [ref=e158]
+        - main [ref=e162]:
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - generic [ref=e166]:
+                - heading "Dashboard" [level=1] [ref=e167]
+                - paragraph [ref=e168]: Visão geral da frota • terça-feira, 5 de maio
+              - group "Filtros de período" [ref=e170]:
+                - button "Hoje" [ref=e171] [cursor=pointer]
+                - button "7 dias" [ref=e172] [cursor=pointer]
+                - button "Mês" [pressed] [ref=e173] [cursor=pointer]
+                - button "Personalizado" [ref=e174] [cursor=pointer]:
+                  - img [ref=e175]
+                  - generic [ref=e177]: Personalizado
+            - generic [ref=e178]:
+              - generic [ref=e184]:
+                - generic [ref=e185]:
+                  - img [ref=e187]
+                  - generic [ref=e189]:
+                    - img [ref=e190]
+                    - generic [ref=e193]: 12%
+                - generic [ref=e194]:
+                  - generic [ref=e195]: "0"
+                  - generic [ref=e196]: h
+                - paragraph [ref=e197]: Horas Trabalhadas
+              - generic [ref=e203]:
+                - generic [ref=e204]:
+                  - img [ref=e206]
+                  - generic [ref=e211]:
+                    - img [ref=e212]
+                    - generic [ref=e215]: 5%
+                - generic [ref=e216]:
+                  - generic [ref=e217]: "0"
+                  - generic [ref=e218]: "%"
+                - paragraph [ref=e219]: Taxa de Utilização
+              - generic [ref=e225]:
+                - generic [ref=e226]:
+                  - img [ref=e228]
+                  - generic [ref=e231]:
+                    - img [ref=e232]
+                    - generic [ref=e235]: 3%
+                - generic [ref=e236]:
+                  - generic [ref=e237]: "0"
+                  - generic [ref=e238]: L
+                - paragraph [ref=e239]: Combustível
+              - generic [ref=e245]:
+                - img [ref=e248]
+                - generic [ref=e251]:
+                  - generic [ref=e252]: "0"
+                  - generic [ref=e253]: kg
+                - paragraph [ref=e254]: Emissões CO₂
+            - generic [ref=e256]:
+              - img [ref=e258]
+              - generic [ref=e260]:
+                - heading "Manutenção Necessária" [level=3] [ref=e261]
+                - paragraph [ref=e262]: 2 equipamentos próximos do limite de horas
+                - generic [ref=e263]:
+                  - generic [ref=e265]: "Escavadora 01 : 1264.5325930555555h"
+                  - generic [ref=e267]: "Escavadora 04 : 120.5h"
+              - button "Ver Todos" [ref=e268] [cursor=pointer]:
+                - text: Ver Todos
+                - img [ref=e269]
+            - generic [ref=e271]:
+              - generic [ref=e272]:
+                - img [ref=e274]
+                - generic [ref=e282]:
+                  - heading "Work Focus" [level=3] [ref=e283]
+                  - paragraph [ref=e284]: Atenção prioritária sugerida pela IA
+              - generic [ref=e285]:
+                - button "Escavadora 04 Manutenção prevista em 6 dias • 30h restantes" [ref=e286] [cursor=pointer]:
+                  - img [ref=e288]
+                  - generic [ref=e291]:
+                    - paragraph [ref=e292]: Escavadora 04
+                    - paragraph [ref=e293]:
+                      - text: Manutenção prevista em
+                      - generic [ref=e294]: 6 dias
+                      - text: • 30h restantes
+                  - img [ref=e295]
+                - button "Grua 02 Manutenção prevista em 9 dias • 54h restantes" [ref=e297] [cursor=pointer]:
+                  - img [ref=e299]
+                  - generic [ref=e302]:
+                    - paragraph [ref=e303]: Grua 02
+                    - paragraph [ref=e304]:
+                      - text: Manutenção prevista em
+                      - generic [ref=e305]: 9 dias
+                      - text: • 54h restantes
+                  - img [ref=e306]
+            - generic [ref=e308]:
+              - generic [ref=e311]:
+                - generic [ref=e312]:
+                  - img [ref=e314]
+                  - generic [ref=e316]: Sessões Ativas
+                - generic [ref=e318]: "0"
+              - generic [ref=e321]:
+                - generic [ref=e322]:
+                  - img [ref=e324]
+                  - generic [ref=e326]: Alertas
+                - generic [ref=e328]: "2"
+              - generic [ref=e331]:
+                - generic [ref=e332]:
+                  - img [ref=e334]
+                  - generic [ref=e337]: MTBF
+                - generic [ref=e338]:
+                  - generic [ref=e339]: "0"
+                  - generic [ref=e340]: h
+              - generic [ref=e343]:
+                - generic [ref=e344]:
+                  - img [ref=e346]
+                  - generic [ref=e348]: Eficiência
+                - generic [ref=e349]:
+                  - generic [ref=e350]: "0"
+                  - generic [ref=e351]: "%"
+            - generic [ref=e352]:
+              - generic [ref=e353]:
+                - generic [ref=e354]:
+                  - img [ref=e356]
+                  - generic [ref=e360]:
+                    - heading "Procore Reconciliation" [level=3] [ref=e361]
+                    - paragraph [ref=e362]: Sync agora mesmo
+                - generic [ref=e363]:
+                  - generic [ref=e364]: operacional
+                  - button "Sincronizar agora com o Procore" [ref=e365] [cursor=pointer]:
+                    - img [ref=e366]
+                    - text: Sincronizar
+              - generic [ref=e371]:
+                - generic [ref=e372]:
+                  - generic [ref=e373]:
+                    - generic [ref=e374]:
+                      - 'img "Taxa de sincronização: 0%" [ref=e375]'
+                      - generic [ref=e378]:
+                        - generic [ref=e379]: 0%
+                        - generic [ref=e380]: sync rate
+                    - paragraph [ref=e381]: 0 de 113 sessões
+                  - generic [ref=e382]:
+                    - generic [ref=e383]:
+                      - heading "Pipeline de Exportação" [level=4] [ref=e384]
+                      - generic [ref=e385]:
+                        - generic [ref=e386]:
+                          - img [ref=e388]
+                          - generic [ref=e392]:
+                            - generic [ref=e393]: Exportadas
+                            - generic [ref=e394]: "0"
+                        - generic [ref=e396]:
+                          - img [ref=e398]
+                          - generic [ref=e404]:
+                            - generic [ref=e405]: Em Retry
+                            - generic [ref=e406]: "0"
+                        - generic [ref=e408]:
+                          - img [ref=e410]
+                          - generic [ref=e415]:
+                            - generic [ref=e416]: Falharam
+                            - generic [ref=e417]: "0"
+                    - generic [ref=e419]:
+                      - heading "Reconciliação de Horas" [level=4] [ref=e420]
+                      - generic [ref=e421]:
+                        - generic [ref=e423]:
+                          - generic [ref=e424]: Horas Locais
+                          - generic [ref=e425]: 1011,8h
+                        - generic [ref=e429]:
+                          - generic [ref=e430]: Horas Procore
+                          - generic [ref=e431]: 0h
+                        - generic [ref=e435]: "Gap: 1011,8h (100%)"
+                - generic [ref=e443]:
+                  - generic [ref=e444]:
+                    - img [ref=e746]
+                    - generic [ref=e449]: 5 Obras
+                  - generic [ref=e450]:
+                    - img [ref=e749]
+                    - generic [ref=e455]: 0 Equipamentos
+                  - generic [ref=e456]:
+                    - img [ref=e752]
+                    - generic [ref=e461]: 11 Pessoas
+            - generic [ref=e462]:
+              - generic [ref=e464]:
+                - generic [ref=e465]:
+                  - generic [ref=e466]:
+                    - heading "Atividade Semanal" [level=3] [ref=e467]
+                    - paragraph [ref=e468]: Horas trabalhadas e consumo de combustível
+                  - generic [ref=e469]:
+                    - generic [ref=e472]: Horas
+                    - generic [ref=e475]: Combustível
+                - application [ref=e478]:
+                  - generic [ref=e531]:
+                    - generic [ref=e532]:
+                      - generic [ref=e534]: Seg
+                      - generic [ref=e536]: Ter
+                      - generic [ref=e538]: Qua
+                      - generic [ref=e540]: Qui
+                      - generic [ref=e542]: Sex
+                      - generic [ref=e544]: Sáb
+                      - generic [ref=e546]: Dom
+                    - generic [ref=e547]:
+                      - generic [ref=e549]: "0"
+                      - generic [ref=e551]: "45"
+                      - generic [ref=e553]: "90"
+                      - generic [ref=e555]: "135"
+                      - generic [ref=e557]: "180"
+              - generic [ref=e558]:
+                - generic [ref=e560]:
+                  - heading "Sessões Ativas" [level=3] [ref=e561]
+                  - paragraph [ref=e562]: 0 em curso
+                - generic [ref=e565]:
+                  - img [ref=e567]
+                  - paragraph [ref=e570]: Nenhuma sessão ativa
+            - generic [ref=e571]:
+              - generic [ref=e572]:
+                - generic [ref=e573]:
+                  - generic [ref=e574]:
+                    - heading "Emissões CO₂" [level=3] [ref=e575]
+                    - paragraph [ref=e576]: Tendência semanal
+                  - generic [ref=e577]:
+                    - img [ref=e578]
+                    - text: "-3% vs anterior"
+                - application [ref=e583]:
+                  - generic [ref=e592]:
+                    - generic [ref=e593]:
+                      - generic [ref=e595]: Seg
+                      - generic [ref=e597]: Ter
+                      - generic [ref=e599]: Qua
+                      - generic [ref=e601]: Qui
+                      - generic [ref=e603]: Sex
+                      - generic [ref=e605]: Sáb
+                      - generic [ref=e607]: Dom
+                    - generic [ref=e608]:
+                      - generic [ref=e610]: "0"
+                      - generic [ref=e612]: "150"
+                      - generic [ref=e614]: "300"
+                      - generic [ref=e616]: "450"
+                      - generic [ref=e618]: "600"
+              - generic [ref=e619]:
+                - generic [ref=e621]:
+                  - heading "Utilização por Equipamento" [level=3] [ref=e622]
+                  - paragraph [ref=e623]: Top 5 mais utilizados · base 24h disponíveis
+                - generic [ref=e624]:
+                  - generic [ref=e625]:
+                    - img [ref=e627]
+                    - generic [ref=e633]:
+                      - generic [ref=e634]: Escavadora Demo EC220
+                      - generic [ref=e635]:
+                        - generic [ref=e636]: 0h
+                        - generic [ref=e637]: 0%
+                  - generic [ref=e639]:
+                    - img [ref=e641]
+                    - generic [ref=e647]:
+                      - generic [ref=e648]: Grua Demo TC50
+                      - generic [ref=e649]:
+                        - generic [ref=e650]: 0h
+                        - generic [ref=e651]: 0%
+                  - generic [ref=e653]:
+                    - img [ref=e655]
+                    - generic [ref=e661]:
+                      - generic [ref=e662]: Escavadora 01
+                      - generic [ref=e663]:
+                        - generic [ref=e664]: 0h
+                        - generic [ref=e665]: 0%
+                  - generic [ref=e667]:
+                    - img [ref=e669]
+                    - generic [ref=e675]:
+                      - generic [ref=e676]: Escavadora 04
+                      - generic [ref=e677]:
+                        - generic [ref=e678]: 0h
+                        - generic [ref=e679]: 0%
+                  - generic [ref=e681]:
+                    - img [ref=e683]
+                    - generic [ref=e689]:
+                      - generic [ref=e690]: Grua 02
+                      - generic [ref=e691]:
+                        - generic [ref=e692]: 0h
+                        - generic [ref=e693]: 0%
+    - button "DevTools - Ferramentas de Desenvolvimento" [ref=e695] [cursor=pointer]:
+      - img [ref=e696]
+  - generic [ref=e698]: "150"

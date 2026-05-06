@@ -1,0 +1,123 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e5]
+      - generic [ref=e6]: "|"
+      - link "Developers" [ref=e7] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e8]:
+      - link "My Apps" [ref=e9] [cursor=pointer]:
+        - /url: /developers
+      - link "Docs" [ref=e10] [cursor=pointer]:
+        - /url: /documentation/introduction
+      - link "API Reference" [ref=e11] [cursor=pointer]:
+        - /url: /reference
+      - link "Changelog" [ref=e12] [cursor=pointer]:
+        - /url: /changelog
+    - generic [ref=e13]:
+      - link "Help" [ref=e14] [cursor=pointer]:
+        - /url: /support
+        - img [ref=e15]
+      - generic [ref=e22] [cursor=pointer]:
+        - img "Bell Outline" [ref=e23]
+        - generic [ref=e26]: "1"
+      - link "VI" [ref=e32] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=e33]:
+    - generic [ref=e35]:
+      - generic:
+        - generic:
+          - img "Loading"
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - navigation [ref=e40]:
+            - navigation "Breadcrumb" [ref=e41]:
+              - link "Apps" [ref=e42] [cursor=pointer]:
+                - /url: /developer_apps
+                - generic [ref=e43]: Apps
+              - img [ref=e45]
+              - link "Casais Fleet Intelligence" [ref=e47] [cursor=pointer]:
+                - /url: /developer_apps/bb391c31-1589-4bc0-a9ec-dc783e673274
+                - generic [ref=e48]: Casais Fleet Intelligence
+          - heading "Casais Fleet Intelligence" [level=1] [ref=e50]
+        - generic [ref=e52]:
+          - generic [ref=e55]:
+            - heading "App Management" [level=3] [ref=e56]
+            - generic [ref=e57]:
+              - generic [ref=e61] [cursor=pointer]: Configuration Builder
+              - generic [ref=e65] [cursor=pointer]: Versions
+              - generic [ref=e69] [cursor=pointer]: App Settings
+              - generic [ref=e73] [cursor=pointer]: OAuth Credentials
+              - generic [ref=e77] [cursor=pointer]: Collaborators
+              - generic [ref=e81] [cursor=pointer]: Performance Metrics
+          - generic [ref=e84]:
+            - generic:
+              - generic:
+                - img "Loading"
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e87]:
+                  - generic [ref=e88]: Version 0.2.0
+                  - generic [ref=e89]: Ready for Testing
+                - generic [ref=e90]:
+                  - button "View Manifest" [ref=e91] [cursor=pointer]:
+                    - generic [ref=e93]: View Manifest
+                  - button "Promote Version" [ref=e95] [cursor=pointer]:
+                    - generic [ref=e97]: Promote Version
+                  - button "Save Version" [ref=e99] [cursor=pointer]:
+                    - generic [ref=e101]: Save Version
+              - generic [ref=e103]:
+                - text: Installation Keys
+                - generic [ref=e104]: Use these keys to do a custom installation of your app on Procore.
+                - generic [ref=e105]:
+                  - generic [ref=e107]:
+                    - generic [ref=e108]: "Sandbox App Version Key (v0.2.0):"
+                    - generic [ref=e109]:
+                      - text: c5a68b6e-343c-43df-9e47-ce944d64102e
+                      - button [ref=e110] [cursor=pointer]:
+                        - generic [ref=e111]:
+                          - img
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: Sandbox URL
+                    - generic [ref=e115]:
+                      - link "sandbox.procore.com" [ref=e116] [cursor=pointer]:
+                        - /url: https://sandbox.procore.com/4283171/company/home
+                      - button [ref=e117] [cursor=pointer]:
+                        - generic [ref=e118]:
+                          - img
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - img [ref=e124]
+                  - generic [ref=e126]:
+                    - generic [ref=e127]: Embedded Components
+                    - generic [ref=e128]: Customize the display of your application by adding components.
+                - generic [ref=e130]:
+                  - img [ref=e133]
+                  - generic [ref=e148]:
+                    - generic [ref=e149]: Components determine your app's display. Choose Side panel, full-screen, or both. Apps without components sync data between Procore and external systems.
+                    - button "Add Component" [ref=e151] [cursor=pointer]:
+                      - generic [ref=e153]: Add Component
+              - generic [ref=e157]:
+                - img [ref=e159]
+                - generic [ref=e161]:
+                  - generic [ref=e162]: Data Connector Components
+                  - generic [ref=e163]: Choose the appropriate method for your data connection app based on your authentication and access requirements.
+              - generic [ref=e167]:
+                - img [ref=e169]
+                - generic [ref=e171]:
+                  - generic [ref=e172]: Instructions and Post Installation Notes
+                  - generic [ref=e173]: Give specific instructions that must be carried out by the Procore user when installing and setting up the App.
+    - text:                                                        
+  - contentinfo [ref=e174]:
+    - generic [ref=e175]: © 2026 Procore. All rights reserved
+    - generic [ref=e176]:
+      - link "System Status" [ref=e177] [cursor=pointer]:
+        - /url: http://status.procore.com
+      - link "Privacy Notice" [ref=e178] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/privacy
+      - link "Terms of Service" [ref=e179] [cursor=pointer]:
+        - /url: https://www.procore.com/legal/terms-of-service
+      - link "API Terms of Use" [ref=e180] [cursor=pointer]:
+        - /url: https://vault.pactsafe.io/s/9e15da2a-f1dc-4cf0-b313-d1e9201c1729/legal.html#contract-hymckkfc9

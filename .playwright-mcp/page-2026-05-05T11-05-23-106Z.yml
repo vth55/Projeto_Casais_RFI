@@ -1,0 +1,430 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#mount-point"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Company Home" [ref=e8] [cursor=pointer]:
+            - /url: /4283171/company/home
+            - img "Casais Fleet Intelligence"
+          - button "Casais Fleet Intelligence Select a Project" [ref=e10] [cursor=pointer]:
+            - generic:
+              - generic: Casais Fleet Intelligence
+              - generic: Select a Project
+            - generic:
+              - img
+          - button "Company Tools Portfolio" [expanded] [active] [ref=e11] [cursor=pointer]:
+            - generic:
+              - generic: Company Tools
+              - generic: Portfolio
+            - generic:
+              - img
+          - generic [ref=e13]:
+            - img [ref=e15]
+            - generic [ref=e17]:
+              - generic [ref=e18]: Favorites
+              - navigation "Favorites":
+                - list
+          - button "Apps Select an App" [ref=e20] [cursor=pointer]:
+            - generic:
+              - generic: Apps
+              - generic: Select an App
+            - generic:
+              - img
+        - generic [ref=e21]:
+          - button "Support & Feedback" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+          - button "Announcements" [ref=e25] [cursor=pointer]:
+            - img [ref=e26]
+          - button "Account & Profile" [ref=e29] [cursor=pointer]:
+            - generic [ref=e31]: VI
+    - generic [ref=e244]:
+      - generic [ref=e245]:
+        - generic [ref=e246]: Core Tools
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - checkbox "Favorite Programs" [ref=e249] [cursor=pointer]
+            - img [ref=e250] [cursor=pointer]
+            - link "Programs" [ref=e252] [cursor=pointer]:
+              - /url: /4283171/company/programs
+          - generic [ref=e253]:
+            - checkbox "Favorite Portfolio" [ref=e254] [cursor=pointer]
+            - img [ref=e255] [cursor=pointer]
+            - link "Portfolio" [ref=e257] [cursor=pointer]:
+              - /url: /4283171/company/home/company_portfolio
+          - generic [ref=e258]:
+            - checkbox "Favorite Directory" [ref=e259] [cursor=pointer]
+            - img [ref=e260] [cursor=pointer]
+            - link "Directory" [ref=e262] [cursor=pointer]:
+              - /url: /4283171/company/directory
+          - generic [ref=e263]:
+            - checkbox "Favorite 360 Reporting" [ref=e264] [cursor=pointer]
+            - img [ref=e265] [cursor=pointer]
+            - link "360 Reporting" [ref=e267] [cursor=pointer]:
+              - /url: /4283171/company/reports
+          - generic [ref=e268]:
+            - checkbox "Favorite Documents" [ref=e269] [cursor=pointer]
+            - img [ref=e270] [cursor=pointer]
+            - link "Documents" [ref=e272] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/documents
+          - generic [ref=e273]:
+            - checkbox "Favorite Workflows" [ref=e274] [cursor=pointer]
+            - img [ref=e275] [cursor=pointer]
+            - link "Workflows" [ref=e277] [cursor=pointer]:
+              - /url: /4283171/company/workflows
+          - generic [ref=e278]:
+            - checkbox "Favorite Admin" [ref=e279] [cursor=pointer]
+            - img [ref=e280] [cursor=pointer]
+            - link "Admin" [ref=e282] [cursor=pointer]:
+              - /url: /4283171/company/admin/index
+          - generic [ref=e283]:
+            - checkbox "Favorite App Management" [ref=e284] [cursor=pointer]
+            - img [ref=e285] [cursor=pointer]
+            - link "App Management" [ref=e287] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/app-installations
+          - generic [ref=e288]:
+            - checkbox "Favorite Permissions" [ref=e289] [cursor=pointer]
+            - img [ref=e290] [cursor=pointer]
+            - link "Permissions" [ref=e292] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/permissions
+          - generic [ref=e293]:
+            - checkbox "Favorite Analytics" [ref=e294] [cursor=pointer]
+            - img [ref=e295] [cursor=pointer]
+            - link "Analytics" [ref=e297] [cursor=pointer]:
+              - /url: /4283171/company/procore_analytics
+          - generic [ref=e298]:
+            - checkbox "Favorite Link" [ref=e299] [cursor=pointer]
+            - img [ref=e300] [cursor=pointer]
+            - link "Link" [ref=e302] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/procoreipaas
+            - generic: Pilot
+          - generic [ref=e303]:
+            - checkbox "Favorite Assets" [ref=e304] [cursor=pointer]
+            - img [ref=e305] [cursor=pointer]
+            - link "Assets" [ref=e307] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/assets
+            - generic: Beta
+      - generic [ref=e308]:
+        - generic [ref=e309]: Project Management
+        - generic [ref=e310]:
+          - generic [ref=e311]:
+            - checkbox "Favorite Quality and Safety Dashboard" [ref=e312] [cursor=pointer]
+            - link "Quality and Safety Dashboard" [ref=e313] [cursor=pointer]:
+              - /url: /4283171/company/standard_dashboards/quality_and_safety
+          - generic [ref=e314]:
+            - checkbox "Favorite Project Management Dashboard" [ref=e315] [cursor=pointer]
+            - link "Project Management Dashboard" [ref=e316] [cursor=pointer]:
+              - /url: /4283171/company/standard_dashboards/pm_essentials
+          - generic [ref=e317]:
+            - checkbox "Favorite Timecard" [ref=e318] [cursor=pointer]
+            - img [ref=e319] [cursor=pointer]
+            - link "Timecard" [ref=e321] [cursor=pointer]:
+              - /url: /4283171/company/timecard
+          - generic [ref=e322]:
+            - checkbox "Favorite Schedule" [ref=e323] [cursor=pointer]
+            - img [ref=e324] [cursor=pointer]
+            - link "Schedule" [ref=e326] [cursor=pointer]:
+              - /url: /4283171/company/calendar
+            - generic: Legacy
+          - generic [ref=e327]:
+            - checkbox "Favorite Inspections" [ref=e328] [cursor=pointer]
+            - img [ref=e329] [cursor=pointer]
+            - link "Inspections" [ref=e331] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/inspections/list_templates
+      - generic [ref=e332]:
+        - generic [ref=e333]: Financial Management
+        - generic [ref=e334]:
+          - generic [ref=e335]:
+            - checkbox "Favorite Financials Dashboard" [ref=e336] [cursor=pointer]
+            - link "Financials Dashboard" [ref=e337] [cursor=pointer]:
+              - /url: /4283171/company/standard_dashboards/financials
+          - generic [ref=e338]:
+            - checkbox "Favorite Project Status Snapshots" [ref=e339] [cursor=pointer]
+            - img [ref=e340] [cursor=pointer]
+            - link "Project Status Snapshots" [ref=e342] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/budgets/project-status-snapshots
+          - generic [ref=e343]:
+            - checkbox "Favorite ERP Integrations" [ref=e344] [cursor=pointer]
+            - img [ref=e345] [cursor=pointer]
+            - link "ERP Integrations" [ref=e347] [cursor=pointer]:
+              - /url: /4283171/company/erp_integrations
+      - generic [ref=e348]:
+        - generic [ref=e349]: Resource Management
+        - generic [ref=e350]:
+          - generic [ref=e351]:
+            - checkbox "Favorite Equipment" [ref=e352] [cursor=pointer]
+            - img [ref=e353] [cursor=pointer]
+            - link "Equipment" [ref=e355] [cursor=pointer]:
+              - /url: /4283171/company/managed_equipment
+            - generic: Legacy
+          - generic [ref=e356]:
+            - checkbox "Favorite Timesheets" [ref=e357] [cursor=pointer]
+            - img [ref=e358] [cursor=pointer]
+            - link "Timesheets" [ref=e360] [cursor=pointer]:
+              - /url: /4283171/company/timesheets
+          - generic [ref=e361]:
+            - checkbox "Favorite Equipment" [ref=e362] [cursor=pointer]
+            - img [ref=e363] [cursor=pointer]
+            - link "Equipment" [ref=e365] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/equipment
+          - generic [ref=e366]:
+            - checkbox "Favorite Kiosk" [ref=e367] [cursor=pointer]
+            - img [ref=e368] [cursor=pointer]
+            - link "Kiosk" [ref=e370] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/kiosk/default-project
+          - generic [ref=e371]:
+            - checkbox "Favorite Resource Planning" [ref=e372] [cursor=pointer]
+            - img [ref=e373] [cursor=pointer]
+            - link "Resource Planning" [ref=e375] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/workforce-planning/home
+      - generic [ref=e376]:
+        - generic [ref=e377]: Preconstruction
+        - generic [ref=e378]:
+          - generic [ref=e379]:
+            - checkbox "Favorite Planroom" [ref=e380] [cursor=pointer]
+            - img [ref=e381] [cursor=pointer]
+            - link "Planroom" [ref=e383] [cursor=pointer]:
+              - /url: /webclients/host/companies/4283171/tools/planroom
+          - generic [ref=e384]:
+            - checkbox "Favorite Prequalifications" [ref=e385] [cursor=pointer]
+            - img [ref=e386] [cursor=pointer]
+            - link "Prequalifications" [ref=e388] [cursor=pointer]:
+              - /url: /4283171/company/prequalification
+          - generic [ref=e389]:
+            - checkbox "Favorite Prequalification Portal" [ref=e390] [cursor=pointer]
+            - img [ref=e391] [cursor=pointer]
+            - link "Prequalification Portal" [ref=e393] [cursor=pointer]:
+              - /url: /4283171/company/prequalification_manager
+          - generic [ref=e394]:
+            - checkbox "Favorite Cost Catalog" [ref=e395] [cursor=pointer]
+            - img [ref=e396] [cursor=pointer]
+            - link "Cost Catalog" [ref=e398] [cursor=pointer]:
+              - /url: /4283171/company/cost_catalog
+          - generic [ref=e399]:
+            - checkbox "Favorite Bid Board" [ref=e400] [cursor=pointer]
+            - img [ref=e401] [cursor=pointer]
+            - link "Bid Board" [ref=e403] [cursor=pointer]:
+              - /url: /4283171/company/bid_board
+      - generic [ref=e404]:
+        - generic [ref=e405]: Custom Tools
+        - generic [ref=e407]:
+          - checkbox "Favorite Dashboard" [ref=e408] [cursor=pointer]
+          - link "Dashboard" [ref=e409] [cursor=pointer]:
+            - /url: /4283171/company/standard_dashboards/executive_dashboard
+  - main [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e36]:
+        - generic [ref=e39]:
+          - link "" [ref=e41]:
+            - /url: /4283171/company/home/configure_tab
+            - generic [ref=e42]: 
+          - heading "Portfolio" [level=1] [ref=e44]
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - generic [ref=e47]: Projects
+            - listitem [ref=e48]:
+              - link "Executive Dashboard" [ref=e49] [cursor=pointer]:
+                - /url: /4283171/company/home/executive_dashboard
+                - generic "Executive Dashboard" [ref=e50]
+            - listitem [ref=e51]:
+              - link "Health Dashboard" [ref=e52] [cursor=pointer]:
+                - /url: /4283171/company/home/health_dashboard
+                - generic "Health Dashboard" [ref=e53]
+            - listitem [ref=e54]:
+              - link "My Open Items" [ref=e55] [cursor=pointer]:
+                - /url: /4283171/company/home/my_open_items
+                - generic "My Open Items" [ref=e56]
+            - listitem [ref=e57]:
+              - generic [ref=e60] [cursor=pointer]:
+                - text: Financial Views
+                - generic [ref=e62]: 
+          - complementary [ref=e64]:
+            - generic [ref=e67] [cursor=pointer]: Export
+        - generic [ref=e69]:
+          - generic [ref=e71]:
+            - generic [ref=e73]:
+              - textbox "Search projects" [ref=e74]
+              - button "" [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: 
+            - generic [ref=e77]:
+              - generic [ref=e78]: "Group By:"
+              - combobox [ref=e80] [cursor=pointer]:
+                - generic [ref=e82]:
+                  - text: 
+                  - generic [ref=e83]: open dropdown
+                - generic [ref=e84]: None
+            - generic [ref=e85]:
+              - generic [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]: Add Filters
+                - generic [ref=e93]: 
+              - generic [ref=e94]: Clear All
+          - generic [ref=e96]:
+            - img [ref=e97]
+            - link [ref=e98]:
+              - /url: /4283171/company/home/thumbnail
+              - img [ref=e99]
+            - link [ref=e100]:
+              - /url: /4283171/company/home/portfolio
+              - img [ref=e101]
+            - link [ref=e102]:
+              - /url: /4283171/company/home/map
+              - img [ref=e103]
+        - generic [ref=e104]:
+          - text: Loading
+          - generic [ref=e105]:
+            - emphasis [ref=e107]: Displaying 1 - 4 of 4
+            - table [ref=e109]:
+              - rowgroup [ref=e110]:
+                - row "Name  Project Number Address City State ZIP Phone Program Status Stage Type Department Notes" [ref=e111]:
+                  - columnheader [ref=e112]
+                  - columnheader "Name " [ref=e113]:
+                    - link "Name" [ref=e114] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=name&sort%5Bdirection%5D=desc
+                    - generic [ref=e115]: 
+                  - columnheader "Project Number" [ref=e116]:
+                    - link "Project Number" [ref=e117] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=number&sort%5Bdirection%5D=asc
+                  - columnheader "Address" [ref=e118]:
+                    - link "Address" [ref=e119] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=address&sort%5Bdirection%5D=asc
+                  - columnheader "City" [ref=e120]:
+                    - link "City" [ref=e121] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=city&sort%5Bdirection%5D=asc
+                  - columnheader "State" [ref=e122]:
+                    - link "State" [ref=e123] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=state&sort%5Bdirection%5D=asc
+                  - columnheader "ZIP" [ref=e124]:
+                    - link "ZIP" [ref=e125] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=zip&sort%5Bdirection%5D=asc
+                  - columnheader "Phone" [ref=e126]:
+                    - link "Phone" [ref=e127] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=phone&sort%5Bdirection%5D=asc
+                  - columnheader "Program" [ref=e128]:
+                    - link "Program" [ref=e129] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=program&sort%5Bdirection%5D=asc
+                  - columnheader "Status" [ref=e130]:
+                    - link "Status" [ref=e131] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=status&sort%5Bdirection%5D=asc
+                  - columnheader "Stage" [ref=e132]:
+                    - link "Stage" [ref=e133] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=stage&sort%5Bdirection%5D=asc
+                  - columnheader "Type" [ref=e134]:
+                    - link "Type" [ref=e135] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=type&sort%5Bdirection%5D=asc
+                  - columnheader "Department" [ref=e136]:
+                    - link "Department" [ref=e137] [cursor=pointer]:
+                      - /url: /4283171/company/home/list?page=1&sort%5Battribute%5D=department&sort%5Bdirection%5D=asc
+                  - columnheader "Notes" [ref=e138]
+              - rowgroup [ref=e139]:
+                - row "Sandbox Test Project  1234 6309 Carpinteria Avenue Carpinteria California 93013 Active (edit)" [ref=e140]:
+                  - cell [ref=e141]
+                  - cell "Sandbox Test Project " [ref=e143]:
+                    - link "Sandbox Test Project" [ref=e144] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/326308
+                    - generic [ref=e146]: 
+                  - cell "1234" [ref=e147]:
+                    - link "1234" [ref=e148] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/326308
+                  - cell "6309 Carpinteria Avenue" [ref=e149]
+                  - cell "Carpinteria" [ref=e150]
+                  - cell "California" [ref=e151]
+                  - cell "93013" [ref=e152]
+                  - cell [ref=e153]
+                  - cell [ref=e154]
+                  - cell "Active" [ref=e155]
+                  - cell [ref=e156]
+                  - cell [ref=e157]
+                  - cell [ref=e158]
+                  - cell "(edit)" [ref=e159]
+                - row "Torre Boavista — Porto CSI-2024-001 Avenida da Boavista, 1200 Porto 4100-115 +351 222 100 200 Active Course of Construction (edit)" [ref=e160]:
+                  - cell [ref=e161]
+                  - cell "Torre Boavista — Porto" [ref=e163]:
+                    - link "Torre Boavista — Porto" [ref=e164] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328122
+                  - cell "CSI-2024-001" [ref=e165]:
+                    - link "CSI-2024-001" [ref=e166] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328122
+                  - cell "Avenida da Boavista, 1200" [ref=e167]
+                  - cell "Porto" [ref=e168]
+                  - cell [ref=e169]
+                  - cell "4100-115" [ref=e170]
+                  - cell "+351 222 100 200" [ref=e171]
+                  - cell [ref=e172]
+                  - cell "Active" [ref=e173]
+                  - cell "Course of Construction" [ref=e174]
+                  - cell [ref=e175]
+                  - cell [ref=e176]
+                  - cell "(edit)" [ref=e177]
+                - row "Urbanização Gaia Norte CSI-2025-003 Rua de Serralves, 45 Vila Nova de Gaia 4400-260 +351 223 745 000 Active (edit)" [ref=e178]:
+                  - cell [ref=e179]
+                  - cell "Urbanização Gaia Norte" [ref=e181]:
+                    - link "Urbanização Gaia Norte" [ref=e182] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328124
+                  - cell "CSI-2025-003" [ref=e183]:
+                    - link "CSI-2025-003" [ref=e184] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328124
+                  - cell "Rua de Serralves, 45" [ref=e185]
+                  - cell "Vila Nova de Gaia" [ref=e186]
+                  - cell [ref=e187]
+                  - cell "4400-260" [ref=e188]
+                  - cell "+351 223 745 000" [ref=e189]
+                  - cell [ref=e190]
+                  - cell "Active" [ref=e191]
+                  - cell [ref=e192]
+                  - cell [ref=e193]
+                  - cell [ref=e194]
+                  - cell "(edit)" [ref=e195]
+                - row "Viaduto IP2 — Trancoso CSI-2024-002 IP2, km 47 Trancoso 6420-000 +351 271 811 000 Active (edit)" [ref=e196]:
+                  - cell [ref=e197]
+                  - cell "Viaduto IP2 — Trancoso" [ref=e199]:
+                    - link "Viaduto IP2 — Trancoso" [ref=e200] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328123
+                  - cell "CSI-2024-002" [ref=e201]:
+                    - link "CSI-2024-002" [ref=e202] [cursor=pointer]:
+                      - /url: https://sandbox.procore.com/set_project/328123
+                  - cell "IP2, km 47" [ref=e203]
+                  - cell "Trancoso" [ref=e204]
+                  - cell [ref=e205]
+                  - cell "6420-000" [ref=e206]
+                  - cell "+351 271 811 000" [ref=e207]
+                  - cell [ref=e208]
+                  - cell "Active" [ref=e209]
+                  - cell [ref=e210]
+                  - cell [ref=e211]
+                  - cell [ref=e212]
+                  - cell "(edit)" [ref=e213]
+            - emphasis [ref=e215]: Displaying 1 - 4 of 4
+      - generic [ref=e216]:
+        - link "Toggle Sidebar" [ref=e217] [cursor=pointer]:
+          - /url: javascript:;
+          - text:  
+        - generic [ref=e219]:
+          - generic [ref=e220]:
+            - button "Create Project" [ref=e226] [cursor=pointer]:
+              - generic [ref=e227]:
+                - img
+                - generic [ref=e228]: Create Project
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - text: Custom Reports
+                - link "+ New" [ref=e231] [cursor=pointer]:
+                  - /url: /4283171/company/portfolio_custom_reports/new
+              - generic:
+                - list
+          - button "Minimize Sidebar" [ref=e232] [cursor=pointer]:
+            - text: Minimize Sidebar
+            - generic [ref=e233]:
+              - generic [ref=e234]: 
+              - generic [ref=e235]: 
+  - contentinfo [ref=e236]:
+    - link "Terms of Service" [ref=e237] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e238] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e240]:
+      - text: Powered By
+      - link "Procore" [ref=e241] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e242]
+  - tooltip "Select a tool" [ref=e412]

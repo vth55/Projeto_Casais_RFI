@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - main [ref=e5]:
+    - generic [ref=e12]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e17] [cursor=pointer]:
+            - img
+          - heading "Equipment" [level=1] [ref=e18]
+          - navigation [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e24]: Registry
+              - generic [ref=e27] [cursor=pointer]: Recycle Bin
+        - generic [ref=e29]:
+          - button "Import" [ref=e31] [cursor=pointer]:
+            - generic [ref=e33]: Import
+          - button "Create" [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]:
+                - img
+              - generic [ref=e38]: Create
+      - generic [ref=e39]:
+        - generic [ref=e41]:
+          - textbox "Search" [ref=e42]
+          - button [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]:
+              - img
+        - generic [ref=e49]:
+          - button "Add Filter " [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]: Add Filter
+            - generic [ref=e53]: 
+          - generic:
+            - generic:
+              - generic [ref=e54] [cursor=pointer]: Category
+              - generic [ref=e55] [cursor=pointer]: Make
+              - generic [ref=e56] [cursor=pointer]: Model
+              - generic [ref=e57] [cursor=pointer]: Project
+              - generic [ref=e58] [cursor=pointer]: Status
+              - generic [ref=e59] [cursor=pointer]: Type
+              - generic [ref=e60] [cursor=pointer]: Year
+              - generic [ref=e61] [cursor=pointer]: Next Service Date
+              - generic [ref=e62] [cursor=pointer]: Last Service Date
+      - button "Bulk Actions" [ref=e65] [cursor=pointer]:
+        - generic: Bulk Actions
+      - generic [ref=e70]:
+        - generic [ref=e72]:
+          - img [ref=e74]
+          - generic [ref=e76]: Loading...
+        - generic [ref=e77]:
+          - img [ref=e79]
+          - generic [ref=e99]: No Results Found.
+  - contentinfo [ref=e101]:
+    - link "Terms of Service" [ref=e102] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/terms
+    - link "Privacy Policy" [ref=e103] [cursor=pointer]:
+      - /url: https://www.procore.com/fine-print/privacy-policy
+    - generic [ref=e105]:
+      - text: Powered By
+      - link "Procore" [ref=e106] [cursor=pointer]:
+        - /url: http://www.procore.com
+        - img "Procore" [ref=e107]
