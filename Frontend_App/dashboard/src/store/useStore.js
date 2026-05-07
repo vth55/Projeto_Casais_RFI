@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
+import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
 import useAvariasStore from './useAvariasStore';
 
 const basePath = `artifacts/${projectId}/public/data`;
@@ -75,73 +76,53 @@ const useStore = create((set, get) => ({
     const unsubscribers = [];
 
     // Sessions listener
-    const sessionsQuery = query(
-      collection(db, `${basePath}/sessions`),
-      orderBy('startTime', 'desc')
-    );
+    const createSessionsListener = createCollectionListener(db, `${basePath}/sessions`, {
+      orderByField: 'startTime',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.error('Erro sessions:', error),
+    });
     unsubscribers.push(
-      onSnapshot(sessionsQuery,
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ sessions: data });
-        },
-        (error) => console.error('Erro sessions:', error)
-      )
+      createSessionsListener((data) => set({ sessions: data }))
     );
 
     // Machines listener
+    const createMachinesListener = createCollectionListener(db, `${basePath}/machines`, {
+      onError: (msg, error) => console.error('Erro machines:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/machines`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ machines: data, loading: false });
-        },
-        (error) => console.error('Erro machines:', error)
-      )
+      createMachinesListener((data) => set({ machines: data, loading: false }))
     );
 
     // Operators listener
+    const createOperatorsListener = createCollectionListener(db, `${basePath}/operators`, {
+      onError: (msg, error) => console.error('Erro operators:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/operators`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ operators: data });
-        },
-        (error) => console.error('Erro operators:', error)
-      )
+      createOperatorsListener((data) => set({ operators: data }))
     );
 
     // Maintenance records listener
+    const createMaintenanceListener = createCollectionListener(db, `${basePath}/maintenance`, {
+      onError: (msg, error) => console.error('Erro maintenance:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/maintenance`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ maintenanceRecords: data });
-        },
-        (error) => console.error('Erro maintenance:', error)
-      )
+      createMaintenanceListener((data) => set({ maintenanceRecords: data }))
     );
 
     // Obras listener
+    const createObrasListener = createCollectionListener(db, `${basePath}/obras`, {
+      onError: (msg, error) => console.error('Erro obras:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/obras`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ obras: data });
-        },
-        (error) => console.error('Erro obras:', error)
-      )
+      createObrasListener((data) => set({ obras: data }))
     );
 
     // Location Cards listener (cartões RFID de localização)
+    const createLocationCardsListener = createCollectionListener(db, `${basePath}/location_cards`, {
+      onError: (msg, error) => console.error('Erro location_cards:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/location_cards`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ locationCards: data });
-        },
-        (error) => console.error('Erro location_cards:', error)
-      )
+      createLocationCardsListener((data) => set({ locationCards: data }))
     );
 
     // ============================================
@@ -158,53 +139,52 @@ const useStore = create((set, get) => ({
       { name: 'equipment', stateKey: 'procoreEquipment' },
     ];
     procoreCollections.forEach(({ name, stateKey }) => {
+      const createProcoreListener = createCollectionListener(
+        db,
+        `${procoreBase}/${name}`,
+        {
+          onError: (msg, error) => console.debug(`[procore:${name}] listener off:`, error?.code || error?.message),
+        }
+      );
       unsubscribers.push(
-        onSnapshot(
-          collection(db, `${procoreBase}/${name}`),
-          (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            set({ [stateKey]: data });
-          },
-          (error) => {
-            // Silencioso — é normal estar vazio enquanto a integração não está ligada
-            console.debug(`[procore:${name}] listener off:`, error?.code || error?.message);
-          }
-        )
+        createProcoreListener((data) => set({ [stateKey]: data }))
       );
     });
 
     // ============================================
     // SYSTEM SETTINGS — parâmetros operacionais
     // ============================================
+    const createSettingsListener = createDocumentListener(
+      db,
+      `${basePath}/settings/system`,
+      {
+        onError: (msg, error) => console.debug('[settings:system] listener off:', error?.code || error?.message),
+      }
+    );
     unsubscribers.push(
-      onSnapshot(
-        doc(db, `${basePath}/settings/system`),
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            set({
-              systemSettings: {
-                fuelPricePerLitre: data.fuelPricePerLitre ?? 1.89,
-                co2FactorPerLitre: data.co2FactorPerLitre ?? 2.68,
-                defaultMaintenanceInterval: data.defaultMaintenanceInterval ?? 150,
-              },
-            });
-          }
-        },
-        (error) => console.debug('[settings:system] listener off:', error?.code || error?.message)
-      )
+      createSettingsListener((docData) => {
+        if (docData) {
+          set({
+            systemSettings: {
+              fuelPricePerLitre: docData.fuelPricePerLitre ?? 1.89,
+              co2FactorPerLitre: docData.co2FactorPerLitre ?? 2.68,
+              defaultMaintenanceInterval: docData.defaultMaintenanceInterval ?? 150,
+            },
+          });
+        }
+      })
     );
 
     // Maintenance Schedules listener
+    const createSchedulesListener = createCollectionListener(
+      db,
+      `${basePath}/maintenance_schedules`,
+      {
+        onError: (msg, error) => console.debug('[maintenance_schedules] listener off:', error?.code || error?.message),
+      }
+    );
     unsubscribers.push(
-      onSnapshot(
-        collection(db, `${basePath}/maintenance_schedules`),
-        (snapshot) => {
-          const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          set({ maintenanceSchedules: data });
-        },
-        (error) => console.debug('[maintenance_schedules] listener off:', error?.code || error?.message)
-      )
+      createSchedulesListener((data) => set({ maintenanceSchedules: data }))
     );
 
     return () => unsubscribers.forEach(unsub => unsub());

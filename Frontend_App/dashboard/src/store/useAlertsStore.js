@@ -24,6 +24,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db, projectId } from '../config/firebase';
+import { createCollectionListener } from '../utils/firestoreListeners';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
@@ -75,25 +76,22 @@ const useAlertsStore = create(
           return () => {};
         }
 
-        const alertsQuery = query(
-          collection(db, `${basePath}/alerts`),
-          orderBy('createdAt', 'desc')
-        );
-
-        return onSnapshot(
-          alertsQuery,
-          (snapshot) => {
-            const data = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            set({ alerts: data, loading: false, alertsLoaded: true });
-          },
-          (error) => {
-            console.error('Erro alerts:', error);
-            set({ error: error.message, alertsLoaded: true });
+        const createAlertsListener = createCollectionListener(
+          db,
+          `${basePath}/alerts`,
+          {
+            orderByField: 'createdAt',
+            orderByDirection: 'desc',
+            onError: (msg, error) => {
+              console.error('Erro alerts:', error);
+              set({ error: error.message, alertsLoaded: true });
+            },
           }
         );
+
+        return createAlertsListener((data) => {
+          set({ alerts: data, loading: false, alertsLoaded: true });
+        });
       },
 
       // Criar novo alerta
