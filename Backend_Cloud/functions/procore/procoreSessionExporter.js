@@ -17,13 +17,17 @@
 
 const admin = require('firebase-admin');
 const { getValidAccessToken } = require('./procoreBridge');
+const {
+  PROCORE_ENDPOINTS,
+  API_VERSION,
+  MAX_RETRY_ATTEMPTS,
+  RETRY_BACKOFF_MINUTES,
+} = require('./config');
 
 // ─── Procore environment ─────────────────────────────────────────────────────
-// Dev Sandbox endpoints. Tem de estar alinhado com procoreBridge.js.
-// Dados estáveis, sem refresh mensal — preserva matching de IDs Procore↔Firestore.
-// Token refresh is now delegated to procoreBridge.getValidAccessToken()
-const PROCORE_API_BASE = 'https://sandbox.procore.com';
-const PROCORE_API_URL = `${PROCORE_API_BASE}/rest/v1.0`;
+// Dev Sandbox endpoints via config. Token refresh delegated to procoreBridge.getValidAccessToken()
+const PROCORE_API_BASE = PROCORE_ENDPOINTS.API_BASE;
+const PROCORE_API_URL = `${PROCORE_API_BASE}${API_VERSION}`;
 
 // ─── Path constants ──────────────────────────────────────────────────────────
 
@@ -36,12 +40,6 @@ const OBRAS_PATH     = `artifacts/${APP_ID}/public/data/obras`;
 const OPERATORS_PATH = `artifacts/${APP_ID}/public/data/operators`;
 const MACHINES_PATH  = `artifacts/${APP_ID}/public/data/machines`;
 const SESSIONS_PATH  = `artifacts/${APP_ID}/public/data/sessions`;
-
-// ─── Retry config ────────────────────────────────────────────────────────────
-
-const MAX_RETRY_ATTEMPTS = 3;
-// Minutes to wait before each successive retry attempt (attempt 0, 1, 2)
-const RETRY_BACKOFF_MINUTES = [5, 20, 60];
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 

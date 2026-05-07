@@ -28,6 +28,14 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
+const {
+  PROCORE_ENDPOINTS,
+  API_VERSION: PROCORE_API_VERSION,
+  PER_PAGE: PROCORE_PER_PAGE,
+  MAX_PAGES: PROCORE_MAX_PAGES,
+  FIRESTORE_BATCH_LIMIT,
+  REFRESH_SAFETY_MARGIN_MS,
+} = require('./config');
 
 // ============================================
 // CONSTANTES
@@ -36,29 +44,15 @@ const admin = require('firebase-admin');
 const APP_ID = 'casais-rfid';
 const INTEGRATION_DOC_PATH = `artifacts/${APP_ID}/public/data/integrations/procore`;
 
-// Dev Sandbox endpoints — dados estáveis, nunca refresha. Usa Sandbox OAuth credentials.
-// Confirmado em 2026-04-28: production access aprovado, mas demo continua em Dev Sandbox para
-// preservar IDs estáveis (Monthly Sandbox refresha dia 1, partia o matching de obras/operadores).
-// Outras opções:
-//   Monthly Sandbox: 'https://login-sandbox-monthly.procore.com' / 'https://api-monthly.procore.com'
-//   Production real: 'https://login.procore.com'                 / 'https://api.procore.com'
-const PROCORE_LOGIN_URL = 'https://login-sandbox.procore.com';
-const PROCORE_API_URL = 'https://sandbox.procore.com';
-const PROCORE_AUTH_URL = `${PROCORE_LOGIN_URL}/oauth/authorize`;
-const PROCORE_TOKEN_URL = `${PROCORE_LOGIN_URL}/oauth/token`;
-
-// REST API — Chunk 1B
-const PROCORE_API_VERSION = '/rest/v1.0';
-const PROCORE_PER_PAGE = 100;       // page size para todas as listagens
-const PROCORE_MAX_PAGES = 50;       // safety cap → 5000 itens por recurso
-const FIRESTORE_BATCH_LIMIT = 400;  // < limite hard de 500 ops/batch
+// Procore endpoints (dev sandbox or production based on ENVIRONMENT)
+const PROCORE_LOGIN_URL = PROCORE_ENDPOINTS.LOGIN_URL;
+const PROCORE_API_URL = PROCORE_ENDPOINTS.API_BASE;
+const PROCORE_AUTH_URL = PROCORE_ENDPOINTS.AUTH_URL;
+const PROCORE_TOKEN_URL = PROCORE_ENDPOINTS.TOKEN_URL;
 
 // URL pública da Cloud Function (via Firebase Hosting rewrite).
 // Tem de bater certo com um dos Redirect URIs configurados no portal Procore.
 const REDIRECT_URI = 'https://casais-rfid.web.app/api/procore/callback';
-
-// Margem de segurança para refresh: refrescamos o token 5min antes de expirar
-const REFRESH_SAFETY_MARGIN_MS = 5 * 60 * 1000;
 
 // ============================================
 // SECRETS
