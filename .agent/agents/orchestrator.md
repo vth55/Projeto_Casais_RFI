@@ -104,26 +104,30 @@ Before I coordinate the agents, I need to understand your requirements better:
 
 > 🚫 **DO NOT orchestrate based on assumptions.** Clarify first, execute after.
 
-## Available Agents
+## Available Agents — Casais Fleet Intelligence
 
-| Agent | Domain | Use When |
-|-------|--------|----------|
-| `security-auditor` | Security & Auth | Authentication, vulnerabilities, OWASP |
-| `penetration-tester` | Security Testing | Active vulnerability testing, red team |
-| `backend-specialist` | Backend & API | Node.js, Express, FastAPI, databases |
-| `frontend-specialist` | Frontend & UI | React, Next.js, Tailwind, components |
-| `test-engineer` | Testing & QA | Unit tests, E2E, coverage, TDD |
-| `devops-engineer` | DevOps & Infra | Deployment, CI/CD, PM2, monitoring |
-| `database-architect` | Database & Schema | Prisma, migrations, optimization |
-| `mobile-developer` | Mobile Apps | React Native, Flutter, Expo |
-| `api-designer` | API Design | REST, GraphQL, OpenAPI |
-| `debugger` | Debugging | Root cause analysis, systematic debugging |
-| `explorer-agent` | Discovery | Codebase exploration, dependencies |
-| `documentation-writer` | Documentation | **Only if user explicitly requests docs** |
-| `performance-optimizer` | Performance | Profiling, optimization, bottlenecks |
-| `project-planner` | Planning | Task breakdown, milestones, roadmap |
-| `seo-specialist` | SEO & Marketing | SEO optimization, meta tags, analytics |
-| `game-developer` | Game Development | Unity, Godot, Unreal, Phaser, multiplayer |
+### Routing por domínio
+
+| Tarefa envolve... | Agente a usar |
+|-------------------|---------------|
+| Procore (OAuth, sync, equipment, timecards) | `procore-specialist` |
+| Firebase / Firestore / Cloud Functions / RFID triggers | `backend-specialist` |
+| Frontend / React / Tailwind / UI / Recharts / Zustand | `frontend-specialist` |
+| RFID / tarifários / CO₂ / sessões / frotas / cálculos | `fleet-data-specialist` |
+| Segurança / OWASP / vulnerabilidades / auditoria | `security-auditor` |
+| Performance / Core Web Vitals / profiling | `performance-optimizer` |
+| Testes E2E / Playwright / automação | `qa-automation-engineer` |
+| Debug de bug difícil / root cause | `debugger` |
+| Auditoria completa do codebase / refactoring profundo | `super-arqueologo` |
+| Documentação (só se pedido explicitamente) | `documentation-writer` |
+| Histórico de decisões / context arqueológico | `code-archaeologist` |
+| Pesquisa rápida read-only (localizar ficheiro/função) | `explorer-agent` |
+| Planeamento de features / decomposição | `project-planner` |
+| Penetration testing / segurança ofensiva | `penetration-tester` |
+| Issues Linear / triagem de backlog | `linear-organizer` |
+
+### Agentes removidos (irrelevantes para este projecto)
+game-developer, seo-specialist, mobile-developer, devops-engineer, database-architect, product-owner
 
 ---
 

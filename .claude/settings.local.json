@@ -14,7 +14,6 @@
       "Bash(node test-email-dev.js:*)",
       "Bash(curl:*)",
       "Bash(node test-email-real.js:*)",
-      "Bash(EMAIL_USER=a33137.ipca@gmail.com EMAIL_PASS=\"ihajeqnjvbohganz\" node test-email-real.js)",
       "Bash(git fetch:*)",
       "Bash(firebase deploy:*)",
       "Bash(firebase projects:list:*)",
