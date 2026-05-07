@@ -14,6 +14,7 @@ import useAuthStore from '../store/useAuthStore';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { PERMISSION_CATEGORIES, PERMISSIONS, DEFAULT_ROLES, ROLE_LEVELS, getLevelLabel } from '../config/permissions';
 import useThemeStore from '../store/useThemeStore';
+import { useProcoreStatus } from '../hooks/useProcoreStatus';
 import { authFetch } from '../utils/authFetch';
 
 // ============================================================
@@ -26,30 +27,14 @@ import { authFetch } from '../utils/authFetch';
 // pelos listeners em `useStore`.
 const ProcoreIntegrationSection = () => {
   const { procoreProjects, procoreDirectory, procoreEquipment } = useStore();
-  const [status, setStatus] = React.useState(null);
-  const [loadingStatus, setLoadingStatus] = React.useState(true);
+  const { status, loading: loadingStatus, error: statusError, refetch } = useProcoreStatus();
   const [syncing, setSyncing] = React.useState(false);
-  const [statusError, setStatusError] = React.useState(null);
   const [syncError, setSyncError] = React.useState(null);
 
-  const fetchStatus = React.useCallback(async () => {
-    try {
-      const res = await authFetch('/api/procore/status', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setStatus(await res.json());
-      setStatusError(null);
-    } catch (err) {
-      setStatusError(err.message || 'Falha a obter estado Procore');
-    } finally {
-      setLoadingStatus(false);
-    }
-  }, []);
-
   React.useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 30_000);
+    const interval = setInterval(refetch, 30_000);
     return () => clearInterval(interval);
-  }, [fetchStatus]);
+  }, [refetch]);
 
   const handleSync = async () => {
     setSyncing(true);

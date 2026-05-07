@@ -16,6 +16,7 @@ import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
 import MachineStoryRings from '../components/ui/MachineStoryRings';
 import LiveTimer from '../components/ui/LiveTimer';
 import useDeviceType from '../hooks/useDeviceType';
+import { useProcoreStatus } from '../hooks/useProcoreStatus';
 import { authFetch } from '../utils/authFetch';
 
 // Filtros de período — 3 presets + calendário personalizado
@@ -200,32 +201,6 @@ const formatRelativeTime = (iso) => {
   if (hours < 24) return `há ${hours}h`;
   const days = Math.floor(hours / 24);
   return `há ${days}d`;
-};
-
-const useProcoreStatus = () => {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await authFetch(PROCORE_STATUS_URL, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setStatus(json);
-      setError(null);
-    } catch (err) {
-      setError(err.message || 'Falha a obter estado Procore');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
-
-  return { status, loading, error, refetch: fetchStatus };
 };
 
 const useProcoreRecon = () => {
