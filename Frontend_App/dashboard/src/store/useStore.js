@@ -8,6 +8,13 @@ import useAvariasStore from './useAvariasStore';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
+// CRUD actions instanciadas uma vez por coleção (não por chamada)
+const machineActions      = createCrudActions(db, `${basePath}/machines`);
+const operatorActions     = createCrudActions(db, `${basePath}/operators`);
+const scheduleActions     = createCrudActions(db, `${basePath}/maintenance_schedules`);
+const cardActions         = createCrudActions(db, `${basePath}/location_cards`);
+const obraActions         = createCrudActions(db, `${basePath}/obras`);
+
 // Constantes para alertas de sessão
 const SESSION_THRESHOLDS = {
   FATIGUE_HOURS: 5,    // Alerta de fadiga após 5h
@@ -214,7 +221,6 @@ const useStore = create((set, get) => ({
   // ============================================
 
   addMaintenanceSchedule: async (scheduleData) => {
-    const scheduleActions = createCrudActions(db, `${basePath}/maintenance_schedules`);
     return scheduleActions.create(undefined, {
       ...scheduleData,
       status: 'scheduled',
@@ -222,12 +228,10 @@ const useStore = create((set, get) => ({
   },
 
   updateMaintenanceSchedule: async (id, data) => {
-    const scheduleActions = createCrudActions(db, `${basePath}/maintenance_schedules`);
     return scheduleActions.update(id, data, { includeTimestamp: false });
   },
 
   deleteMaintenanceSchedule: async (id) => {
-    const scheduleActions = createCrudActions(db, `${basePath}/maintenance_schedules`);
     return scheduleActions.delete(id);
   },
 
@@ -400,20 +404,17 @@ const useStore = create((set, get) => ({
       active: true,
     });
 
-    const cardActions = createCrudActions(db, `${basePath}/location_cards`);
     return cardActions.create(normalizedId, card);
   },
 
   // Atualizar cartão de localização
   updateLocationCard: async (cardId, updates) => {
-    const cardActions = createCrudActions(db, `${basePath}/location_cards`);
     const cleanUpdates = sanitizeData(updates);
     return cardActions.update(cardId, cleanUpdates);
   },
 
   // Eliminar cartão de localização
   deleteLocationCard: async (cardId) => {
-    const cardActions = createCrudActions(db, `${basePath}/location_cards`);
     const result = await cardActions.delete(cardId);
     if (!result.success) {
       console.error('Erro ao eliminar cartão:', result.error);
@@ -649,7 +650,6 @@ const useStore = create((set, get) => ({
 
   // Actions para máquinas
   addMachine: async (machineData) => {
-    const machineActions = createCrudActions(db, `${basePath}/machines`);
     const cleanMachine = sanitizeData({
       ...machineData,
       totalHours: 0,
@@ -664,19 +664,16 @@ const useStore = create((set, get) => ({
   },
 
   updateMachine: async (id, data) => {
-    const machineActions = createCrudActions(db, `${basePath}/machines`);
     const cleanData = sanitizeData(data);
     return machineActions.update(id, cleanData);
   },
 
   deleteMachine: async (id) => {
-    const machineActions = createCrudActions(db, `${basePath}/machines`);
     return machineActions.delete(id);
   },
 
   // Actions para operadores
   addOperator: async (operatorData) => {
-    const operatorActions = createCrudActions(db, `${basePath}/operators`);
     const cleanOperator = sanitizeData(operatorData);
     return operatorActions.create(
       operatorData.cardId || undefined,
@@ -686,12 +683,10 @@ const useStore = create((set, get) => ({
   },
 
   deleteOperator: async (id) => {
-    const operatorActions = createCrudActions(db, `${basePath}/operators`);
     return operatorActions.delete(id);
   },
 
   updateOperator: async (id, data) => {
-    const operatorActions = createCrudActions(db, `${basePath}/operators`);
     const cleanData = sanitizeData(data);
     return operatorActions.update(id, cleanData);
   },
@@ -819,19 +814,16 @@ const useStore = create((set, get) => ({
 
   // Actions para obras
   addObra: async (obraData) => {
-    const obraActions = createCrudActions(db, `${basePath}/obras`);
     const id = obraData.code || undefined;
     return obraActions.create(id, obraData, { idPrefix: 'obra' });
   },
 
   updateObra: async (id, data) => {
-    const obraActions = createCrudActions(db, `${basePath}/obras`);
     const cleanData = sanitizeData(data);
     return obraActions.update(id, cleanData);
   },
 
   deleteObra: async (id) => {
-    const obraActions = createCrudActions(db, `${basePath}/obras`);
     return obraActions.delete(id);
   },
 
