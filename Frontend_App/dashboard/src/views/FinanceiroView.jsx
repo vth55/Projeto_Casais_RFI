@@ -26,6 +26,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import { parseFirestoreTimestamp } from '../utils/dateUtils';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState } from '../components/ui';
 import { formatCurrency, formatHours, formatNumber } from '../utils/formatters';
 
@@ -149,7 +150,7 @@ const MachineTariffForm = ({ machines, initialMachineId, onSave, onCancel }) => 
 
 const formatDate = (ts) => {
   if (!ts) return '—';
-  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  const d = parseFirestoreTimestamp(ts);
   return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
@@ -197,7 +198,7 @@ const FinanceiroView = () => {
     filteredSessions
       .filter(s => s.status === 'CLOSED' && s.costs && s.startTime)
       .forEach(s => {
-        const d = s.startTime?.toDate ? s.startTime.toDate() : new Date(s.startTime);
+        const d = parseFirestoreTimestamp(s.startTime);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const label = d.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
         if (!map[key]) map[key] = { name: label, custos: 0, maquina: 0, operador: 0 };

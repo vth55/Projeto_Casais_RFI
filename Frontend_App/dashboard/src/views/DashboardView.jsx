@@ -10,6 +10,7 @@ import {
   Sparkles, Brain, ShieldAlert,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import { parseFirestoreTimestamp } from '../utils/dateUtils';
 import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
 import MachineStoryRings from '../components/ui/MachineStoryRings';
@@ -133,7 +134,7 @@ const DateFilters = () => {
 
 // Card de Sessão Ativa
 const ActiveSessionCard = ({ session, machine, operator }) => {
-  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+  const startTime = parseFirestoreTimestamp(session.startTime);
   const isLong = Date.now() - startTime.getTime() >= 5 * 60 * 60 * 1000;
 
   return (
@@ -983,7 +984,7 @@ const DashboardView = () => {
     const grouped = {};
     filteredSessions.forEach(session => {
       if (session.startTime && session.durationHours) {
-        const date = session.startTime.toDate?.() || new Date(session.startTime);
+        const date = parseFirestoreTimestamp(session.startTime);
         const day = date.toLocaleDateString('pt-PT', { weekday: 'short' });
         if (!grouped[day]) grouped[day] = { horas: 0, combustivel: 0, co2: 0 };
         grouped[day].horas += session.durationHours || 0;

@@ -11,6 +11,7 @@
 import React, { useMemo } from 'react';
 import { Smartphone, Play, Clock, AlertTriangle, CheckCircle, Truck, QrCode, User } from 'lucide-react';
 import useStore from '../../store/useStore';
+import { parseFirestoreTimestamp } from '../utils/dateUtils';
 import useAuthStore from '../../store/useAuthStore';
 import { Card, Badge } from '../../components/ui';
 import LiveTimer from '../../components/ui/LiveTimer';
@@ -29,8 +30,8 @@ const DashboardOperador = () => {
     sessions
       .filter(s => s.status === 'CLOSED' && (!myCardId || s.cardId === myCardId))
       .sort((a, b) => {
-        const dateA = a.endTime?.toDate?.() || new Date(a.endTime);
-        const dateB = b.endTime?.toDate?.() || new Date(b.endTime);
+        const dateA = parseFirestoreTimestamp(a.endTime);
+        const dateB = parseFirestoreTimestamp(b.endTime);
         return dateB - dateA;
       })
       .slice(0, 5),
@@ -99,7 +100,7 @@ const DashboardOperador = () => {
           </div>
           {activeSessions.slice(0, 2).map(session => {
             const machine = machines.find(m => m.id === session.machineId);
-            const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+            const startTime = parseFirestoreTimestamp(session.startTime);
 
             return (
               <div key={session.id} className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
@@ -149,7 +150,7 @@ const DashboardOperador = () => {
           <div className="space-y-2">
             {recentSessions.map(session => {
               const machine = machines.find(m => m.id === session.machineId);
-              const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+              const startTime = parseFirestoreTimestamp(session.startTime);
               
               return (
                 <div key={session.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg">

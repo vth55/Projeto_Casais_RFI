@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, Select, Skeleton } from '../components/ui';
+import { parseFirestoreTimestamp } from '../utils/dateUtils';
 
 const TabNav = ({ tabs, activeTab, onChange }) => (
   <div className="flex border-b border-slate-200 dark:border-slate-700">
@@ -146,7 +147,7 @@ const AnalisesView = () => {
 
     sessions.forEach(s => {
       if (s.status !== 'CLOSED' || !s.startTime) return;
-      const date = s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
+      const date = parseFirestoreTimestamp(s.startTime);
       const dayIdx = date.getDay();
       const hours = s.durationHours || 0;
       
