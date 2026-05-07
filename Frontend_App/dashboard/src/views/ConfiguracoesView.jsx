@@ -45,7 +45,7 @@ const ProcoreIntegrationSection = () => {
         const text = await res.text();
         throw new Error(`Sync falhou: ${text.slice(0, 200)}`);
       }
-      await fetchStatus();
+      await refetch();
     } catch (err) {
       setSyncError(err.message || 'Erro desconhecido no sync');
     } finally {
@@ -57,9 +57,9 @@ const ProcoreIntegrationSection = () => {
     if (!confirm('Desconectar a integração Procore? Será preciso reautorizar para voltar a sincronizar.')) return;
     try {
       await authFetch('/api/procore/disconnect', { method: 'POST' });
-      await fetchStatus();
+      await refetch();
     } catch (err) {
-      setStatusError(err.message || 'Erro ao desconectar');
+      setSyncError(err.message || 'Erro ao desconectar');
     }
   };
 

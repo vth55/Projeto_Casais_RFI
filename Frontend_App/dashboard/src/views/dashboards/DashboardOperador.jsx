@@ -11,7 +11,7 @@
 import React, { useMemo } from 'react';
 import { Smartphone, Play, Clock, AlertTriangle, CheckCircle, Truck, QrCode, User } from 'lucide-react';
 import useStore from '../../store/useStore';
-import { parseFirestoreTimestamp } from '../utils/dateUtils';
+import { parseFirestoreTimestamp } from '../../utils/dateUtils';
 import useAuthStore from '../../store/useAuthStore';
 import { Card, Badge } from '../../components/ui';
 import LiveTimer from '../../components/ui/LiveTimer';

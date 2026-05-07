@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { authFetch } from '../utils/authFetch';
 
-const PROCORE_STATUS_URL = 'https://us-central1-casais-rfid.cloudfunctions.net/procoreStatus';
+const PROCORE_STATUS_URL = '/api/procore/status';
 
 export const useProcoreStatus = () => {
   const [status, setStatus] = useState(null);
