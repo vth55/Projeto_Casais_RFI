@@ -4,19 +4,9 @@ import useStore from '../store/useStore';
 import useAvariasStore from '../store/useAvariasStore';
 import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
+import TabNav from '../components/TabNav';
 import { getCategoryName } from '../utils/safeRender';
 import { PERMISSIONS } from '../config/permissions';
-
-const TabNav = ({ tabs, activeTab, onChange }) => (
-  <div className="flex border-b border-slate-200 dark:border-slate-700">
-    {tabs.map(tab => (
-      <button key={tab.id} onClick={() => onChange(tab.id)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}>
-        {tab.label}
-        {tab.count > 0 && <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{tab.count}</span>}
-      </button>
-    ))}
-  </div>
-);
 
 // ============================================================================
 // MaintenanceCalendar — grid mensal com eventos passados, avarias e previsões
