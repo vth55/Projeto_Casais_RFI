@@ -16,13 +16,13 @@
  */
 
 const admin = require('firebase-admin');
+const { getValidAccessToken } = require('./procoreBridge');
 
 // ─── Procore environment ─────────────────────────────────────────────────────
 // Dev Sandbox endpoints. Tem de estar alinhado com procoreBridge.js.
 // Dados estáveis, sem refresh mensal — preserva matching de IDs Procore↔Firestore.
-const PROCORE_LOGIN_URL = 'https://login-sandbox.procore.com';
+// Token refresh is now delegated to procoreBridge.getValidAccessToken()
 const PROCORE_API_BASE = 'https://sandbox.procore.com';
-const PROCORE_TOKEN_URL = `${PROCORE_LOGIN_URL}/oauth/token`;
 const PROCORE_API_URL = `${PROCORE_API_BASE}/rest/v1.0`;
 
 // ─── Path constants ──────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ function buildNextRetryTimestamp(attemptsDone) {
 
 /**
  * Execute an authenticated Procore REST call.
- * Transparently refreshes the OAuth token when it is about to expire (< 60s).
+ * Uses getValidAccessToken() from procoreBridge to handle token refresh transparently.
  */
 async function procoreFetch(endpoint, options = {}) {
     const integRef = admin.firestore().doc(PROCORE_INTEGRATION_PATH);
@@ -88,40 +88,9 @@ async function procoreFetch(endpoint, options = {}) {
     if (!snap.exists) throw new Error('PROCORE_NOT_CONNECTED');
 
     const data = snap.data();
-    let token = data.access_token;
 
-    // Refresh if token expires within 60 seconds
-    const expiresAtMs = data.expires_at?.toMillis ? data.expires_at.toMillis() : (data.expires_at || 0);
-    if (expiresAtMs - 60_000 <= Date.now()) {
-        if (!data.refresh_token) throw new Error('PROCORE_NO_REFRESH_TOKEN');
-
-        console.log('[procoreSessionExporter] token expiring — refreshing...');
-        const refreshRes = await fetch(PROCORE_TOKEN_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                grant_type:    'refresh_token',
-                refresh_token: data.refresh_token,
-                client_id:     process.env.PROCORE_CLIENT_ID,
-                client_secret: process.env.PROCORE_CLIENT_SECRET,
-            }),
-        });
-
-        if (!refreshRes.ok) {
-            const body = await refreshRes.text();
-            throw new Error(`PROCORE_TOKEN_REFRESH_FAILED: ${body}`);
-        }
-
-        const newTokens = await refreshRes.json();
-        token = newTokens.access_token;
-
-        await integRef.update({
-            access_token:  newTokens.access_token,
-            refresh_token: newTokens.refresh_token,
-            expires_at:    admin.firestore.Timestamp.fromMillis(Date.now() + (newTokens.expires_in * 1000)),
-        });
-        console.log('[procoreSessionExporter] token refreshed');
-    }
+    // Use shared token management from procoreBridge
+    const token = await getValidAccessToken();
 
     const url = `${PROCORE_API_URL}${endpoint}`;
     const res = await fetch(url, {
