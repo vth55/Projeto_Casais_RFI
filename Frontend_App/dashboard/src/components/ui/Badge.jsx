@@ -55,9 +55,10 @@ const StatusBadge = ({ status }) => {
   const statusConfig = {
     ACTIVE: { label: 'Ativo', variant: 'success', dot: true },
     OPEN: { label: 'Em curso', variant: 'success', dot: true },
-    IDLE: { label: 'Parado', variant: 'default', dot: true },
+    IDLE: { label: 'Disponível', variant: 'default', dot: true },
     CLOSED: { label: 'Fechado', variant: 'default', dot: false },
     MAINTENANCE: { label: 'Manutenção', variant: 'warning', dot: true },
+    AVARIA: { label: 'Avaria', variant: 'danger', dot: true },
     ERROR: { label: 'Erro', variant: 'danger', dot: true },
     PENDING: { label: 'Pendente', variant: 'warning', dot: true },
     VALIDATED: { label: 'Validado', variant: 'success', dot: false },

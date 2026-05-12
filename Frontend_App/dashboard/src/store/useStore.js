@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, Timestamp, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
 import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
@@ -838,12 +838,10 @@ const useStore = create((set, get) => ({
       for (const machineId of machineIds) {
         await updateDoc(doc(db, `${basePath}/machines`, machineId), {
           obraId: isEstaleiro ? 'estaleiro' : (obra?.id || obraId),
-          location: obra ? {
-            workId: obra.id,
-            workName: obra.name,
-            gps: obra.gps || null,
-            lastUpdated: Timestamp.now(),
-          } : null,
+          ...(isEstaleiro
+            ? { status: 'IDLE', location: null, movedToYardAt: Timestamp.now() }
+            : { movedToYardAt: null, location: obra ? { workId: obra.id, workName: obra.name, gps: obra.gps || null, lastUpdated: Timestamp.now() } : null }
+          ),
         });
       }
       return { success: true, count: machineIds.length };
@@ -892,6 +890,15 @@ const useStore = create((set, get) => ({
         closedBy: isAutoClose ? 'SYSTEM_AUTO_CLOSE' : 'MANUAL',
         closedAt: Timestamp.now(),
       });
+
+      // Acumular horas na máquina e repor status IDLE
+      if (session.machineId) {
+        await updateDoc(doc(db, `${basePath}/machines`, session.machineId), {
+          totalHours: increment(durationHours),
+          partialHours: increment(durationHours),
+          status: 'IDLE',
+        });
+      }
 
       // Criar alerta se necessário
       if (alertType) {

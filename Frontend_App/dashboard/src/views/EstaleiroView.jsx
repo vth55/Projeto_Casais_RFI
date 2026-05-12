@@ -29,9 +29,10 @@ const StatusChip = ({ status }) => {
 };
 
 function timeInYard(machine) {
-  const ts = machine.location?.lastUpdated;
+  const ts = machine.movedToYardAt || machine.updatedAt || machine.createdAt;
   if (!ts) return '—';
   const date = parseFirestoreTimestamp(ts);
+  if (!date || isNaN(date.getTime())) return '—';
   const diffMs = Date.now() - date.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
   const diffHours = Math.floor(diffMs / 3600000);
@@ -56,7 +57,7 @@ export default function EstaleiroView() {
 
   const stats = useMemo(() => ({
     total:       estMachines.length,
-    disponiveis: estMachines.filter(m => m.status === 'IDLE').length,
+    disponiveis: estMachines.filter(m => !['MAINTENANCE', 'AVARIA', 'ACTIVE'].includes(m.status)).length,
     manutencao:  estMachines.filter(m => m.status === 'MAINTENANCE').length,
     avaria:      estMachines.filter(m => m.status === 'AVARIA').length,
   }), [estMachines]);
