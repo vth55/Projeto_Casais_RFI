@@ -286,7 +286,7 @@ exports.handleSessionTrigger = onRequest(
     // Validação de input — prevenir path traversal e payloads maliciosos
     const VALID_ID_REGEX = /^[A-Za-z0-9_\-]{1,80}$/;
     const normalizedCard = String(cardId).toUpperCase().trim();
-    const normalizedMachine = String(machineId).trim();
+    let normalizedMachine = String(machineId).trim();
 
     if (!VALID_ID_REGEX.test(normalizedCard) || !VALID_ID_REGEX.test(normalizedMachine)) {
         return res.status(400).json({ error: 'cardId ou machineId contém caracteres inválidos.' });
@@ -299,6 +299,23 @@ exports.handleSessionTrigger = onRequest(
             machineId: normalizedMachine,
             timestamp: timestamp
         }, { merge: true });
+
+        // Resolver rfidReaderId → machineId.
+        // O hardware pode enviar o seu próprio ID fixo (ex: "READER-001") em vez do
+        // doc ID do Firestore. Se não encontrar doc directo, tenta lookup por rfidReaderId.
+        {
+            const directSnap = await db.doc(`${MACHINES_PATH}/${normalizedMachine}`).get();
+            if (!directSnap.exists) {
+                const byReader = await db.collection(MACHINES_PATH)
+                    .where('rfidReaderId', '==', normalizedMachine)
+                    .limit(1)
+                    .get();
+                if (!byReader.empty) {
+                    console.log(`[session] rfidReaderId '${normalizedMachine}' → machineId '${byReader.docs[0].id}'`);
+                    normalizedMachine = byReader.docs[0].id;
+                }
+            }
+        }
 
         // ============================================
         // VERIFICAR SE É CARTÃO DE LOCALIZAÇÃO

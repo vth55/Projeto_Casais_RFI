@@ -15,6 +15,8 @@ import {
   CheckSquare,
   Square,
   ArrowRight,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, StatusBadge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
@@ -98,7 +100,13 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <StatusBadge status={machine.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={machine.status} />
+          {machine.rfidReaderId
+            ? <span title={`Leitor: ${machine.rfidReaderId}`}><Wifi className="w-3.5 h-3.5 text-emerald-500" /></span>
+            : <span title="Sem leitor RFID configurado"><WifiOff className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" /></span>
+          }
+        </div>
         {machine.location ? (
           <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
             <MapPin className="w-3.5 h-3.5" />
@@ -125,6 +133,7 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
     serialNumber: machine.serialNumber || '',
     co2Factor: machine.co2Factor || '',
     maintenanceInterval: machine.maintenanceInterval || '',
+    rfidReaderId: machine.rfidReaderId || '',
   } : {
     name: '',
     category: '',
@@ -133,6 +142,7 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
     serialNumber: '',
     co2Factor: '',
     maintenanceInterval: '',
+    rfidReaderId: '',
   };
   const [formData, setFormData] = useState(initialData);
 
@@ -155,6 +165,7 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
     };
     if (formData.co2Factor !== '') saveData.co2Factor = parseFloat(formData.co2Factor);
     if (formData.maintenanceInterval !== '') saveData.maintenanceInterval = parseInt(formData.maintenanceInterval, 10);
+    if (!formData.rfidReaderId) saveData.rfidReaderId = null;
     onSave(saveData);
   };
 
@@ -218,6 +229,36 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
           onChange={e => setFormData({ ...formData, maintenanceInterval: e.target.value })}
           placeholder={`${systemSettings?.defaultMaintenanceInterval ?? 150}`}
         />
+      </div>
+
+      {/* Leitor RFID */}
+      <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
+        <div className="flex items-center gap-2 mb-3">
+          {formData.rfidReaderId
+            ? <Wifi className="w-4 h-4 text-emerald-500" />
+            : <WifiOff className="w-4 h-4 text-slate-400" />
+          }
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Leitor RFID</span>
+          {formData.rfidReaderId
+            ? <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Configurado</span>
+            : <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">Sem leitor</span>
+          }
+        </div>
+        <Input
+          label="ID do Leitor (ex: READER-001)"
+          value={formData.rfidReaderId}
+          onChange={e => setFormData({ ...formData, rfidReaderId: e.target.value })}
+          placeholder="READER-001"
+          icon={Wifi}
+        />
+        {machine?.id && (
+          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+            ID Firestore desta máquina: <span className="font-mono select-all">{machine.id}</span>
+          </p>
+        )}
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          O hardware envia o ID do leitor — o sistema resolve automaticamente qual máquina está associada.
+        </p>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
