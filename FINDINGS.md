@@ -73,6 +73,15 @@ ULIDs do sandbox (não resetam — Dev Sandbox):
 
 Sync testado: GET count:2, POST create HTTP 201, fullSync machinesCreated:2. Tudo funcional.
 
+**2026-05-12 update** — 6 equipamentos adicionais criados via `equipment-bulk`:
+RET-001 "Retroescavadora 01/02", GIR-001 "Giratória 01", DMP-001 "Dumper 01",
+CPT-001 "Compactador 01", GRU-001 "Grua 01". Total sandbox: 8 equipamentos.
+Procore → Firestore sync: equipment=8, machinesCreated=6, machinesUpdated=2. ✅
+
+**ownership obrigatório no POST**: `equipment-bulk` sem `ownership` → 422. Sempre incluir.
+**procorePwaProjector.js**: já trata machine stubs. Não adicionar lógica redundante em procoreBridge.
+Projector usa `procore_<ULID>` como doc ID nas machines (não `equipment_id`).
+
 ---
 
 ## 2026-04-29 — Procore: coleção `obras` não existe
