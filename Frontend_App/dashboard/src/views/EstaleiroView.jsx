@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, Truck, Clock, Fuel,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import { parseFirestoreTimestamp } from '../utils/dateUtils';
 import { Card, Button, Modal, Select, EmptyState } from '../components/ui';
 import { getCategoryName } from '../utils/safeRender';
 import { formatHours } from '../utils/formatters';
@@ -30,7 +31,7 @@ const StatusChip = ({ status }) => {
 function timeInYard(machine) {
   const ts = machine.location?.lastUpdated;
   if (!ts) return '—';
-  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const date = parseFirestoreTimestamp(ts);
   const diffMs = Date.now() - date.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
   const diffHours = Math.floor(diffMs / 3600000);

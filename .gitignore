@@ -156,5 +156,15 @@ firebase-adminsdk-*.json
 secrets/
 
 
-# Mem�ria do AI (opcional - pode commitar se quiser)
+# Memória do AI (opcional - pode commitar se quiser)
 # memoria/
+
+# ============================================
+# BUILD ARTIFACTS — Frontend Vite (deploy via Firebase Hosting)
+# ============================================
+Backend_Cloud/public/assets/
+
+# ============================================
+# PLAYWRIGHT MCP — ficheiros de sessão temporários
+# ============================================
+.playwright-mcp/

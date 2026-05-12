@@ -10,11 +10,13 @@ import {
   Sparkles, Brain, ShieldAlert,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import { parseFirestoreTimestamp } from '../utils/dateUtils';
 import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
 import MachineStoryRings from '../components/ui/MachineStoryRings';
 import LiveTimer from '../components/ui/LiveTimer';
 import useDeviceType from '../hooks/useDeviceType';
+import { useProcoreStatus } from '../hooks/useProcoreStatus';
 import { authFetch } from '../utils/authFetch';
 
 // Filtros de período — 3 presets + calendário personalizado
@@ -133,7 +135,7 @@ const DateFilters = () => {
 
 // Card de Sessão Ativa
 const ActiveSessionCard = ({ session, machine, operator }) => {
-  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
+  const startTime = parseFirestoreTimestamp(session.startTime);
   const isLong = Date.now() - startTime.getTime() >= 5 * 60 * 60 * 1000;
 
   return (
@@ -199,32 +201,6 @@ const formatRelativeTime = (iso) => {
   if (hours < 24) return `há ${hours}h`;
   const days = Math.floor(hours / 24);
   return `há ${days}d`;
-};
-
-const useProcoreStatus = () => {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await authFetch(PROCORE_STATUS_URL, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setStatus(json);
-      setError(null);
-    } catch (err) {
-      setError(err.message || 'Falha a obter estado Procore');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
-
-  return { status, loading, error, refetch: fetchStatus };
 };
 
 const useProcoreRecon = () => {
@@ -983,7 +959,7 @@ const DashboardView = () => {
     const grouped = {};
     filteredSessions.forEach(session => {
       if (session.startTime && session.durationHours) {
-        const date = session.startTime.toDate?.() || new Date(session.startTime);
+        const date = parseFirestoreTimestamp(session.startTime);
         const day = date.toLocaleDateString('pt-PT', { weekday: 'short' });
         if (!grouped[day]) grouped[day] = { horas: 0, combustivel: 0, co2: 0 };
         grouped[day].horas += session.durationHours || 0;

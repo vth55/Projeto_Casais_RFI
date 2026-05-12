@@ -2,9 +2,18 @@ import { create } from 'zustand';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
+import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
+import { createCrudActions } from '../utils/firestoreCrud';
 import useAvariasStore from './useAvariasStore';
 
 const basePath = `artifacts/${projectId}/public/data`;
+
+// CRUD actions instanciadas uma vez por coleção (não por chamada)
+const machineActions      = createCrudActions(db, `${basePath}/machines`);
+const operatorActions     = createCrudActions(db, `${basePath}/operators`);
+const scheduleActions     = createCrudActions(db, `${basePath}/maintenance_schedules`);
+const cardActions         = createCrudActions(db, `${basePath}/location_cards`);
+const obraActions         = createCrudActions(db, `${basePath}/obras`);
 
 // Constantes para alertas de sessão
 const SESSION_THRESHOLDS = {
@@ -75,73 +84,53 @@ const useStore = create((set, get) => ({
     const unsubscribers = [];
 
     // Sessions listener
-    const sessionsQuery = query(
-      collection(db, `${basePath}/sessions`),
-      orderBy('startTime', 'desc')
-    );
+    const createSessionsListener = createCollectionListener(db, `${basePath}/sessions`, {
+      orderByField: 'startTime',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.error('Erro sessions:', error),
+    });
     unsubscribers.push(
-      onSnapshot(sessionsQuery,
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ sessions: data });
-        },
-        (error) => console.error('Erro sessions:', error)
-      )
+      createSessionsListener((data) => set({ sessions: data }))
     );
 
     // Machines listener
+    const createMachinesListener = createCollectionListener(db, `${basePath}/machines`, {
+      onError: (msg, error) => console.error('Erro machines:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/machines`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ machines: data, loading: false });
-        },
-        (error) => console.error('Erro machines:', error)
-      )
+      createMachinesListener((data) => set({ machines: data, loading: false }))
     );
 
     // Operators listener
+    const createOperatorsListener = createCollectionListener(db, `${basePath}/operators`, {
+      onError: (msg, error) => console.error('Erro operators:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/operators`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ operators: data });
-        },
-        (error) => console.error('Erro operators:', error)
-      )
+      createOperatorsListener((data) => set({ operators: data }))
     );
 
     // Maintenance records listener
+    const createMaintenanceListener = createCollectionListener(db, `${basePath}/maintenance`, {
+      onError: (msg, error) => console.error('Erro maintenance:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/maintenance`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ maintenanceRecords: data });
-        },
-        (error) => console.error('Erro maintenance:', error)
-      )
+      createMaintenanceListener((data) => set({ maintenanceRecords: data }))
     );
 
     // Obras listener
+    const createObrasListener = createCollectionListener(db, `${basePath}/obras`, {
+      onError: (msg, error) => console.error('Erro obras:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/obras`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ obras: data });
-        },
-        (error) => console.error('Erro obras:', error)
-      )
+      createObrasListener((data) => set({ obras: data }))
     );
 
     // Location Cards listener (cartões RFID de localização)
+    const createLocationCardsListener = createCollectionListener(db, `${basePath}/location_cards`, {
+      onError: (msg, error) => console.error('Erro location_cards:', error),
+    });
     unsubscribers.push(
-      onSnapshot(collection(db, `${basePath}/location_cards`),
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          set({ locationCards: data });
-        },
-        (error) => console.error('Erro location_cards:', error)
-      )
+      createLocationCardsListener((data) => set({ locationCards: data }))
     );
 
     // ============================================
@@ -158,53 +147,52 @@ const useStore = create((set, get) => ({
       { name: 'equipment', stateKey: 'procoreEquipment' },
     ];
     procoreCollections.forEach(({ name, stateKey }) => {
+      const createProcoreListener = createCollectionListener(
+        db,
+        `${procoreBase}/${name}`,
+        {
+          onError: (msg, error) => console.debug(`[procore:${name}] listener off:`, error?.code || error?.message),
+        }
+      );
       unsubscribers.push(
-        onSnapshot(
-          collection(db, `${procoreBase}/${name}`),
-          (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            set({ [stateKey]: data });
-          },
-          (error) => {
-            // Silencioso — é normal estar vazio enquanto a integração não está ligada
-            console.debug(`[procore:${name}] listener off:`, error?.code || error?.message);
-          }
-        )
+        createProcoreListener((data) => set({ [stateKey]: data }))
       );
     });
 
     // ============================================
     // SYSTEM SETTINGS — parâmetros operacionais
     // ============================================
+    const createSettingsListener = createDocumentListener(
+      db,
+      `${basePath}/settings/system`,
+      {
+        onError: (msg, error) => console.debug('[settings:system] listener off:', error?.code || error?.message),
+      }
+    );
     unsubscribers.push(
-      onSnapshot(
-        doc(db, `${basePath}/settings/system`),
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            set({
-              systemSettings: {
-                fuelPricePerLitre: data.fuelPricePerLitre ?? 1.89,
-                co2FactorPerLitre: data.co2FactorPerLitre ?? 2.68,
-                defaultMaintenanceInterval: data.defaultMaintenanceInterval ?? 150,
-              },
-            });
-          }
-        },
-        (error) => console.debug('[settings:system] listener off:', error?.code || error?.message)
-      )
+      createSettingsListener((docData) => {
+        if (docData) {
+          set({
+            systemSettings: {
+              fuelPricePerLitre: docData.fuelPricePerLitre ?? 1.89,
+              co2FactorPerLitre: docData.co2FactorPerLitre ?? 2.68,
+              defaultMaintenanceInterval: docData.defaultMaintenanceInterval ?? 150,
+            },
+          });
+        }
+      })
     );
 
     // Maintenance Schedules listener
+    const createSchedulesListener = createCollectionListener(
+      db,
+      `${basePath}/maintenance_schedules`,
+      {
+        onError: (msg, error) => console.debug('[maintenance_schedules] listener off:', error?.code || error?.message),
+      }
+    );
     unsubscribers.push(
-      onSnapshot(
-        collection(db, `${basePath}/maintenance_schedules`),
-        (snapshot) => {
-          const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          set({ maintenanceSchedules: data });
-        },
-        (error) => console.debug('[maintenance_schedules] listener off:', error?.code || error?.message)
-      )
+      createSchedulesListener((data) => set({ maintenanceSchedules: data }))
     );
 
     return () => unsubscribers.forEach(unsub => unsub());
@@ -233,20 +221,18 @@ const useStore = create((set, get) => ({
   // ============================================
 
   addMaintenanceSchedule: async (scheduleData) => {
-    const id = `sched_${Date.now()}`;
-    await setDoc(doc(db, `${basePath}/maintenance_schedules`, id), {
+    return scheduleActions.create(undefined, {
       ...scheduleData,
-      createdAt: Timestamp.now(),
       status: 'scheduled',
-    });
+    }, { idPrefix: 'sched' });
   },
 
   updateMaintenanceSchedule: async (id, data) => {
-    await updateDoc(doc(db, `${basePath}/maintenance_schedules`, id), data);
+    return scheduleActions.update(id, data, { includeTimestamp: false });
   },
 
   deleteMaintenanceSchedule: async (id) => {
-    await deleteDoc(doc(db, `${basePath}/maintenance_schedules`, id));
+    return scheduleActions.delete(id);
   },
 
   // ============================================
@@ -403,62 +389,37 @@ const useStore = create((set, get) => ({
 
   // Criar cartão de localização
   addLocationCard: async (cardData) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
+    const cardId = cardData.cardId || `LOC_${Date.now()}`;
+    const normalizedId = cardId.toUpperCase().startsWith('LOC_')
+      ? cardId.toUpperCase()
+      : `LOC_${cardId.toUpperCase()}`;
 
-    try {
-      const cardId = cardData.cardId || `LOC_${Date.now()}`;
-      const normalizedId = cardId.toUpperCase().startsWith('LOC_')
-        ? cardId.toUpperCase()
-        : `LOC_${cardId.toUpperCase()}`;
+    const card = sanitizeData({
+      ...cardData,
+      id: normalizedId,
+      obraId: cardData.obraId,
+      obraName: cardData.obraName,
+      gps: cardData.gps || null,
+      description: cardData.description || '',
+      active: true,
+    });
 
-      const card = sanitizeData({
-        ...cardData,
-        id: normalizedId,
-        obraId: cardData.obraId,
-        obraName: cardData.obraName,
-        gps: cardData.gps || null,
-        description: cardData.description || '',
-        createdAt: Timestamp.now(),
-        active: true,
-      });
-
-      await setDoc(doc(db, `${basePath}/location_cards`, normalizedId), card);
-      return { success: true, id: normalizedId };
-    } catch (error) {
-      console.error('Erro ao criar cartão de localização:', error);
-      return { success: false, error: error.message };
-    }
+    return cardActions.create(normalizedId, card);
   },
 
   // Atualizar cartão de localização
   updateLocationCard: async (cardId, updates) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-
-    try {
-      const cleanUpdates = sanitizeData(updates);
-
-      await updateDoc(doc(db, `${basePath}/location_cards`, cardId), {
-        ...cleanUpdates,
-        updatedAt: Timestamp.now(),
-      });
-      return { success: true };
-    } catch (error) {
-      console.error('Erro ao atualizar cartão:', error);
-      return { success: false, error: error.message };
-    }
+    const cleanUpdates = sanitizeData(updates);
+    return cardActions.update(cardId, cleanUpdates);
   },
 
   // Eliminar cartão de localização
   deleteLocationCard: async (cardId) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-
-    try {
-      await deleteDoc(doc(db, `${basePath}/location_cards`, cardId));
-      return { success: true };
-    } catch (error) {
-      console.error('Erro ao eliminar cartão:', error);
-      return { success: false, error: error.message };
+    const result = await cardActions.delete(cardId);
+    if (!result.success) {
+      console.error('Erro ao eliminar cartão:', result.error);
     }
+    return result;
   },
 
   // Obter cartões de uma obra específica
@@ -689,86 +650,45 @@ const useStore = create((set, get) => ({
 
   // Actions para máquinas
   addMachine: async (machineData) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      const id = machineData.id || `machine_${Date.now()}`;
-      const cleanMachine = sanitizeData({
-        ...machineData,
-        id,
-        createdAt: Timestamp.now(),
-        totalHours: 0,
-        partialHours: 0,
-        status: 'IDLE',
-      });
-
-      await setDoc(doc(db, `${basePath}/machines`, id), cleanMachine);
-      return { success: true, id };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    const cleanMachine = sanitizeData({
+      ...machineData,
+      totalHours: 0,
+      partialHours: 0,
+      status: 'IDLE',
+    });
+    return machineActions.create(
+      machineData.id || undefined,
+      cleanMachine,
+      { idPrefix: 'machine' }
+    );
   },
 
   updateMachine: async (id, data) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      const cleanData = sanitizeData(data);
-      await updateDoc(doc(db, `${basePath}/machines`, id), cleanData);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    const cleanData = sanitizeData(data);
+    return machineActions.update(id, cleanData);
   },
 
   deleteMachine: async (id) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      await deleteDoc(doc(db, `${basePath}/machines`, id));
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    return machineActions.delete(id);
   },
 
   // Actions para operadores
   addOperator: async (operatorData) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      const id = operatorData.cardId || `op_${Date.now()}`;
-      const cleanOperator = sanitizeData({
-        ...operatorData,
-        registeredAt: Timestamp.now(),
-      });
-
-      await setDoc(doc(db, `${basePath}/operators`, id), cleanOperator);
-      return { success: true, id };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    const cleanOperator = sanitizeData(operatorData);
+    return operatorActions.create(
+      operatorData.cardId || undefined,
+      cleanOperator,
+      { idPrefix: 'op' }
+    );
   },
 
   deleteOperator: async (id) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      await deleteDoc(doc(db, `${basePath}/operators`, id));
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    return operatorActions.delete(id);
   },
 
   updateOperator: async (id, data) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      const cleanData = sanitizeData(data);
-
-      await updateDoc(doc(db, `${basePath}/operators`, id), {
-        ...cleanData,
-        updatedAt: Timestamp.now(),
-      });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    const cleanData = sanitizeData(data);
+    return operatorActions.update(id, cleanData);
   },
 
   // Definir novo tarifário versionado numa máquina
@@ -894,43 +814,17 @@ const useStore = create((set, get) => ({
 
   // Actions para obras
   addObra: async (obraData) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      const id = obraData.code || `obra_${Date.now()}`;
-      await setDoc(doc(db, `${basePath}/obras`, id), {
-        ...obraData,
-        id,
-        createdAt: Timestamp.now(),
-      });
-      return { success: true, id };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    const id = obraData.code || undefined;
+    return obraActions.create(id, obraData, { idPrefix: 'obra' });
   },
 
   updateObra: async (id, data) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      const cleanData = sanitizeData(data);
-
-      await updateDoc(doc(db, `${basePath}/obras`, id), {
-        ...cleanData,
-        updatedAt: Timestamp.now(),
-      });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    const cleanData = sanitizeData(data);
+    return obraActions.update(id, cleanData);
   },
 
   deleteObra: async (id) => {
-    if (!db) return { success: false, error: 'DB não inicializado' };
-    try {
-      await deleteDoc(doc(db, `${basePath}/obras`, id));
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    return obraActions.delete(id);
   },
 
   // Mover máquinas para uma obra

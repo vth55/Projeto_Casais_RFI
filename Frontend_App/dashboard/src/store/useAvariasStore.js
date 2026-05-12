@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
+import { createCollectionListener } from '../utils/firestoreListeners';
 
 const basePath = `artifacts/${projectId}/public/data`;
 
@@ -23,23 +24,22 @@ const useAvariasStore = create((set, get) => ({
   initializeListener: () => {
     if (!db) return () => {};
 
-    const q = query(
-      collection(db, `${basePath}/avarias`),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsub = onSnapshot(q,
-      (snapshot) => {
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        set({ avarias: data, loading: false });
-      },
-      (error) => {
-        console.error('Erro avarias listener:', error);
-        set({ loading: false });
+    const createAvariasListener = createCollectionListener(
+      db,
+      `${basePath}/avarias`,
+      {
+        orderByField: 'createdAt',
+        orderByDirection: 'desc',
+        onError: (msg, error) => {
+          console.error('Erro avarias listener:', error);
+          set({ loading: false });
+        },
       }
     );
 
-    return unsub;
+    return createAvariasListener((data) => {
+      set({ avarias: data, loading: false });
+    });
   },
 
   // Submeter nova avaria com upload de fotos para Storage
