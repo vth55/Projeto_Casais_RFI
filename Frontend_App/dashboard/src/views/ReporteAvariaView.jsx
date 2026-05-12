@@ -1,6 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Camera, Send, CheckCircle2, X, AlertOctagon, ImagePlus } from 'lucide-react';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import useAvariasStore from '../store/useAvariasStore';
+
+const FIRESTORE_BASE = 'artifacts/casais-rfid/public/data';
 
 // ─── Constantes ───────────────────────────────────────────────
 const CASAIS_BLUE = '#005EB8';
@@ -17,15 +20,6 @@ const TIPOS_PROBLEMA = [
   { id: 'outro',       label: 'Outro',               desc: 'Problema não listado acima' },
 ];
 
-// Máquinas demo (em produção, o QR Code pré-preenche automaticamente)
-const MAQUINAS_DEMO = [
-  { id: 'ESC-001', label: 'ESC-001 — Escavadora Komatsu PC210' },
-  { id: 'RET-003', label: 'RET-003 — Retroescavadora CAT 430F' },
-  { id: 'GRU-002', label: 'GRU-002 — Grua Torre Liebherr 172 EC-B' },
-  { id: 'CMP-005', label: 'CMP-005 — Compactador Hamm H13i' },
-  { id: 'DMP-004', label: 'DMP-004 — Dumper Volvo A30G' },
-  { id: 'CAR-006', label: 'CAR-006 — Carregadora Volvo L120H' },
-];
 
 // ─── Header Branding ──────────────────────────────────────────
 const AppHeader = () => (
@@ -127,7 +121,7 @@ const PhotoCapture = ({ photos, onCapture, onRemove }) => {
 };
 
 // ─── Seleção de Máquina ───────────────────────────────────────
-const MachineSelect = ({ value, onChange }) => (
+const MachineSelect = ({ value, onChange, machines, loadingMachines }) => (
   <div className="px-5">
     <label className="block text-sm font-semibold text-slate-700 mb-2">
       Equipamento
@@ -136,10 +130,11 @@ const MachineSelect = ({ value, onChange }) => (
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none bg-white border border-slate-200 rounded-xl px-4 py-3.5 pr-10 text-sm font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
+        disabled={loadingMachines}
+        className="w-full appearance-none bg-white border border-slate-200 rounded-xl px-4 py-3.5 pr-10 text-sm font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all disabled:opacity-60"
       >
-        <option value="">Selecionar equipamento...</option>
-        {MAQUINAS_DEMO.map((m) => (
+        <option value="">{loadingMachines ? 'A carregar...' : 'Selecionar equipamento...'}</option>
+        {machines.map((m) => (
           <option key={m.id} value={m.id}>{m.label}</option>
         ))}
       </select>
@@ -147,7 +142,6 @@ const MachineSelect = ({ value, onChange }) => (
         <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
       </svg>
     </div>
-    <p className="text-[10px] text-slate-400 mt-1.5 px-1">Em produção, o QR Code preenche automaticamente.</p>
   </div>
 );
 
@@ -342,7 +336,24 @@ const SuccessScreen = ({ onClose }) => (
 const ReporteAvariaView = () => {
   const submitAvaria = useAvariasStore((s) => s.submitAvaria);
 
-  const [machineId, setMachineId] = useState('');
+  const urlMachineId = new URLSearchParams(window.location.search).get('machine') || '';
+  const [machines, setMachines] = useState([]);
+  const [loadingMachines, setLoadingMachines] = useState(true);
+
+  useEffect(() => {
+    const db = getFirestore();
+    getDocs(collection(db, `${FIRESTORE_BASE}/machines`)).then(snap => {
+      const list = snap.docs.map(d => {
+        const data = d.data();
+        const code = data.equipmentCode || d.id;
+        const name = data.name || d.id;
+        return { id: d.id, label: `${code} — ${name}` };
+      }).sort((a, b) => a.label.localeCompare(b.label));
+      setMachines(list);
+    }).catch(() => {}).finally(() => setLoadingMachines(false));
+  }, []);
+
+  const [machineId, setMachineId] = useState(urlMachineId);
   const [operadorNome, setOperadorNome] = useState('');
   const [operadorTelefone, setOperadorTelefone] = useState('');
   const [maquinaParada, setMaquinaParada] = useState(null);
@@ -395,7 +406,7 @@ const ReporteAvariaView = () => {
 
   const handleReset = useCallback(() => {
     photos.forEach((p) => { if (p.url) URL.revokeObjectURL(p.url); });
-    setMachineId('');
+    setMachineId(urlMachineId);
     setOperadorNome('');
     setOperadorTelefone('');
     setMaquinaParada(null);
@@ -415,7 +426,7 @@ const ReporteAvariaView = () => {
 
       <div className="flex-1 overflow-y-auto pb-32 space-y-5 pt-4">
         <PhotoCapture photos={photos} onCapture={handleAddPhoto} onRemove={handleRemovePhoto} />
-        <MachineSelect value={machineId} onChange={setMachineId} />
+        <MachineSelect value={machineId} onChange={setMachineId} machines={machines} loadingMachines={loadingMachines} />
         <OperadorFields
           nome={operadorNome}
           onNomeChange={setOperadorNome}

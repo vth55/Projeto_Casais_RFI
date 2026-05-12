@@ -24,6 +24,7 @@ export default function MachineQrView() {
   const appUrl = `${window.location.origin}${window.location.pathname}`;
 
   const [machine, setMachine] = useState(null);
+  const [obraName, setObraName] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -35,11 +36,20 @@ export default function MachineQrView() {
     }
 
     const db = getFirestore();
-    getDoc(doc(db, `${basePath}/machines`, machineId)).then(snap => {
+    getDoc(doc(db, `${basePath}/machines`, machineId)).then(async snap => {
       if (!snap.exists()) {
         setError('Máquina não encontrada.');
-      } else {
-        setMachine({ id: snap.id, ...snap.data() });
+        setLoading(false);
+        return;
+      }
+      const machineData = { id: snap.id, ...snap.data() };
+      setMachine(machineData);
+
+      if (machineData.obraId && machineData.obraId !== 'estaleiro') {
+        try {
+          const obraSnap = await getDoc(doc(db, `${basePath}/obras`, machineData.obraId));
+          if (obraSnap.exists()) setObraName(obraSnap.data().name || machineData.obraId);
+        } catch (_) {}
       }
       setLoading(false);
     }).catch(err => {
@@ -95,7 +105,7 @@ export default function MachineQrView() {
             </p>
             <h1 className="text-lg font-bold truncate">{machine.name}</h1>
             {machine.obraId && machine.obraId !== 'estaleiro' && (
-              <p className="text-xs text-blue-200 mt-0.5 truncate">{machine.obraId}</p>
+              <p className="text-xs text-blue-200 mt-0.5 truncate">{obraName || machine.obraId}</p>
             )}
             {(!machine.obraId || machine.obraId === 'estaleiro') && (
               <p className="text-xs text-blue-200 mt-0.5">Estaleiro</p>
