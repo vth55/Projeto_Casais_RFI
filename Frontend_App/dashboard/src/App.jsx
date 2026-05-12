@@ -35,6 +35,9 @@ const ReporteAvariaView = lazy(() => import('./views/ReporteAvariaView'));
 // Mobile Hub - Smartphone-as-Machine (standalone fullscreen)
 const MobileHubView = lazy(() => import('./views/MobileHubView'));
 
+// Machine QR View - standalone page via QR Code (/m/:machineId)
+const MachineQrView = lazy(() => import('./views/MachineQrView'));
+
 // Views com lazy loading (code splitting)
 const DashboardView = lazy(() => import('./views/DashboardView'));
 const ObrasView = lazy(() => import('./views/ObrasView'));
@@ -62,6 +65,7 @@ export default function App() {
   const [validationToken, setValidationToken] = useState(null);
   const [isReporteAvaria, setIsReporteAvaria] = useState(false);
   const [isMobileHub, setIsMobileHub] = useState(false);
+  const [isMachineQr, setIsMachineQr] = useState(false);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -81,6 +85,11 @@ export default function App() {
     // Rota Mobile Hub - Smartphone-as-Machine
     if (window.location.href.includes('/mobile-hub')) {
       setIsMobileHub(true);
+    }
+
+    // Rota Machine QR (/m/:machineId)
+    if (/\/m\/[^/]+/.test(path)) {
+      setIsMachineQr(true);
     }
 
     // Sincronizar URL com activeView no carregamento inicial (deep links)
@@ -181,6 +190,16 @@ export default function App() {
       <ErrorBoundary>
         <Suspense fallback={<ViewLoader />}>
           <MobileHubView />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (isMachineQr) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<ViewLoader />}>
+          <MachineQrView />
         </Suspense>
       </ErrorBoundary>
     );

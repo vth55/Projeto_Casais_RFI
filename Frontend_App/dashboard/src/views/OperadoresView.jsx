@@ -443,15 +443,14 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
 
       <div>
         <Input
-          label="Email Institucional"
+          label="Email (opcional)"
           type="email"
           value={formData.email}
           onChange={e => setFormData({ ...formData, email: e.target.value })}
           placeholder="Ex: joao.silva@casais.pt"
-          required
         />
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Obrigatório - usado para enviar alertas de validação de sessões
+          Campo de contacto. O acesso à máquina é feito via cartão RFID, não email.
         </p>
       </div>
 
@@ -625,6 +624,18 @@ const OperadoresView = () => {
     return suggestions.sort((a, b) => b.hoursInSuggestedObra - a.hoursInSuggestedObra);
   }, [operators, sessions, machines, obras, dismissedSuggestions]);
 
+  // Pending operators: Procore directory entries not yet matched to a local operator
+  const pendingFromProcore = useMemo(() => {
+    if (!procoreDirectory?.length) return [];
+    const localEmails = new Set(operators.map(o => (o.email || '').toLowerCase()).filter(Boolean));
+    const localProcoreIds = new Set(operators.map(o => o.procoreUserId).filter(Boolean));
+    return procoreDirectory.filter(u => {
+      const email = (u.email_address || u.email || '').toLowerCase();
+      const pid = String(u.id || '');
+      return !localProcoreIds.has(pid) && (!email || !localEmails.has(email));
+    });
+  }, [procoreDirectory, operators]);
+
   const filteredOperators = operatorStats.filter(op => {
     const matchesSearch = op.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          op.id?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -708,10 +719,10 @@ const OperadoresView = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard icon={Users} title="Total" value={operators.length} color="primary" />
         <StatCard icon={Activity} title="Ativos" value={operatorStats.filter(op => op.isActive).length} color="emerald" />
-        <StatCard icon={Briefcase} title="Operadores" value={roleStats.operador || 0} color="blue" />
+        <StatCard icon={CreditCard} title="Com RFID" value={operators.filter(o => o.cardId).length} color="blue" />
         <StatCard icon={Briefcase} title="Encarregados" value={roleStats.encarregado || 0} color="amber" />
         <StatCard icon={Briefcase} title="Técnicos" value={roleStats.tecnico_manutencao || 0} color="emerald" />
-        <StatCard icon={Clock} title="Horas Mês" value={operatorStats.reduce((sum, op) => sum + op.totalHours, 0).toFixed(0)} unit="h" color="slate" />
+        <StatCard icon={Clock} title="Horas Total" value={operatorStats.reduce((sum, op) => sum + op.totalHours, 0).toFixed(0)} unit="h" color="slate" />
       </div>
 
       {/* Auto-Assign Suggestions */}
@@ -720,6 +731,72 @@ const OperadoresView = () => {
         onAccept={handleAcceptSuggestion}
         onDismiss={handleDismissSuggestion}
       />
+
+      {/* Pending operators from Procore directory */}
+      {pendingFromProcore.length > 0 && (
+        <Card className="border-2 border-dashed border-[#005EB8]/30 bg-[#005EB8]/5">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="p-2 bg-[#005EB8]/10 rounded-lg">
+              <Link2 className="w-5 h-5 text-[#005EB8]" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                Operadores do Procore sem RFID
+                <Badge variant="primary">{pendingFromProcore.length}</Badge>
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Encontrados no directory do Procore. Associe um cartão RFID para os activar.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {pendingFromProcore.slice(0, 5).map(u => {
+              const name = u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Sem nome';
+              const email = u.email_address || u.email || '';
+              const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+              return (
+                <div key={u.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#005EB8]/10 flex items-center justify-center text-xs font-semibold text-[#005EB8]">
+                      {initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{name}</p>
+                      {email && <p className="text-xs text-slate-500 dark:text-slate-400">{email}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-[#005EB8]/10 text-[#005EB8]">
+                      <Link2 className="w-2.5 h-2.5" />
+                      Procore
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                      <CreditCard className="w-2.5 h-2.5" />
+                      Sem RFID
+                    </span>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => {
+                        const name2 = name.split(' ');
+                        setEditingOperator(null);
+                        setShowModal(true);
+                      }}
+                    >
+                      Activar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+            {pendingFromProcore.length > 5 && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-2">
+                + {pendingFromProcore.length - 5} operadores adicionais no Procore
+              </p>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card padding="sm">
@@ -787,7 +864,7 @@ const OperadoresView = () => {
                         {op.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium block truncate">{op.name}</span>
                           {op.procoreUser && (
                             <span
@@ -796,6 +873,12 @@ const OperadoresView = () => {
                             >
                               <Link2 className="w-2.5 h-2.5" />
                               Procore
+                            </span>
+                          )}
+                          {!op.cardId && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                              <CreditCard className="w-2.5 h-2.5" />
+                              Sem RFID
                             </span>
                           )}
                         </div>

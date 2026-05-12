@@ -1,0 +1,22 @@
+{
+  "name": "casais-scripts",
+  "version": "1.0.0",
+  "description": "Scripts de reset, seed e testes E2E — Casais Fleet Intelligence",
+  "scripts": {
+    "reset:wipe": "node reset/wipe_firestore.js",
+    "reset:procore": "node reset/wipe_procore_sandbox.js",
+    "seed:machines": "node reset/seed_machines.js",
+    "seed:operators": "node reset/seed_operators.js",
+    "seed:obras": "node reset/seed_obras.js",
+    "seed:all": "npm run seed:machines && npm run seed:operators && npm run seed:obras",
+    "test:sprint0": "node tests/sprint0_test.js",
+    "test:sprint1": "node tests/sprint1_test.js",
+    "test:sprint2": "node tests/sprint2_test.js",
+    "test:sprint4": "node tests/sprint4_test.js",
+    "test:smoke": "node tests/sprint5_smoke.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.9.0",
+    "playwright": "^1.60.0"
+  }
+}

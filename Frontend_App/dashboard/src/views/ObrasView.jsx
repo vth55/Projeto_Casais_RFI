@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Building2,
-  Plus,
   Search,
   Edit2,
   Trash2,
@@ -44,7 +43,7 @@ const ObraCard = ({ obra, machines, operators, procoreProject, onViewDetails, on
 
   const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
   const StatusIcon = status.icon;
-  const hasProcoreLink = !!procoreProject;
+  const hasProcoreLink = !!procoreProject || obra.source === 'procore';
 
   return (
     <Card hover onClick={() => onViewDetails(obra)} className="relative">
@@ -138,33 +137,39 @@ const ObraCard = ({ obra, machines, operators, procoreProject, onViewDetails, on
 
 // Formulário de Obra
 const ObraForm = ({ obra, onSave, onCancel }) => {
-  const [formData, setFormData] = useState(obra || {
-    name: '',
-    code: '',
-    address: '',
-    city: '',
-    status: 'ACTIVE',
-    startDate: '',
-    endDate: '',
-    gps: { latitude: '', longitude: '' },
-    manager: '',
-    description: '',
+  const isProcore = obra?.source === 'procore';
+
+  const [formData, setFormData] = useState({
+    name: obra?.name || '',
+    code: obra?.code || '',
+    address: obra?.address || '',
+    city: obra?.city || '',
+    status: obra?.status || 'ACTIVE',
+    startDate: obra?.startDate || '',
+    endDate: obra?.endDate || '',
+    gps: obra?.gps || { latitude: '', longitude: '' },
+    manager: obra?.manager || '',
+    description: obra?.description || '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      gps: {
-        latitude: parseFloat(formData.gps?.latitude) || null,
-        longitude: parseFloat(formData.gps?.longitude) || null,
-      },
-    });
+    if (isProcore) {
+      // Only patch the 3 PWA-only fields for Procore obras
+      onSave({ manager: formData.manager, description: formData.description, endDate: formData.endDate });
+    } else {
+      onSave({
+        ...formData,
+        gps: {
+          latitude: parseFloat(formData.gps?.latitude) || null,
+          longitude: parseFloat(formData.gps?.longitude) || null,
+        },
+      });
+    }
   };
 
   const getCoordinatesFromAddress = async () => {
     if (!formData.address) return;
-    // Abrir Google Maps para o utilizador copiar as coordenadas manualmente
     const query = encodeURIComponent(`${formData.address}, ${formData.city || 'Portugal'}`);
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
     alert('Copie as coordenadas do Google Maps e cole nos campos GPS.\n\nDica: Clique com o botão direito no mapa para ver as coordenadas.');
@@ -172,115 +177,170 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Nome da Obra"
-          value={formData.name}
-          onChange={e => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Ex: Obra Porto Norte 2025"
-          required
-        />
-        <Input
-          label="Código"
-          value={formData.code}
-          onChange={e => setFormData({ ...formData, code: e.target.value })}
-          placeholder="Ex: OPN-2025"
-        />
-      </div>
+      {/* Procore info banner */}
+      {isProcore && (
+        <div className="flex items-start gap-3 p-4 bg-[#005EB8]/5 border border-[#005EB8]/20 rounded-xl">
+          <Link2 className="w-4 h-4 text-[#005EB8] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-[#005EB8]">Obra gerida no Procore</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Nome, endereço e estado são geridos no Procore. Pode editar responsável, descrição e data de fim.
+            </p>
+          </div>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
+      {/* Campos read-only para obras Procore */}
+      {isProcore ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-1">Nome da Obra</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{formData.name}</p>
+          </div>
+          {formData.code && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-1">Código</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{formData.code}</p>
+            </div>
+          )}
+          {(formData.address || formData.city) && (
+            <div className="md:col-span-2">
+              <p className="text-xs font-medium text-slate-500 mb-1">Localização</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                {[formData.address, formData.city].filter(Boolean).join(', ')}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Nome da Obra"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ex: Obra Porto Norte 2025"
+              required
+            />
+            <Input
+              label="Código"
+              value={formData.code}
+              onChange={e => setFormData({ ...formData, code: e.target.value })}
+              placeholder="Ex: OPN-2025"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <Input
+                label="Endereço"
+                value={formData.address}
+                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Rua, número, etc."
+                icon={MapPin}
+              />
+            </div>
+            <Input
+              label="Cidade"
+              value={formData.city}
+              onChange={e => setFormData({ ...formData, city: e.target.value })}
+              placeholder="Porto"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select
+              label="Estado"
+              value={formData.status}
+              onChange={e => setFormData({ ...formData, status: e.target.value })}
+              options={[
+                { value: 'ACTIVE', label: 'Em Curso' },
+                { value: 'PLANNED', label: 'Planeada' },
+                { value: 'COMPLETED', label: 'Concluída' },
+              ]}
+            />
+            <Input
+              label="Data Início"
+              type="date"
+              value={formData.startDate}
+              onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+            />
+            <Input
+              label="Data Fim (Prevista)"
+              type="date"
+              value={formData.endDate}
+              onChange={e => setFormData({ ...formData, endDate: e.target.value })}
+            />
+          </div>
+
+          <div className="border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Coordenadas GPS</h4>
+              <Button type="button" variant="ghost" size="sm" icon={ExternalLink} onClick={getCoordinatesFromAddress}>
+                Obter do Maps
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Latitude"
+                type="number"
+                step="any"
+                value={formData.gps?.latitude || ''}
+                onChange={e => setFormData({ ...formData, gps: { ...formData.gps, latitude: e.target.value } })}
+                placeholder="41.1579"
+              />
+              <Input
+                label="Longitude"
+                type="number"
+                step="any"
+                value={formData.gps?.longitude || ''}
+                onChange={e => setFormData({ ...formData, gps: { ...formData.gps, longitude: e.target.value } })}
+                placeholder="-8.6291"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Campos PWA-only (editáveis mesmo em obras Procore) */}
+      <div className={isProcore ? 'border-t border-slate-100 dark:border-slate-700 pt-4' : ''}>
+        {isProcore && (
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Informação interna (editável)</p>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Endereço"
-            value={formData.address}
-            onChange={e => setFormData({ ...formData, address: e.target.value })}
-            placeholder="Rua, número, etc."
-            icon={MapPin}
+            label="Responsável / Encarregado"
+            value={formData.manager}
+            onChange={e => setFormData({ ...formData, manager: e.target.value })}
+            placeholder="Nome do responsável"
+            icon={Users}
+          />
+          {isProcore && (
+            <Input
+              label="Data Fim (Prevista)"
+              type="date"
+              value={formData.endDate}
+              onChange={e => setFormData({ ...formData, endDate: e.target.value })}
+            />
+          )}
+        </div>
+
+        <div className={isProcore ? 'mt-4' : ''}>
+          <Input
+            label="Descrição / Notas"
+            value={formData.description}
+            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Informações adicionais sobre a obra..."
           />
         </div>
-        <Input
-          label="Cidade"
-          value={formData.city}
-          onChange={e => setFormData({ ...formData, city: e.target.value })}
-          placeholder="Porto"
-        />
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select
-          label="Estado"
-          value={formData.status}
-          onChange={e => setFormData({ ...formData, status: e.target.value })}
-          options={[
-            { value: 'ACTIVE', label: 'Em Curso' },
-            { value: 'PLANNED', label: 'Planeada' },
-            { value: 'COMPLETED', label: 'Concluída' },
-          ]}
-        />
-        <Input
-          label="Data Início"
-          type="date"
-          value={formData.startDate}
-          onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-        />
-        <Input
-          label="Data Fim (Prevista)"
-          type="date"
-          value={formData.endDate}
-          onChange={e => setFormData({ ...formData, endDate: e.target.value })}
-        />
-      </div>
-
-      <div className="border-t border-slate-200 pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Coordenadas GPS</h4>
-          <Button type="button" variant="ghost" size="sm" icon={ExternalLink} onClick={getCoordinatesFromAddress}>
-            Obter do Maps
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Latitude"
-            type="number"
-            step="any"
-            value={formData.gps?.latitude || ''}
-            onChange={e => setFormData({ ...formData, gps: { ...formData.gps, latitude: e.target.value } })}
-            placeholder="41.1579"
-          />
-          <Input
-            label="Longitude"
-            type="number"
-            step="any"
-            value={formData.gps?.longitude || ''}
-            onChange={e => setFormData({ ...formData, gps: { ...formData.gps, longitude: e.target.value } })}
-            placeholder="-8.6291"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Responsável / Encarregado"
-          value={formData.manager}
-          onChange={e => setFormData({ ...formData, manager: e.target.value })}
-          placeholder="Nome do responsável"
-          icon={Users}
-        />
-      </div>
-
-      <Input
-        label="Descrição / Notas"
-        value={formData.description}
-        onChange={e => setFormData({ ...formData, description: e.target.value })}
-        placeholder="Informações adicionais sobre a obra..."
-      />
 
       <div className="flex justify-end gap-3 pt-4">
         <Button variant="ghost" type="button" onClick={onCancel}>
           Cancelar
         </Button>
         <Button type="submit">
-          {obra ? 'Guardar Alterações' : 'Criar Obra'}
+          Guardar Alterações
         </Button>
       </div>
     </form>
@@ -393,7 +453,9 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
               variant="ghost"
               icon={Trash2}
               onClick={() => onDelete(obra)}
-              className="!text-red-500 hover:!bg-red-50"
+              disabled={obra.source === 'procore'}
+              title={obra.source === 'procore' ? 'Esta obra só pode ser apagada no Procore' : 'Apagar obra'}
+              className="!text-red-500 hover:!bg-red-50 disabled:!text-slate-300 disabled:!cursor-not-allowed"
             />
           )}
         </div>
@@ -806,7 +868,7 @@ const VIEW_TO_FILTER = {
 };
 
 const ObrasView = () => {
-  const { activeView, setActiveView, obras, machines, operators, sessions, loading, addObra, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard, matchObraToProcore } = useStore();
+  const { activeView, setActiveView, obras, machines, operators, sessions, loading, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard, matchObraToProcore } = useStore();
   const { isAdmin } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
@@ -846,8 +908,6 @@ const ObrasView = () => {
   const handleSave = async (data) => {
     if (editingObra) {
       await updateObra(editingObra.id, data);
-    } else {
-      await addObra(data);
     }
     setShowModal(false);
     setEditingObra(null);
@@ -940,9 +1000,10 @@ const ObrasView = () => {
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Obras</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de obras e localizações</p>
         </div>
-        <Button icon={Plus} onClick={() => setShowModal(true)}>
-          Nova Obra
-        </Button>
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#005EB8]/5 border border-[#005EB8]/20 rounded-lg">
+          <Link2 className="w-3.5 h-3.5 text-[#005EB8]" />
+          <span className="text-xs font-medium text-[#005EB8]">Obras geridas no Procore</span>
+        </div>
       </div>
 
       {/* KPIs — clicáveis como filtros */}
@@ -1056,9 +1117,7 @@ const ObrasView = () => {
             <EmptyState
               icon={Building2}
               title="Sem obras"
-              description="Adicione a primeira obra para começar a gerir localizações."
-              actionLabel="Adicionar Obra"
-              onAction={() => setShowModal(true)}
+              description="As obras são geridas no Procore e sincronizadas automaticamente."
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1098,7 +1157,7 @@ const ObrasView = () => {
       <Modal
         isOpen={showModal}
         onClose={() => { setShowModal(false); setEditingObra(null); }}
-        title={editingObra ? 'Editar Obra' : 'Nova Obra'}
+        title="Editar Obra"
         size="lg"
       >
         <ObraForm

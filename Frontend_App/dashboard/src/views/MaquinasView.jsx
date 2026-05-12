@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   Truck,
   Plus,
@@ -24,7 +25,7 @@ import { getCategoryName, getLocationName, getCategoryId } from '../utils/safeRe
 import { formatHours, formatConsumption } from '../utils/formatters';
 
 // Card de máquina
-const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode, maintenanceInterval }) => {
+const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode, maintenanceInterval, obras, onMove }) => {
   const interval = machine.maintenanceInterval || maintenanceInterval || 150;
   const hoursProgress = Math.min(100, ((machine.partialHours || 0) / interval) * 100);
   const needsMaintenance = hoursProgress >= 80;
@@ -99,24 +100,31 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-        <div className="flex items-center gap-2">
-          <StatusBadge status={machine.status} />
-          {machine.rfidReaderId
-            ? <span title={`Leitor: ${machine.rfidReaderId}`}><Wifi className="w-3.5 h-3.5 text-emerald-500" /></span>
-            : <span title="Sem leitor RFID configurado"><WifiOff className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" /></span>
-          }
-        </div>
-        {machine.location ? (
-          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-            <MapPin className="w-3.5 h-3.5" />
-            {getLocationName(machine.location)}
+      <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <StatusBadge status={machine.status} />
+            {machine.rfidReaderId
+              ? <span title={`Leitor: ${machine.rfidReaderId}`}><Wifi className="w-3.5 h-3.5 text-emerald-500" /></span>
+              : <span title="Sem leitor RFID configurado"><WifiOff className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" /></span>
+            }
           </div>
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Estaleiro
-          </span>
+        </div>
+        {/* Inline obra move dropdown */}
+        {onMove && obras && (
+          <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+            <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            <select
+              value={machine.obraId || 'estaleiro'}
+              onChange={e => onMove(machine.id, e.target.value)}
+              className="flex-1 text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500/40 focus:border-primary-400 cursor-pointer"
+            >
+              <option value="estaleiro">🏭 Estaleiro</option>
+              {obras.filter(o => o.status === 'ACTIVE' && o.id !== 'estaleiro').map(o => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
     </Card>
@@ -134,6 +142,7 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
     co2Factor: machine.co2Factor || '',
     maintenanceInterval: machine.maintenanceInterval || '',
     rfidReaderId: machine.rfidReaderId || '',
+    qrFeatures: machine.qrFeatures || { reportAvaria: true, startSession: false, viewHistory: true },
   } : {
     name: '',
     category: '',
@@ -143,6 +152,7 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
     co2Factor: '',
     maintenanceInterval: '',
     rfidReaderId: '',
+    qrFeatures: { reportAvaria: true, startSession: false, viewHistory: true },
   };
   const [formData, setFormData] = useState(initialData);
 
@@ -260,6 +270,47 @@ const MachineForm = ({ machine, onSave, onCancel, systemSettings }) => {
           O hardware envia o ID do leitor — o sistema resolve automaticamente qual máquina está associada.
         </p>
       </div>
+
+      {/* QR Code */}
+      {machine?.id && (
+        <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">QR Code da Máquina</p>
+          <div className="flex items-start gap-6">
+            <div className="flex-shrink-0 p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <QRCodeSVG
+                value={`${window.location.origin}/m/${machine.id}`}
+                size={100}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <p className="text-xs text-slate-500 font-mono break-all">{window.location.origin}/m/{machine.id}</p>
+              <p className="text-xs text-slate-400">Funções disponíveis via QR:</p>
+              <div className="space-y-1.5">
+                {[
+                  { key: 'reportAvaria', label: 'Reportar Avaria' },
+                  { key: 'viewHistory', label: 'Ver Histórico' },
+                  { key: 'startSession', label: 'Iniciar Sessão (requer RFID)' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.qrFeatures?.[key]}
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        qrFeatures: { ...prev.qrFeatures, [key]: e.target.checked },
+                      }))}
+                      className="w-4 h-4 text-primary-600 rounded"
+                    />
+                    <span className="text-xs text-slate-600 dark:text-slate-300">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-4">
         <Button variant="ghost" type="button" onClick={onCancel}>
@@ -431,6 +482,10 @@ const MaquinasView = () => {
     setShowModal(true);
   };
 
+  const handleMoveSingle = async (machineId, newObraId) => {
+    await moveMachinesToObra([machineId], newObraId);
+  };
+
   const handleDelete = async (machine) => {
     if (confirm(`Eliminar ${machine.name}?`)) {
       await deleteMachine(machine.id);
@@ -595,6 +650,8 @@ const MaquinasView = () => {
               onSelect={toggleSelection}
               selectionMode={selectionMode}
               maintenanceInterval={systemSettings.defaultMaintenanceInterval}
+              obras={obrasList}
+              onMove={!selectionMode ? handleMoveSingle : undefined}
             />
           ))}
         </div>
@@ -641,17 +698,33 @@ const MaquinasView = () => {
                     </div>
                   </Table.Cell>
                   <Table.Cell>{getCategoryName(machine.category, '-')}</Table.Cell>
-                  <Table.Cell>
-                    {machine.location ? (
-                      <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                        <MapPin className="w-3.5 h-3.5" />
-                        {getLocationName(machine.location)}
+                  <Table.Cell onClick={e => e.stopPropagation()}>
+                    {!selectionMode ? (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <select
+                          value={machine.obraId || 'estaleiro'}
+                          onChange={e => handleMoveSingle(machine.id, e.target.value)}
+                          className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+                        >
+                          <option value="estaleiro">🏭 Estaleiro</option>
+                          {obrasList.filter(o => o.status === 'ACTIVE' && o.id !== 'estaleiro').map(o => (
+                            <option key={o.id} value={o.id}>{o.name}</option>
+                          ))}
+                        </select>
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        Estaleiro
-                      </span>
+                      machine.location ? (
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {getLocationName(machine.location)}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Estaleiro
+                        </span>
+                      )
                     )}
                   </Table.Cell>
                   <Table.Cell align="right">{machine.totalHours || 0}h</Table.Cell>

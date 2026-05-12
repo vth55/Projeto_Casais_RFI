@@ -6,7 +6,16 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "reset:wipe": "node scripts/reset/wipe_firestore.js",
+    "reset:procore": "node scripts/reset/wipe_procore_sandbox.js",
+    "seed:machines": "node scripts/reset/seed_machines.js",
+    "seed:operators": "node scripts/reset/seed_operators.js",
+    "seed:obras": "node scripts/reset/seed_obras.js",
+    "seed:all": "npm run seed:machines && npm run seed:operators && npm run seed:obras",
+    "test:sprint0": "node scripts/tests/sprint0_test.js",
+    "test:sprint1": "node scripts/tests/sprint1_test.js",
+    "test:sprint4": "node scripts/tests/sprint4_test.js"
   },
   "engines": {
     "node": "22"
