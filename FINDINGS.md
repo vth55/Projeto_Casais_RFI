@@ -57,6 +57,24 @@ Agents apagados (irrelevantes): game-developer, seo-specialist, mobile-developer
 
 ---
 
+## 2026-05-12 — Procore Equipment v2.1: ULIDs estáveis sandbox
+
+Endpoint correcto: `POST/GET /rest/v2.1/companies/4283171/equipment_register`
+Campos obrigatórios no POST: `name`, `equipment_id`, `status_id`, `category_id`, `type_id`.
+
+ULIDs do sandbox (não resetam — Dev Sandbox):
+- `status_id` "Active": `01KPRV693GQFM6FCM77D59YKFT`
+- `category_id` "terra": `01KQCGF5S8GME0ZQNGKXPS9WN8`
+- `type_id` "escavadora": `01KQCGFKFZK4P5H84XG98SYPM6`
+
+**Envelope v2**: respostas em `{ "data": [...], "meta": { "total_count": N } }` — v1 retorna array directo.
+**Body v2**: POST/PATCH usam body flat (sem wrapper `{ equipment: {...} }`).
+**configurable_field_sets**: GET a nível de projecto, não POST a nível de empresa.
+
+Sync testado: GET count:2, POST create HTTP 201, fullSync machinesCreated:2. Tudo funcional.
+
+---
+
 ## 2026-04-29 — Procore: coleção `obras` não existe
 A coleção `artifacts/casais-rfid/public/data/obras` não existe no Firestore.
 Sessions têm campo `obraId` mas sem documentos correspondentes.

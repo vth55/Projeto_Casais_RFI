@@ -236,13 +236,20 @@ async function procoreFetch(endpoint, { query = {}, method = 'GET', body } = {})
         );
     }
 
-    const totalHeader = response.headers.get('total');
+    const responseJson = await response.json();
+
+    // v2.x APIs envolvem a resposta em { data: ..., meta: { total_count: N } }
+    // v1.x devolvem o array/objecto directamente com paginação nos headers
+    const isV2 = endpoint.startsWith('/rest/v2');
+    const data  = isV2 ? responseJson.data  : responseJson;
+    const total = isV2
+        ? (responseJson.meta?.total_count ?? null)
+        : (response.headers.get('total') ? parseInt(response.headers.get('total'), 10) : null);
     const perPageHeader = response.headers.get('per-page');
-    const data = await response.json();
 
     return {
         data,
-        total: totalHeader ? parseInt(totalHeader, 10) : null,
+        total,
         page: parseInt(query.page || '1', 10),
         perPage: perPageHeader ? parseInt(perPageHeader, 10) : PROCORE_PER_PAGE,
     };
@@ -279,53 +286,12 @@ async function fetchProjects() {
 }
 
 /**
- * GET /rest/v1.0/companies/{company_id}/equipment
- * Inventário de equipamentos a nível de empresa. Cruza com `machines` no Casais.
- * Tenta múltiplas versões da API (v1.0 legacy, v1.1 managed).
+ * GET /rest/v2.1/companies/{company_id}/equipment_register
+ * Inventário de equipamentos (API v2.1 — endpoint definitivo confirmado pela Procore).
  */
 async function fetchEquipment() {
     const companyId = process.env.PROCORE_COMPANY_ID;
-
-    // 1. Tentar company-level legacy (v1.0)
-    try {
-        const items = await procoreFetchAll(`${PROCORE_API_VERSION}/companies/${companyId}/equipment`);
-        if (items.length > 0) return items;
-    } catch (_) { /* continua */ }
-
-    // 2. Tentar company-level managed (v1.1)
-    try {
-        const items = await procoreFetchAll(`/rest/v1.1/companies/${companyId}/managed_equipment`);
-        if (items.length > 0) return items;
-    } catch (_) { /* continua */ }
-
-    // 3. Fallback: agregar equipment de todos os projectos (sandbox frequentemente só tem project-level)
-    console.log('[procoreBridge] Company-level equipment endpoints falhou — a tentar project-level...');
-    const projects = await fetchProjects();
-    const seen = new Set();
-    const all = [];
-
-    for (const project of projects) {
-        // Tentar v1.1 managed_equipment por projecto
-        for (const endpoint of [
-            `/rest/v1.1/projects/${project.id}/managed_equipment`,
-            `${PROCORE_API_VERSION}/projects/${project.id}/equipment`,
-        ]) {
-            try {
-                const items = await procoreFetchAll(endpoint);
-                for (const item of items) {
-                    const key = String(item.id || item.equipment_id);
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        all.push({ ...item, _source_project_id: project.id });
-                    }
-                }
-                break; // se um endpoint funciona, não testar o seguinte para este projecto
-            } catch (_) { /* tentar próximo endpoint */ }
-        }
-    }
-
-    console.log(`[procoreBridge] fetchEquipment (project-level fallback): ${all.length} items`);
-    return all;
+    return procoreFetchAll(`/rest/v2.1/companies/${companyId}/equipment_register`);
 }
 
 /**
@@ -341,8 +307,8 @@ async function fetchDirectory() {
 // ---------- Equipment Setup (Configurable Fieldsets + Create) ----------
 
 /**
- * Diagnóstico completo do estado de Equipment no Procore.
- * Testa múltiplos endpoints para determinar qual funciona no sandbox.
+ * Diagnóstico do estado de Equipment no Procore (v2.1).
+ * Testa o endpoint correcto confirmado pela Procore Support (Marie V., 2026-05-12).
  */
 async function diagnoseEquipment() {
     const companyId = process.env.PROCORE_COMPANY_ID;
@@ -351,350 +317,81 @@ async function diagnoseEquipment() {
         endpoints_tested: [],
         working_endpoint: null,
         fieldsets: null,
-        categories: null,
+        post_probe: null,
         recommendation: null,
     };
 
-    // 1. Testar endpoint legacy equipment
+    // 1. Testar GET v2.1/equipment_register (endpoint correcto)
     try {
-        const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/equipment`, {
+        const { data } = await procoreFetch(`/rest/v2.1/companies/${companyId}/equipment_register`, {
             query: { per_page: 1 },
         });
-        results.endpoints_tested.push({ endpoint: 'v1.0/equipment', status: 'ok', count: Array.isArray(data) ? data.length : '?' });
-        results.working_endpoint = 'v1.0/equipment';
+        results.endpoints_tested.push({ endpoint: 'v2.1/equipment_register', status: 'ok', count: Array.isArray(data) ? data.length : '?' });
+        results.working_endpoint = 'v2.1/equipment_register';
     } catch (err) {
-        results.endpoints_tested.push({ endpoint: 'v1.0/equipment', status: 'error', error: err.message.slice(0, 200) });
+        results.endpoints_tested.push({ endpoint: 'v2.1/equipment_register', status: 'error', error: err.message.slice(0, 200) });
     }
 
-    // 2. Testar endpoint managed equipment v1.1
+    // 2. Listar configurable fieldsets por projecto (conforme documentação Procore)
     try {
-        const { data } = await procoreFetch(`/rest/v1.1/companies/${companyId}/managed_equipment`, {
-            query: { per_page: 1 },
-        });
-        results.endpoints_tested.push({ endpoint: 'v1.1/managed_equipment', status: 'ok', count: Array.isArray(data) ? data.length : '?' });
-        if (!results.working_endpoint) results.working_endpoint = 'v1.1/managed_equipment';
-    } catch (err) {
-        results.endpoints_tested.push({ endpoint: 'v1.1/managed_equipment', status: 'error', error: err.message.slice(0, 200) });
-    }
-
-    // 3. Listar configurable fieldsets
-    try {
-        const { data } = await procoreFetch(`${PROCORE_API_VERSION}/configurable_field_sets`, {
-            query: { company_id: companyId },
-        });
-        results.fieldsets = Array.isArray(data) ? data : [data];
-    } catch (err) {
-        // Tentar com tool filter
-        try {
-            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/configurable_field_sets`, {
-                query: {},
-            });
-            results.fieldsets = Array.isArray(data) ? data : [data];
-        } catch (err2) {
-            results.fieldsets = { error: err.message.slice(0, 200), alt_error: err2.message.slice(0, 200) };
-        }
-    }
-
-    // 4. Tentar listar categorias de equipment
-    try {
-        const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/equipment/categories`, {
-            query: {},
-        });
-        results.categories = Array.isArray(data) ? data : [data];
-    } catch (err) {
-        results.categories = { error: err.message.slice(0, 200) };
-    }
-
-    // 5. Tentar criar um fieldset para equipment
-    try {
-        const { data } = await procoreFetch(`${PROCORE_API_VERSION}/configurable_field_sets`, {
-            method: 'POST',
-            body: {
-                configurable_field_set: {
-                    name: 'Default Equipment Fieldset',
-                    tool: 'equipment',
-                    company_id: parseInt(companyId, 10),
-                },
-            },
-        });
-        results.fieldset_create = { status: 'ok', data };
-    } catch (err) {
-        results.fieldset_create = { status: 'error', error: err.message.slice(0, 300) };
-    }
-
-    // 6. Testar endpoint de tools da empresa
-    try {
-        const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/tools`, {
-            query: {},
-        });
-        const equipmentTools = Array.isArray(data)
-            ? data.filter(t => t.name?.toLowerCase().includes('equipment') || t.key?.toLowerCase().includes('equipment'))
-            : [];
-        results.company_tools = { total: Array.isArray(data) ? data.length : '?', equipment_tools: equipmentTools };
-    } catch (err) {
-        results.company_tools = { error: err.message.slice(0, 200) };
-    }
-
-    // 7. Tentar POST de equipment mesmo com GET a dar 404
-    try {
-        const testEquipment = {
-            equipment: {
-                name: '__test_probe__',
-                equipment_id: 'TEST-PROBE-001',
-            },
-        };
-        const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/equipment`, {
-            method: 'POST',
-            body: testEquipment,
-        });
-        results.equipment_post_probe = { status: 'ok', data };
-    } catch (err) {
-        results.equipment_post_probe = { status: 'error', error: err.message.slice(0, 300) };
-    }
-
-    // 8. Tentar managed equipment POST (v1.1)
-    try {
-        const testManaged = {
-            managed_equipment: {
-                name: '__test_probe__',
-            },
-        };
-        const { data } = await procoreFetch(`/rest/v1.1/companies/${companyId}/managed_equipment`, {
-            method: 'POST',
-            body: testManaged,
-        });
-        results.managed_equipment_post_probe = { status: 'ok', data };
-    } catch (err) {
-        results.managed_equipment_post_probe = { status: 'error', error: err.message.slice(0, 300) };
-    }
-
-    // 9. Tentar endpoints a nível de PROJETO (equipment pode estar project-level)
-    try {
-        // Primeiro buscar os projectos que temos
         const projects = await fetchProjects();
         if (projects.length > 0) {
             const projectId = projects[0].id;
-            results.project_level = { project_id: projectId, project_name: projects[0].name };
-
-            // Tentar equipment a nível de projecto
-            const projectEndpoints = [
-                { name: 'project_equipment_v1.0', path: `${PROCORE_API_VERSION}/projects/${projectId}/equipment` },
-                { name: 'project_managed_equipment_v1.1', path: `/rest/v1.1/projects/${projectId}/managed_equipment` },
-                { name: 'project_equipment_logs', path: `${PROCORE_API_VERSION}/projects/${projectId}/equipment_logs` },
-                { name: 'project_daily_equipment_logs', path: `${PROCORE_API_VERSION}/projects/${projectId}/daily_logs/equipment_logs` },
-                { name: 'project_tools', path: `${PROCORE_API_VERSION}/projects/${projectId}/tools` },
-            ];
-
-            results.project_level.endpoints = [];
-            for (const ep of projectEndpoints) {
-                try {
-                    const { data } = await procoreFetch(ep.path, { query: { per_page: 1 } });
-                    results.project_level.endpoints.push({
-                        name: ep.name,
-                        status: 'ok',
-                        count: Array.isArray(data) ? data.length : '?',
-                        sample: Array.isArray(data) ? data.slice(0, 2) : data,
-                    });
-                } catch (err) {
-                    results.project_level.endpoints.push({
-                        name: ep.name,
-                        status: 'error',
-                        error: err.message.slice(0, 200),
-                    });
-                }
-            }
+            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/configurable_field_sets`, {
+                query: {},
+            });
+            results.fieldsets = Array.isArray(data) ? data : [data];
         }
     } catch (err) {
-        results.project_level = { error: err.message.slice(0, 200) };
+        results.fieldsets = { error: err.message.slice(0, 200) };
     }
 
-    // 10. Listar TODAS as tools disponíveis no projecto (sem limit)
-    if (results.project_level?.project_id) {
-        try {
-            const projectId = results.project_level.project_id;
-            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/tools`, {
-                query: { per_page: 100 },
-            });
-            results.project_level.all_tools = Array.isArray(data) ? data : [data];
-        } catch (err) {
-            results.project_level.all_tools_error = err.message.slice(0, 200);
-        }
+    // 3. Probe de POST v2.1 com corpo plano (sem wrapper)
+    try {
+        const { data } = await procoreFetch(`/rest/v2.1/companies/${companyId}/equipment_register`, {
+            method: 'POST',
+            body: { name: '__test_probe__', equipment_id: 'TEST-PROBE-001' },
+        });
+        results.post_probe = { status: 'ok', id: data?.id };
+    } catch (err) {
+        results.post_probe = { status: 'error', error: err.message.slice(0, 300) };
     }
 
-    // 11. Tentar ATIVAR tools de equipment no projecto via PATCH
-    if (results.project_level?.all_tools) {
-        const projectId = results.project_level.project_id;
-        const equipmentTools = results.project_level.all_tools.filter(
-            t => ['managed_equipment', 'equipment_register', 'timesheets'].includes(t.engine_name) && !t.is_active
-        );
-        results.project_level.tool_activation = [];
-
-        for (const tool of equipmentTools) {
-            // Formato correcto: PATCH /projects/{id}/tools com body { "tools": [{ "id": ..., "is_active": true }] }
-            try {
-                const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/tools`, {
-                    method: 'PATCH',
-                    body: {
-                        tools: [{ id: tool.id, is_active: true }],
-                    },
-                });
-                results.project_level.tool_activation.push({
-                    tool: tool.engine_name,
-                    id: tool.id,
-                    status: 'ok',
-                    data: Array.isArray(data) ? data.find(t => t.id === tool.id) : data,
-                });
-            } catch (err) {
-                // Tentar formato alternativo: array no toplevel
-                try {
-                    const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/tools`, {
-                        method: 'PATCH',
-                        body: [{ id: tool.id, is_active: true }],
-                    });
-                    results.project_level.tool_activation.push({
-                        tool: tool.engine_name,
-                        id: tool.id,
-                        status: 'ok_alt',
-                        data: Array.isArray(data) ? data.find(t => t.id === tool.id) : data,
-                    });
-                } catch (err2) {
-                    results.project_level.tool_activation.push({
-                        tool: tool.engine_name,
-                        id: tool.id,
-                        status: 'error',
-                        error: err.message.slice(0, 200),
-                        alt_error: err2.message.slice(0, 200),
-                    });
-                }
-            }
-        }
-    }
-
-    // 12. Probes de WRITE (timecard / daily_logs / direct_costs) — descobrir se estão também 404 no sandbox.
-    //      Usamos payloads obviamente de teste e datas no futuro para minimizar pollution se algum POST passar.
-    if (results.project_level?.project_id) {
-        const projectId = results.project_level.project_id;
-        results.write_probes = {};
-
-        const probeDate = '2099-01-01';
-        const probeNote = 'API_PROBE_TEST — please ignore (manifest scope diagnosis)';
-
-        try {
-            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/timecard_entries`, {
-                method: 'POST',
-                body: { timecard_entry: { date: probeDate, hours: '0', description: probeNote } },
-            });
-            results.write_probes.timecard_entries = { status: 'ok', id: data?.id };
-        } catch (err) {
-            results.write_probes.timecard_entries = { status: 'error', error: err.message.slice(0, 300) };
-        }
-
-        try {
-            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/daily_logs/notes_logs`, {
-                method: 'POST',
-                body: [{ date: probeDate, notes: probeNote }],
-            });
-            results.write_probes.daily_logs_notes = { status: 'ok', id: Array.isArray(data) ? data[0]?.id : data?.id };
-        } catch (err) {
-            results.write_probes.daily_logs_notes = { status: 'error', error: err.message.slice(0, 300) };
-        }
-
-        try {
-            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/direct_costs`, {
-                method: 'POST',
-                body: { direct_cost: { date: probeDate, description: probeNote, amount: '0.01', direct_cost_type: 'other' } },
-            });
-            results.write_probes.direct_costs = { status: 'ok', id: data?.id };
-        } catch (err) {
-            results.write_probes.direct_costs = { status: 'error', error: err.message.slice(0, 300) };
-        }
-
-        try {
-            const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${companyId}/users/0`, {
-                method: 'PATCH',
-                body: { user: { custom_field_999999: 'probe' } },
-            });
-            results.write_probes.directory_patch = { status: 'ok', data };
-        } catch (err) {
-            results.write_probes.directory_patch = { status: 'error', error: err.message.slice(0, 300) };
-        }
-    }
-
-    // 13. Recomendação baseada nos resultados
-    const projectOk = results.project_level?.endpoints?.some(e => e.status === 'ok');
-    const toolActivated = results.project_level?.tool_activation?.some(t => t.status === 'ok');
+    // 4. Recomendação
     if (results.working_endpoint) {
-        results.recommendation = `Endpoint ${results.working_endpoint} funciona. Pode criar equipamentos via POST.`;
-    } else if (results.equipment_post_probe?.status === 'ok' || results.managed_equipment_post_probe?.status === 'ok') {
-        results.recommendation = 'GET falha mas POST funciona — endpoint de criação está activo.';
-    } else if (results.fieldset_create?.status === 'ok') {
-        results.recommendation = 'Fieldset criado com sucesso — retry GET de equipment agora.';
-    } else if (projectOk) {
-        const workingEps = results.project_level.endpoints.filter(e => e.status === 'ok').map(e => e.name);
-        results.recommendation = `Company-level bloqueado mas project-level funciona: ${workingEps.join(', ')}. Usar endpoints a nível de projecto.`;
-    } else if (toolActivated) {
-        results.recommendation = 'Tool de equipment activada com sucesso! Corra o diagnóstico novamente para verificar se os endpoints agora respondem.';
+        results.recommendation = 'Endpoint v2.1/equipment_register funciona. Pode criar e listar equipamentos.';
+    } else if (results.post_probe?.status === 'ok') {
+        results.recommendation = 'GET falhou mas POST funcionou — tool activa mas sem itens ainda.';
     } else {
-        results.recommendation = 'Nenhum endpoint de equipment responde (company nem project level). A ferramenta Equipment precisa de ser activada no Procore Admin > Company Tools.';
+        results.recommendation = 'Endpoint v2.1/equipment_register não responde. Verificar se "Equipment" tool está activa no Project Admin → Tool Settings.';
     }
 
     return results;
 }
 
 /**
- * Cria um equipamento no Procore via API REST.
- * Tenta v1.0 (legacy) primeiro, depois v1.1 (managed).
+ * Cria um equipamento no Procore via API REST v2.1.
+ * Body é plano (sem wrapper) conforme documentação oficial:
+ * POST /rest/v2.1/companies/{company_id}/equipment_register
  *
  * @param {object} equipmentData
- * @param {string} equipmentData.name           Nome do equipamento (ex: "Escavadora 01")
- * @param {string} [equipmentData.equipment_id] ID interno (ex: "ESC-001")
- * @param {string} [equipmentData.category]     Categoria
- * @param {string} [equipmentData.type]         Tipo
- * @param {string} [equipmentData.make]         Fabricante
- * @param {string} [equipmentData.model]        Modelo
- * @param {string} [equipmentData.serial_number] Número de série
- * @param {number} [equipmentData.year]         Ano
- * @param {string} [equipmentData.status]       Estado (active, inactive, etc.)
- * @param {string} [equipmentData.ownership]    owned, rented, subcontracted
+ * @param {string} equipmentData.name                Nome do equipamento (ex: "Escavadora 01")
+ * @param {string} [equipmentData.equipment_id]      ID interno (ex: "ESC-001")
+ * @param {string} [equipmentData.identification_number] Número de série/matrícula
+ * @param {number} [equipmentData.year]              Ano
+ * @param {string} [equipmentData.ownership]         'OWNED' | 'RENTED' | 'LEASED'
+ * @param {number} [equipmentData.rate_per_hour]     Taxa horária
+ * @param {string} [equipmentData.serial_number]     Número de série
  * @returns {Promise<{data: object, endpoint: string}>}
  */
 async function createEquipment(equipmentData) {
     const companyId = process.env.PROCORE_COMPANY_ID;
-
-    // Tentar legacy endpoint primeiro (v1.0)
-    try {
-        const result = await procoreFetch(
-            `${PROCORE_API_VERSION}/companies/${companyId}/equipment`,
-            {
-                method: 'POST',
-                body: { equipment: equipmentData },
-            }
-        );
-        console.log(`[procoreBridge] equipment created (v1.0) id=${result.data?.id} name=${equipmentData.name}`);
-        return { data: result.data, endpoint: 'v1.0/equipment' };
-    } catch (legacyErr) {
-        console.log('[procoreBridge] Legacy equipment POST failed:', legacyErr.message.slice(0, 200));
-
-        // Tentar managed equipment v1.1
-        try {
-            const result = await procoreFetch(
-                `/rest/v1.1/companies/${companyId}/managed_equipment`,
-                {
-                    method: 'POST',
-                    body: { managed_equipment: equipmentData },
-                }
-            );
-            console.log(`[procoreBridge] equipment created (v1.1) id=${result.data?.id} name=${equipmentData.name}`);
-            return { data: result.data, endpoint: 'v1.1/managed_equipment' };
-        } catch (managedErr) {
-            console.error('[procoreBridge] Both equipment create endpoints failed');
-            // Devolver ambos os erros para diagnóstico
-            const error = new Error(
-                `Legacy: ${legacyErr.message.slice(0, 300)} | Managed: ${managedErr.message.slice(0, 300)}`
-            );
-            throw error;
-        }
-    }
+    const result = await procoreFetch(
+        `/rest/v2.1/companies/${companyId}/equipment_register`,
+        { method: 'POST', body: equipmentData }
+    );
+    console.log(`[procoreBridge] equipment created (v2.1) id=${result.data?.id} name=${equipmentData.name}`);
+    return { data: result.data, endpoint: 'v2.1/equipment_register' };
 }
 
 // ---------- Persistência Firestore ----------
@@ -1116,7 +813,11 @@ async function handleDirectory(req, res) {
  * @param {'equipment'|'directory'} tool
  */
 async function fetchConfigurableFieldSets(tool) {
-    const { data } = await procoreFetch(`${PROCORE_API_VERSION}/companies/${process.env.PROCORE_COMPANY_ID}/configurable_field_sets`, {
+    // Procore exige consulta a nível de projecto (confirmado pela Support, 2026-05-12)
+    const projects = await fetchProjects();
+    if (projects.length === 0) return [];
+    const projectId = projects[0].id;
+    const { data } = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/configurable_field_sets`, {
         query: { tool },
     });
     return Array.isArray(data) ? data : [];
@@ -1180,9 +881,10 @@ async function patchEquipmentCustomField(equipmentId, fieldKey, value) {
     const snap = await integrationDoc().get();
     const fieldDef = snap.data()?.customFields?.equipment?.[fieldKey];
     if (!fieldDef?.id) throw new Error(`CUSTOM_FIELDS_NOT_DISCOVERED: equipment.${fieldKey}`);
-    await procoreFetch(`${PROCORE_API_VERSION}/companies/${process.env.PROCORE_COMPANY_ID}/equipment/${equipmentId}`, {
+    // v2.1: body plano (sem wrapper), endpoint equipment_register
+    await procoreFetch(`/rest/v2.1/companies/${process.env.PROCORE_COMPANY_ID}/equipment_register/${equipmentId}`, {
         method: 'PATCH',
-        body: { equipment: { [`custom_field_${fieldDef.id}`]: value } },
+        body: { [`custom_field_${fieldDef.id}`]: value },
     });
 }
 
@@ -1452,20 +1154,11 @@ async function handleEquipmentTest(req, res) {
         return res.status(500).json({ error: 'Cannot fetch projects: ' + err.message });
     }
 
-    // Lista de endpoints a testar (GET e POST)
+    // Endpoints a testar — apenas v2.1 (confirmado pela Procore Support, 2026-05-12)
     const tests = [
-        // Company level
-        { name: 'company_equipment_GET', method: 'GET', path: `${PROCORE_API_VERSION}/companies/${companyId}/equipment` },
-        { name: 'company_managed_GET', method: 'GET', path: `/rest/v1.1/companies/${companyId}/managed_equipment` },
-        // Project level
-        { name: 'project_equipment_GET', method: 'GET', path: `${PROCORE_API_VERSION}/projects/${projectId}/equipment` },
-        { name: 'project_managed_GET', method: 'GET', path: `/rest/v1.1/projects/${projectId}/managed_equipment` },
-        { name: 'project_equipment_logs_GET', method: 'GET', path: `${PROCORE_API_VERSION}/projects/${projectId}/equipment_logs` },
-        // POST attempts
-        { name: 'company_equipment_POST', method: 'POST', path: `${PROCORE_API_VERSION}/companies/${companyId}/equipment`, body: { equipment: { name: 'Test Probe', equipment_id: 'PROBE-001' } } },
-        { name: 'company_managed_POST', method: 'POST', path: `/rest/v1.1/companies/${companyId}/managed_equipment`, body: { managed_equipment: { name: 'Test Probe' } } },
-        { name: 'project_equipment_POST', method: 'POST', path: `${PROCORE_API_VERSION}/projects/${projectId}/equipment`, body: { equipment: { name: 'Test Probe', equipment_id: 'PROBE-001' } } },
-        { name: 'project_managed_POST', method: 'POST', path: `/rest/v1.1/projects/${projectId}/managed_equipment`, body: { managed_equipment: { name: 'Test Probe' } } },
+        { name: 'equipment_register_GET', method: 'GET', path: `/rest/v2.1/companies/${companyId}/equipment_register` },
+        { name: 'equipment_register_POST', method: 'POST', path: `/rest/v2.1/companies/${companyId}/equipment_register`, body: { name: 'Test Probe', equipment_id: 'PROBE-001' } },
+        { name: 'project_configurable_fieldsets_GET', method: 'GET', path: `${PROCORE_API_VERSION}/projects/${projectId}/configurable_field_sets` },
     ];
 
     for (const test of tests) {
