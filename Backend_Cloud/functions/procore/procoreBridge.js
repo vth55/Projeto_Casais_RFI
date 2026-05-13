@@ -328,6 +328,11 @@ async function procoreFetch(endpoint, { query = {}, method = 'GET', body } = {})
         );
     }
 
+    // 204 No Content — DELETE success with empty body
+    if (response.status === 204) {
+        return { data: null, total: null, page: 1, perPage: 0 };
+    }
+
     const responseJson = await response.json();
 
     // v2.x APIs envolvem a resposta em { data: ..., meta: { total_count: N } }
@@ -1710,6 +1715,40 @@ async function removeEquipmentFromProject(procoreEquipmentId, procoreProjectId) 
     }
 }
 
+/**
+ * Arquiva (ou apaga) um equipamento no Procore a partir do ID Procore.
+ * Tenta DELETE primeiro; se o sandbox retornar 405, faz PATCH para inactive.
+ * Retorna { method, success, status }.
+ */
+async function archiveEquipment(procoreEquipmentId) {
+    const companyId = process.env.PROCORE_COMPANY_ID;
+    const endpoint = `/rest/v2.1/companies/${companyId}/equipment_register/${procoreEquipmentId}`;
+
+    // 1. Tentar DELETE
+    try {
+        await procoreFetch(endpoint, { method: 'DELETE' });
+        console.log(`[archiveEquipment] DELETE OK — ${procoreEquipmentId}`);
+        return { method: 'delete', success: true, status: 204 };
+    } catch (delErr) {
+        // 405 = sandbox não suporta DELETE; qualquer outro erro relança
+        if (!delErr.message.includes('→ 405')) throw delErr;
+        console.log(`[archiveEquipment] DELETE 405 — fallback PATCH inactive: ${procoreEquipmentId}`);
+    }
+
+    // 2. Fallback: PATCH status inactive
+    try {
+        await procoreFetch(endpoint, {
+            method: 'PATCH',
+            body: { equipment: { status: 'inactive' } },
+        });
+        console.log(`[archiveEquipment] PATCH inactive OK — ${procoreEquipmentId}`);
+        return { method: 'patch', success: true, status: 200 };
+    } catch (patchErr) {
+        console.error(`[archiveEquipment] PATCH também falhou — ${procoreEquipmentId}: ${patchErr.message}`);
+        return { method: 'patch', success: false, error: patchErr.message };
+    }
+}
+
 module.exports = {
     procoreBridge,
     // Helpers OAuth (Chunk 1A)
@@ -1733,6 +1772,8 @@ module.exports = {
     // Bidirectional obra assignment
     associateEquipmentToProject,
     removeEquipmentFromProject,
+    // Bidirectional deletion
+    archiveEquipment,
     // Write-back (Phase 2 + 3)
     createTimecardEntry,
     createDailyLog,

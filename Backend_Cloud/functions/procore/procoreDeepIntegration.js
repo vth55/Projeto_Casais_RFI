@@ -14,7 +14,7 @@
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
@@ -29,6 +29,7 @@ const {
     updateObservation,
     getCostCodes,
     getVendors,
+    archiveEquipment,
     getValidAccessToken: _getToken,
 } = require('./procoreBridge');
 
@@ -462,6 +463,9 @@ async function executeQueueItem(item) {
         await createObservation(procoreProjectId, payload);
     } else if (operation === 'update_observation') {
         await updateObservation(procoreProjectId, payload.observationId, payload.updates);
+    } else if (operation === 'archive_equipment') {
+        const result = await archiveEquipment(payload.procoreEquipmentId);
+        if (!result.success) throw new Error(result.error || 'archive_equipment failed');
     } else {
         throw new Error(`Operação desconhecida: ${operation}`);
     }
@@ -549,6 +553,47 @@ exports.pullProcoreCache = onSchedule(
             last_cache_pull_at: now,
             last_cache_summary: { vendors: vendorCount, cost_code_projects: costCodeProjects },
         }, { merge: true });
+
+        return null;
+    }
+);
+
+// ─── PWA → Procore: máquina apagada na PWA → arquivar no Procore ─────────────
+
+exports.onMachineDeletedToProcore = onDocumentDeleted(
+    {
+        document: `artifacts/casais-rfid/public/data/machines/{machineId}`,
+        secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
+        region: 'us-central1',
+    },
+    async (event) => {
+        const machine = event.data?.data();
+        if (!machine) return null;
+
+        const procoreEquipmentId = machine.procoreEquipmentId;
+        if (!procoreEquipmentId) return null; // máquina sem ligação Procore — nada a fazer
+
+        const machineId = event.params.machineId;
+        console.log(`[onMachineDeleted] machine ${machineId} tinha procoreEquipmentId=${procoreEquipmentId} — a arquivar no Procore`);
+
+        try {
+            if (!(await isProcoreConnected())) {
+                console.log('[onMachineDeleted] Procore não conectado — skip');
+                return null;
+            }
+
+            const result = await archiveEquipment(procoreEquipmentId);
+            if (result.success) {
+                console.log(`[onMachineDeleted] Procore equipment ${procoreEquipmentId} arquivado via ${result.method}`);
+            } else {
+                console.error(`[onMachineDeleted] falha ao arquivar ${procoreEquipmentId}:`, result.error);
+                // Colocar na fila de retry
+                await enqueueSync('archive_equipment', { procoreEquipmentId, machineId }, null);
+            }
+        } catch (err) {
+            console.error('[onMachineDeleted] erro:', err.message);
+            await enqueueSync('archive_equipment', { procoreEquipmentId, machineId }, null);
+        }
 
         return null;
     }

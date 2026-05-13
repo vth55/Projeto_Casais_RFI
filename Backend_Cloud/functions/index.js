@@ -1482,12 +1482,14 @@ const {
     procoreSyncQueueRun,
     procoreTokenRefresh,
     pullProcoreCache,
+    onMachineDeletedToProcore,
 } = require('./procore/procoreDeepIntegration');
 
-exports.equipmentLogsDailyAgg    = equipmentLogsDailyAgg;
-exports.procoreWebhookReceiver   = procoreWebhookReceiver;
-exports.onAvariaCreatedToProcore = onAvariaCreatedToProcore;
-exports.onWorkOrderToProcore     = onWorkOrderToProcore;
-exports.procoreSyncQueueRun      = procoreSyncQueueRun;
-exports.procoreTokenRefresh      = procoreTokenRefresh;
-exports.pullProcoreCache         = pullProcoreCache;
+exports.equipmentLogsDailyAgg      = equipmentLogsDailyAgg;
+exports.procoreWebhookReceiver     = procoreWebhookReceiver;
+exports.onAvariaCreatedToProcore   = onAvariaCreatedToProcore;
+exports.onWorkOrderToProcore       = onWorkOrderToProcore;
+exports.procoreSyncQueueRun        = procoreSyncQueueRun;
+exports.procoreTokenRefresh        = procoreTokenRefresh;
+exports.pullProcoreCache           = pullProcoreCache;
+exports.onMachineDeletedToProcore  = onMachineDeletedToProcore;
