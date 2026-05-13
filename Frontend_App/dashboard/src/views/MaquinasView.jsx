@@ -18,6 +18,8 @@ import {
   ArrowRight,
   Wifi,
   WifiOff,
+  Navigation,
+  History,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { Card, StatCard, Button, Badge, StatusBadge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
@@ -25,19 +27,26 @@ import { getCategoryName, getLocationName, getCategoryId } from '../utils/safeRe
 import { formatHours, formatConsumption } from '../utils/formatters';
 
 // Card de máquina
-const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode, maintenanceInterval, obras, onMove }) => {
+const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect, selectionMode, maintenanceInterval, obras, onMove, onDispatch, onHistory }) => {
   const interval = machine.maintenanceInterval || maintenanceInterval || 150;
   const hoursProgress = Math.min(100, ((machine.partialHours || 0) / interval) * 100);
   const needsMaintenance = hoursProgress >= 80;
+  const isTransit = machine.estadoOperacional === 'em_transito' || !!machine.despachoPendente;
+  const transitDest = machine.despachoPendente?.obraName || null;
 
   return (
     <Card hover onClick={() => selectionMode ? onSelect(machine.id) : onEdit(machine)} className="relative">
-      {needsMaintenance && (
+      {needsMaintenance && !isTransit && (
         <div className="absolute top-3 right-3">
           <Badge variant="warning" size="sm">
             <AlertTriangle className="w-3 h-3 mr-1" />
             Manutenção
           </Badge>
+        </div>
+      )}
+      {isTransit && (
+        <div className="absolute top-3 right-3">
+          <Badge variant="info" size="sm" dot>Em Trânsito</Badge>
         </div>
       )}
 
@@ -53,15 +62,22 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
 
       <div className={`flex items-start gap-4 ${selectionMode ? 'mt-4' : ''}`}>
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+          isTransit ? 'bg-sky-100 dark:bg-sky-900/30' :
           machine.status === 'ACTIVE' ? 'bg-emerald-100' : 'bg-slate-100 dark:bg-slate-700/50'
         }`}>
           <Truck className={`w-6 h-6 ${
+            isTransit ? 'text-sky-500' :
             machine.status === 'ACTIVE' ? 'text-emerald-600' : 'text-slate-400'
           }`} />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-900 dark:text-white truncate">{machine.name || 'Sem Nome'}</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">{getCategoryName(machine.category)}</p>
+          {isTransit && transitDest && (
+            <p className="text-xs text-sky-600 dark:text-sky-400 mt-0.5 flex items-center gap-1">
+              <Navigation className="w-3 h-3" /> A caminho de {transitDest}
+            </p>
+          )}
         </div>
       </div>
 
@@ -103,15 +119,34 @@ const MachineCard = ({ machine, onEdit, onDelete: _ON_DELETE, selected, onSelect
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <StatusBadge status={machine.status} />
+            <StatusBadge status={machine.estadoOperacional || machine.status} />
             {machine.rfidReaderId
               ? <span title={`Leitor: ${machine.rfidReaderId}`}><Wifi className="w-3.5 h-3.5 text-emerald-500" /></span>
               : <span title="Sem leitor RFID configurado"><WifiOff className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" /></span>
             }
           </div>
+          {onHistory && (
+            <button
+              onClick={e => { e.stopPropagation(); onHistory(machine); }}
+              title="Histórico de localização"
+              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <History className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        {/* Inline obra move dropdown */}
-        {onMove && obras && (
+        {/* Despacho ou move imediato */}
+        {!isTransit && onDispatch && obras && (
+          <button
+            onClick={e => { e.stopPropagation(); onDispatch(machine); }}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            Enviar para Obra
+          </button>
+        )}
+        {/* Inline obra move dropdown (modo localização) */}
+        {onMove && obras && !isTransit && (
           <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
             <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
             <select
@@ -428,8 +463,123 @@ const BulkLocationModal = ({ isOpen, onClose, selectedMachines, machines, obras,
   );
 };
 
+// Modal de despacho (dois passos)
+const DispatchModal = ({ machine, obras, onConfirm, onClose, loading }) => {
+  const [obraId, setObraId] = useState('');
+  const activeObras = (obras || []).filter(o => o.status === 'ACTIVE' && o.id !== 'estaleiro');
+
+  return (
+    <Modal isOpen onClose={onClose} title={`Enviar para Obra — ${machine?.name}`}>
+      <div className="space-y-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          A máquina ficará em estado <span className="font-medium text-sky-600">Em Trânsito</span> até o cartão RFID da obra ser passado no leitor.
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Destino</label>
+          <select
+            value={obraId}
+            onChange={e => setObraId(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Selecionar obra…</option>
+            {activeObras.map(o => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
+        </div>
+        {obraId && (
+          <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
+            <p className="text-xs text-sky-700 dark:text-sky-300">
+              <span className="font-medium">Fluxo:</span> Gestor confirma envio → máquina fica Em Trânsito → portaria da obra passa cartão RFID → confirmado Em Obra
+            </p>
+          </div>
+        )}
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button
+            icon={Navigation}
+            loading={loading}
+            disabled={!obraId}
+            onClick={() => onConfirm(machine.id, obraId)}
+          >
+            Confirmar Envio
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// Modal de histórico de localização
+const LocationHistoryModal = ({ machine, onClose }) => {
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const { db: _db } = useStore();
+  const { projectId: _pid } = useStore();
+
+  useEffect(() => {
+    if (!machine) return;
+    // Import dinâmico para evitar dependência circular
+    import('firebase/firestore').then(({ collection, query, where, getDocs, getFirestore, limit }) => {
+      const firestore = getFirestore();
+      const basePath = `artifacts/casais-rfid/public/data`;
+      const q = query(
+        collection(firestore, `${basePath}/machineLocationEvents`),
+        where('machineId', '==', machine.id),
+        limit(50)
+      );
+      getDocs(q).then(snap => {
+        const evts = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+        setEvents(evts);
+        setLoadingEvents(false);
+      }).catch(err => { console.error('[history]', err); setLoadingEvents(false); });
+    });
+  }, [machine?.id]);
+
+  const formatTs = (ts) => {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' });
+  };
+
+  const typeLabel = {
+    manual_dispatch: 'Movido manualmente',
+    despacho_iniciado: 'Despacho iniciado',
+    chegada_obra: 'Chegada à obra',
+    chegada_obra_confirmada: 'Chegada confirmada (RFID)',
+    entrada_estaleiro: 'Regresso ao estaleiro',
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={`Histórico de Localização — ${machine?.name}`}>
+      {loadingEvents ? (
+        <div className="py-8 text-center text-slate-400 text-sm">A carregar…</div>
+      ) : events.length === 0 ? (
+        <div className="py-8 text-center text-slate-400 text-sm">Sem eventos de localização registados.</div>
+      ) : (
+        <div className="space-y-0 max-h-96 overflow-y-auto">
+          {events.map((ev, i) => (
+            <div key={ev.id} className={`flex gap-3 pb-4 ${i < events.length - 1 ? 'border-l-2 border-slate-200 dark:border-slate-700 ml-3' : 'ml-3'}`}>
+              <div className="relative -left-3 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-3 h-3 text-slate-400" />
+              </div>
+              <div className="pb-2">
+                <p className="text-xs font-medium text-slate-700 dark:text-slate-200">{typeLabel[ev.type] || ev.type}</p>
+                <p className="text-xs text-slate-500">{ev.from} → {ev.to}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{formatTs(ev.timestamp)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+};
+
 const MaquinasView = () => {
-  const { activeView, machines, obras, loading, addMachine, updateMachine, deleteMachine, moveMachinesToObra, systemSettings } = useStore();
+  const { activeView, machines, obras, loading, addMachine, updateMachine, deleteMachine, moveMachinesToObra, dispatchMachine, systemSettings } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
@@ -438,6 +588,9 @@ const MaquinasView = () => {
   const isLocationView = activeView === 'maquinas-localizacao';
   const [selectionMode, setSelectionMode] = useState(isLocationView);
   const [selectedMachines, setSelectedMachines] = useState([]);
+  const [dispatchingMachine, setDispatchingMachine] = useState(null);
+  const [dispatchLoading, setDispatchLoading] = useState(false);
+  const [historyMachine, setHistoryMachine] = useState(null);
 
   // Sync selection mode with sidebar submenu
   useEffect(() => {
@@ -484,6 +637,13 @@ const MaquinasView = () => {
 
   const handleMoveSingle = async (machineId, newObraId) => {
     await moveMachinesToObra([machineId], newObraId);
+  };
+
+  const handleDispatchConfirm = async (machineId, obraId) => {
+    setDispatchLoading(true);
+    await dispatchMachine(machineId, obraId);
+    setDispatchLoading(false);
+    setDispatchingMachine(null);
   };
 
   const handleDelete = async (machine) => {
@@ -652,6 +812,8 @@ const MaquinasView = () => {
               maintenanceInterval={systemSettings.defaultMaintenanceInterval}
               obras={obrasList}
               onMove={!selectionMode ? handleMoveSingle : undefined}
+              onDispatch={!selectionMode ? setDispatchingMachine : undefined}
+              onHistory={!selectionMode ? setHistoryMachine : undefined}
             />
           ))}
         </div>
@@ -763,6 +925,25 @@ const MaquinasView = () => {
         obras={obrasList}
         onConfirm={handleBulkMove}
       />
+
+      {/* Modal de Despacho */}
+      {dispatchingMachine && (
+        <DispatchModal
+          machine={dispatchingMachine}
+          obras={obrasList}
+          loading={dispatchLoading}
+          onConfirm={handleDispatchConfirm}
+          onClose={() => setDispatchingMachine(null)}
+        />
+      )}
+
+      {/* Modal de Histórico de Localização */}
+      {historyMachine && (
+        <LocationHistoryModal
+          machine={historyMachine}
+          onClose={() => setHistoryMachine(null)}
+        />
+      )}
     </div>
   );
 };

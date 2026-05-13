@@ -64,6 +64,14 @@ const StatusBadge = ({ status }) => {
     VALIDATED: { label: 'Validado', variant: 'success', dot: false },
     CORRECTED: { label: 'Corrigido', variant: 'info', dot: false },
     RESOLVED: { label: 'Resolvido', variant: 'success', dot: false },
+    TRANSIT: { label: 'Em Trânsito', variant: 'info', dot: true },
+    em_transito: { label: 'Em Trânsito', variant: 'info', dot: true },
+    em_obra: { label: 'Em Obra', variant: 'primary', dot: true },
+    disponivel: { label: 'Disponível', variant: 'default', dot: true },
+    // Procore sync returns lowercase
+    active: { label: 'Ativo', variant: 'success', dot: true },
+    idle: { label: 'Disponível', variant: 'default', dot: true },
+    maintenance: { label: 'Manutenção', variant: 'warning', dot: true },
   };
 
   const config = statusConfig[status] || { label: status, variant: 'default', dot: false };

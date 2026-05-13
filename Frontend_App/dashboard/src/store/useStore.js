@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, Timestamp, increment } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
 import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
@@ -93,12 +93,15 @@ const useStore = create((set, get) => ({
       createSessionsListener((data) => set({ sessions: data }))
     );
 
-    // Machines listener
+    // Machines listener — filtra máquinas marcadas como [REMOVIDO] no Procore
     const createMachinesListener = createCollectionListener(db, `${basePath}/machines`, {
       onError: (msg, error) => console.error('Erro machines:', error),
     });
     unsubscribers.push(
-      createMachinesListener((data) => set({ machines: data, loading: false }))
+      createMachinesListener((data) => {
+        const visible = (data || []).filter(m => !String(m.name || '').startsWith('[REMOVIDO]'));
+        set({ machines: visible, loading: false });
+      })
     );
 
     // Operators listener
@@ -835,16 +838,93 @@ const useStore = create((set, get) => ({
       const isEstaleiro = obraId === 'estaleiro' || !obraId;
       const obra = isEstaleiro ? null : obras.find(o => o.id === obraId);
 
+      const { machines } = get();
       for (const machineId of machineIds) {
+        const machine = machines.find(m => m.id === machineId);
+        const prevLocalizacao = machine?.localizacao || null;
+        const prevLocation = machine?.location || null;
+        const fromName = prevLocalizacao?.obraName || prevLocation?.workName || 'Sem localização';
+        const fromObraId = prevLocalizacao?.obraId || prevLocation?.workId || null;
+        const toName = isEstaleiro ? 'Estaleiro' : (obra?.name || obraId);
+        const toObraId = isEstaleiro ? 'estaleiro' : (obra?.id || obraId);
+        const ts = Timestamp.now();
+
         await updateDoc(doc(db, `${basePath}/machines`, machineId), {
-          obraId: isEstaleiro ? 'estaleiro' : (obra?.id || obraId),
+          obraId: toObraId,
+          localizacao: {
+            obraId: toObraId,
+            obraName: toName,
+            gps: isEstaleiro ? null : (obra?.gps || null),
+            type: isEstaleiro ? 'estaleiro' : 'obra',
+            updatedAt: ts,
+            cardId: null,
+          },
+          estadoOperacional: isEstaleiro ? 'disponivel' : 'em_obra',
           ...(isEstaleiro
-            ? { status: 'IDLE', location: null, movedToYardAt: Timestamp.now() }
-            : { movedToYardAt: null, location: obra ? { workId: obra.id, workName: obra.name, gps: obra.gps || null, lastUpdated: Timestamp.now() } : null }
+            ? { status: 'IDLE', location: null, movedToYardAt: ts }
+            : { movedToYardAt: null, location: obra ? { workId: obra.id, workName: obra.name, gps: obra.gps || null, lastUpdated: ts } : null }
           ),
+        });
+
+        await addDoc(collection(db, `${basePath}/machineLocationEvents`), {
+          machineId,
+          machineLabel: machine?.name || machineId,
+          type: 'manual_dispatch',
+          from: fromName,
+          fromObraId,
+          to: toName,
+          toObraId,
+          timestamp: ts,
+          cardId: null,
+          confirmedDespacho: false,
+          triggeredBy: 'manual',
         });
       }
       return { success: true, count: machineIds.length };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Despachar máquina para obra (cria despachoPendente, RFID confirma chegada)
+  dispatchMachine: async (machineId, obraId, dispatchedBy = 'system') => {
+    if (!db) return { success: false, error: 'DB não inicializado' };
+    try {
+      const { obras, machines } = get();
+      const obra = obras.find(o => o.id === obraId);
+      if (!obra) return { success: false, error: 'Obra não encontrada' };
+
+      const machine = machines.find(m => m.id === machineId);
+      const ts = Timestamp.now();
+      const expected = new Date(ts.toDate().getTime() + 48 * 60 * 60 * 1000);
+
+      await updateDoc(doc(db, `${basePath}/machines`, machineId), {
+        estadoOperacional: 'em_transito',
+        despachoPendente: {
+          obraId: obra.id,
+          obraName: obra.name,
+          dispatchedAt: ts,
+          dispatchedBy,
+          expectedArrivalAt: Timestamp.fromDate(expected),
+          timeoutTriggered: false,
+        },
+      });
+
+      await addDoc(collection(db, `${basePath}/machineLocationEvents`), {
+        machineId,
+        machineLabel: machine?.name || machineId,
+        type: 'despacho_iniciado',
+        from: machine?.localizacao?.obraName || 'Estaleiro',
+        fromObraId: machine?.localizacao?.obraId || 'estaleiro',
+        to: obra.name,
+        toObraId: obra.id,
+        timestamp: ts,
+        cardId: null,
+        confirmedDespacho: false,
+        triggeredBy: dispatchedBy,
+      });
+
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }

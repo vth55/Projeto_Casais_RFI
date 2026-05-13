@@ -216,9 +216,18 @@ const FinanceiroView = () => {
       }));
   }, [filteredSessions]);
 
-  // Custos reais por máquina
+  // Custos reais por máquina — dedup por nome (prefere versão com procoreEquipmentId)
   const machineCostData = useMemo(() => {
-    return machines
+    const byName = new Map();
+    for (const m of machines) {
+      const key = (m.name || m.id || '').trim().toLowerCase();
+      if (!key) continue;
+      const existing = byName.get(key);
+      if (!existing || (m.procoreEquipmentId && !existing.procoreEquipmentId)) {
+        byName.set(key, m);
+      }
+    }
+    return [...byName.values()]
       .map(machine => {
         const machineSessions = filteredSessions.filter(
           s => s.machineId === machine.id && s.status === 'CLOSED'

@@ -211,8 +211,17 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
               <li key={item.id}>
                 <button
                   onClick={() => {
-                    if (hasSubmenu) { toggleMenu(item.id); }
-                    else { setActiveView(item.id); onNavigate?.(); }
+                    if (hasSubmenu) {
+                      toggleMenu(item.id);
+                      // Se ainda não está numa sub-view, navega para a primeira do submenu
+                      if (!item.submenu.some(s => s.id === activeView)) {
+                        setActiveView(item.submenu[0].id);
+                        onNavigate?.();
+                      }
+                    } else {
+                      setActiveView(item.id);
+                      onNavigate?.();
+                    }
                   }}
                   className={`
                     w-full flex items-center justify-between px-3 py-2.5 rounded-xl

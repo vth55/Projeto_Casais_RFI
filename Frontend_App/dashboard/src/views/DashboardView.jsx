@@ -316,6 +316,15 @@ const ProcoreReconciliationPanel = () => {
   }
 
   if (error || !status?.connected) {
+    const needsReauth = !!status?.needs_reauth;
+    const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    const title = needsReauth ? 'Procore — sessão expirada' : 'Procore não conectado';
+    const subtitle = needsReauth
+      ? 'O token de refresh expirou. Reautoriza para continuar a sincronização automática.'
+      : isDev && error
+        ? 'Estado Procore não disponível em modo dev (sem rewrite Hosting). Funciona no deploy.'
+        : error ? `Erro: ${error}` : 'Conecta o Procore nas Configurações para ativar o painel de reconciliação.';
+
     return (
       <div className="rounded-lg overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-4 p-6">
@@ -323,17 +332,17 @@ const ProcoreReconciliationPanel = () => {
             <Link2 className="w-7 h-7 text-slate-400" />
           </div>
           <div className="flex-1">
-            <p className="text-lg font-bold text-slate-900 dark:text-white">Procore não conectado</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              {error ? `Erro: ${error}` : 'Conecta o Procore nas Configurações para ativar o painel de reconciliação.'}
-            </p>
+            <p className="text-lg font-bold text-slate-900 dark:text-white">{title}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
           </div>
-          <a
-            href="/api/procore/authorize"
-            className="px-5 py-2.5 text-sm font-bold text-white casais-gradient rounded-lg shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all hover:-translate-y-0.5"
-          >
-            Conectar Procore
-          </a>
+          {!isDev && (
+            <a
+              href="/api/procore/authorize"
+              className="px-5 py-2.5 text-sm font-bold text-white casais-gradient rounded-lg shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all hover:-translate-y-0.5"
+            >
+              {needsReauth ? 'Reautorizar' : 'Conectar Procore'}
+            </a>
+          )}
         </div>
       </div>
     );

@@ -6,12 +6,21 @@
  * - onAlertCreated: Enviar email quando alerta é criado
  * - resendAlertEmail: Reenviar email de validação
  * - autoCloseStuckSessions: Cron job para fechar sessões abandonadas
+ * - detectDispatchTimeout: Cron job de 2h — máquinas em trânsito >48h sem confirmação RFID
  * - procoreBridge: Integração OAuth2 + REST API Procore (Chunks 1A/1B)
  * - procoreScheduledSync: Cron job horário de sincronização Procore → Firestore (Chunk 1C)
  * - procoreSessionExport: Exportar sessões para Procore (Timecard Entries)
  * - procoreDailyWriteback: Cron diário (23:30) — Daily Logs + Cost Entries ao Procore
  * - procoreExportRetry: Cron job (30 min) de retry de exports Procore falhados
  * - onSessionCorrected: Trigger Firestore — re-exporta Timecard para Procore quando sessão é corrigida
+ * Sprint 3 — Deep Integration:
+ * - equipmentLogsDailyAgg: Cron 23:55 — equipment_logs por máquina/obra no Procore
+ * - procoreWebhookReceiver: HTTP — recebe webhooks Procore com HMAC validation
+ * - onAvariaCreatedToProcore: Trigger — avaria criada -> Procore Observation
+ * - onWorkOrderToProcore: Trigger — WorkOrder criada/concluida -> Procore Observation
+ * - procoreSyncQueueRun: Cron 15min — retry de operacoes Procore falhadas
+ * - procoreTokenRefresh: Cron 6h — refresh proactivo do token OAuth
+ * - pullProcoreCache: Cron diario 00:30 — cost_codes + vendors -> procore_cache
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
@@ -44,6 +53,8 @@ const SCAN_BUFFER_PATH = `artifacts/${APP_ID}/public/data/scan_buffer`;
 const ALERTS_PATH = `artifacts/${APP_ID}/public/data/alerts`;
 const SETTINGS_PATH = `artifacts/${APP_ID}/public/data/settings`;
 const LOCATION_CARDS_PATH = `artifacts/${APP_ID}/public/data/location_cards`;
+const RFID_LOCATION_CARDS_PATH = `artifacts/${APP_ID}/public/data/rfidLocationCards`;
+const MACHINE_LOCATION_EVENTS_PATH = `artifacts/${APP_ID}/public/data/machineLocationEvents`;
 const OBRAS_PATH = `artifacts/${APP_ID}/public/data/obras`;
 
 // ============================================
@@ -319,23 +330,29 @@ exports.handleSessionTrigger = onRequest(
 
         // ============================================
         // VERIFICAR SE É CARTÃO DE LOCALIZAÇÃO
-        // Cartões com prefixo "LOC_" mudam localização da máquina
+        // Cartões LOC_ mudam localizacao + estadoOperacional da máquina
+        // Distingue estaleiro vs obra pelo campo tipo no cartão
         // ============================================
         if (normalizedCard.startsWith('LOC_')) {
             console.log(`📍 Cartão de localização detectado: ${normalizedCard}`);
 
-            // Buscar cartão de localização
-            const locationCardSnap = await db.doc(`${LOCATION_CARDS_PATH}/${normalizedCard}`).get();
-
-            if (!locationCardSnap.exists) {
-                console.log(`❌ Cartão de localização não registado: ${normalizedCard}`);
-                return res.status(404).json({
-                    status: 'LOCATION_NOT_FOUND',
-                    message: 'Cartão de localização não registado no sistema.'
-                });
+            // Procurar primeiro na nova coleção rfidLocationCards, fallback na antiga
+            let locationCard = null;
+            const newCardSnap = await db.doc(`${RFID_LOCATION_CARDS_PATH}/${normalizedCard}`).get();
+            if (newCardSnap.exists) {
+                locationCard = newCardSnap.data();
+            } else {
+                const oldCardSnap = await db.doc(`${LOCATION_CARDS_PATH}/${normalizedCard}`).get();
+                if (!oldCardSnap.exists) {
+                    console.log(`❌ Cartão de localização não registado: ${normalizedCard}`);
+                    return res.status(404).json({
+                        status: 'LOCATION_NOT_FOUND',
+                        message: 'Cartão de localização não registado no sistema.'
+                    });
+                }
+                locationCard = oldCardSnap.data();
             }
 
-            const locationCard = locationCardSnap.data();
             const machineRef = db.doc(`${MACHINES_PATH}/${normalizedMachine}`);
             const machineSnap = await machineRef.get();
 
@@ -346,10 +363,29 @@ exports.handleSessionTrigger = onRequest(
                 });
             }
 
-            const previousLocation = machineSnap.data().location;
+            const machineData = machineSnap.data();
+            const previousLocalizacao = machineData.localizacao || machineData.location || null;
+            const isEstaleiro = locationCard.tipo === 'estaleiro' || locationCard.obraId === 'estaleiro';
 
-            // Atualizar localização da máquina
-            await machineRef.update({
+            // Verificar se este scan confirma um despacho pendente
+            const despachoPendente = machineData.despachoPendente;
+            const confirmaDespacho = !isEstaleiro && despachoPendente && despachoPendente.obraId === locationCard.obraId;
+
+            const novoEstado = isEstaleiro ? 'disponivel' : 'em_obra';
+
+            const novaLocalizacao = {
+                obraId: locationCard.obraId,
+                obraName: locationCard.obraName,
+                gps: locationCard.gps || null,
+                type: isEstaleiro ? 'estaleiro' : 'obra',
+                updatedAt: timestamp,
+                cardId: normalizedCard,
+            };
+
+            const machineUpdate = {
+                localizacao: novaLocalizacao,
+                estadoOperacional: novoEstado,
+                // Campo legacy mantido temporariamente para compatibilidade do frontend
                 location: {
                     workId: locationCard.obraId,
                     workName: locationCard.obraName,
@@ -357,22 +393,54 @@ exports.handleSessionTrigger = onRequest(
                     updatedAt: timestamp,
                     updatedBy: normalizedCard,
                 },
-                locationHistory: admin.firestore.FieldValue.arrayUnion({
-                    from: previousLocation?.workName || 'Sem localização',
-                    to: locationCard.obraName,
-                    timestamp: timestamp,
-                    cardId: normalizedCard,
-                }),
+            };
+
+            if (isEstaleiro) {
+                machineUpdate.movedToYardAt = timestamp;
+                machineUpdate.status = 'IDLE';
+            } else {
+                machineUpdate.movedToYardAt = admin.firestore.FieldValue.delete();
+            }
+
+            if (confirmaDespacho) {
+                machineUpdate.despachoPendente = admin.firestore.FieldValue.delete();
+            }
+
+            await machineRef.update(machineUpdate);
+
+            // Registar evento em machineLocationEvents
+            const eventType = isEstaleiro ? 'entrada_estaleiro' : (confirmaDespacho ? 'chegada_obra_confirmada' : 'chegada_obra');
+            await db.collection(MACHINE_LOCATION_EVENTS_PATH).add({
+                machineId: normalizedMachine,
+                type: eventType,
+                from: previousLocalizacao?.obraName || previousLocalizacao?.workName || 'Sem localização',
+                fromObraId: previousLocalizacao?.obraId || previousLocalizacao?.workId || null,
+                to: locationCard.obraName,
+                toObraId: locationCard.obraId,
+                timestamp: timestamp,
+                cardId: normalizedCard,
+                confirmedDespacho: confirmaDespacho || false,
+                procoreEquipmentId: machineData.procoreEquipmentId || null,
             });
 
-            console.log(`✅ Máquina ${normalizedMachine} movida para ${locationCard.obraName}`);
+            // Sincronizar com Procore se máquina tem equipamento e o cartão tem projecto Procore
+            if (!isEstaleiro && machineData.procoreEquipmentId && locationCard.procoreProjectId) {
+                associateEquipmentToProject(machineData.procoreEquipmentId, locationCard.procoreProjectId)
+                    .catch(err => console.error('[Procore] associateEquipment error:', err));
+            }
+
+            console.log(`✅ Máquina ${normalizedMachine} → ${locationCard.obraName} [${novoEstado}]${confirmaDespacho ? ' ✓ despacho confirmado' : ''}`);
 
             return res.json({
-                status: 'LOCATION_CHANGED',
+                status: confirmaDespacho ? 'ARRIVAL_CONFIRMED' : 'LOCATION_CHANGED',
                 machine: normalizedMachine,
                 newLocation: locationCard.obraName,
                 obraId: locationCard.obraId,
-                message: `Localização alterada para: ${locationCard.obraName}`
+                estadoOperacional: novoEstado,
+                confirmedDespacho: confirmaDespacho || false,
+                message: confirmaDespacho
+                    ? `Chegada confirmada em: ${locationCard.obraName}`
+                    : `Localização alterada para: ${locationCard.obraName}`
             });
         }
 
@@ -1346,3 +1414,80 @@ exports.onMachineObraChanged = onDocumentUpdated(
         return null;
     }
 );
+
+// ============================================
+// DETECT DISPATCH TIMEOUT
+// Corre de 2 em 2 horas. Máquinas com despachoPendente há mais de 48h
+// sem confirmação RFID recebem alerta + flag timeoutTriggered.
+// ============================================
+exports.detectDispatchTimeout = onSchedule(
+    {
+        schedule: 'every 2 hours',
+        timeZone: 'Europe/Lisbon',
+        region: 'us-central1',
+    },
+    async (_context) => {
+        const now = admin.firestore.Timestamp.now();
+        const cutoffMs = 48 * 60 * 60 * 1000; // 48 horas em ms
+
+        const machinesSnap = await db.collection(MACHINES_PATH)
+            .where('estadoOperacional', '==', 'em_transito')
+            .get();
+
+        let timedOut = 0;
+
+        for (const machineDoc of machinesSnap.docs) {
+            const data = machineDoc.data();
+            const despacho = data.despachoPendente;
+            if (!despacho || despacho.timeoutTriggered) continue;
+
+            const dispatchedAt = despacho.dispatchedAt?.toMillis?.() || 0;
+            const elapsed = now.toMillis() - dispatchedAt;
+            if (elapsed < cutoffMs) continue;
+
+            // Marcar timeout
+            await machineDoc.ref.update({
+                'despachoPendente.timeoutTriggered': true,
+            });
+
+            // Criar alerta
+            await db.collection(ALERTS_PATH).add({
+                type: 'DISPATCH_TIMEOUT',
+                machineId: machineDoc.id,
+                machineLabel: data.name || machineDoc.id,
+                message: `Máquina "${data.name || machineDoc.id}" em trânsito para ${despacho.obraName} há mais de 48h sem confirmação RFID.`,
+                despachoPendente: despacho,
+                createdAt: now,
+                status: 'PENDING',
+                severity: 'warning',
+            });
+
+            console.log(`[dispatchTimeout] Timeout: ${machineDoc.id} → ${despacho.obraName}`);
+            timedOut++;
+        }
+
+        console.log(`[dispatchTimeout] Verificadas ${machinesSnap.size} máquinas em trânsito. Timeouts: ${timedOut}`);
+        return null;
+    }
+);
+
+// ============================================
+// SPRINT 3 — PROCORE DEEP INTEGRATION
+// ============================================
+const {
+    equipmentLogsDailyAgg,
+    procoreWebhookReceiver,
+    onAvariaCreatedToProcore,
+    onWorkOrderToProcore,
+    procoreSyncQueueRun,
+    procoreTokenRefresh,
+    pullProcoreCache,
+} = require('./procore/procoreDeepIntegration');
+
+exports.equipmentLogsDailyAgg    = equipmentLogsDailyAgg;
+exports.procoreWebhookReceiver   = procoreWebhookReceiver;
+exports.onAvariaCreatedToProcore = onAvariaCreatedToProcore;
+exports.onWorkOrderToProcore     = onWorkOrderToProcore;
+exports.procoreSyncQueueRun      = procoreSyncQueueRun;
+exports.procoreTokenRefresh      = procoreTokenRefresh;
+exports.pullProcoreCache         = pullProcoreCache;

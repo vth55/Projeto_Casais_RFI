@@ -35,6 +35,8 @@ const {
   MAX_PAGES: PROCORE_MAX_PAGES,
   FIRESTORE_BATCH_LIMIT,
   REFRESH_SAFETY_MARGIN_MS,
+  REFRESH_LOCK_TTL_MS,
+  REFRESH_MAX_RETRIES,
 } = require('./config');
 
 // ============================================
@@ -86,6 +88,11 @@ async function persistTokenResponse(tokenJson, { isRefresh = false } = {}) {
         expires_at: expiresAt,
         last_refreshed_at: admin.firestore.FieldValue.serverTimestamp(),
         company_id: process.env.PROCORE_COMPANY_ID || null,
+        // Limpa marcadores de erro/lock — refresh ou auth com sucesso
+        needs_reauth: admin.firestore.FieldValue.delete(),
+        last_refresh_error: admin.firestore.FieldValue.delete(),
+        last_refresh_error_at: admin.firestore.FieldValue.delete(),
+        refresh_lock_until: admin.firestore.FieldValue.delete(),
     };
 
     if (!isRefresh) {
@@ -129,6 +136,8 @@ async function exchangeCodeForToken(code) {
 
 /**
  * Refresca o access token usando o refresh token persistido.
+ * Retries em falhas transitórias (5xx, network). Falhas 400/401 (refresh_token
+ * inválido ou expirado) NÃO retentam — propagam imediatamente.
  */
 async function refreshAccessToken(currentRefreshToken) {
     const body = new URLSearchParams({
@@ -138,28 +147,92 @@ async function refreshAccessToken(currentRefreshToken) {
         client_secret: process.env.PROCORE_CLIENT_SECRET,
     });
 
-    const response = await fetch(PROCORE_TOKEN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-    });
+    let lastErr;
+    for (let attempt = 1; attempt <= (REFRESH_MAX_RETRIES || 3); attempt++) {
+        try {
+            const response = await fetch(PROCORE_TOKEN_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString(),
+            });
 
-    if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Procore token refresh failed (${response.status}): ${errText}`);
+            if (!response.ok) {
+                const errText = await response.text();
+                // 400/401 = refresh_token invalido/expirado. Não retentar — precisa de re-auth.
+                if (response.status === 400 || response.status === 401) {
+                    await integrationDoc().set({
+                        last_refresh_error: `${response.status}: ${errText}`,
+                        last_refresh_error_at: admin.firestore.FieldValue.serverTimestamp(),
+                        needs_reauth: true,
+                    }, { merge: true });
+                    throw new Error(`PROCORE_REAUTH_REQUIRED: refresh_token rejeitado (${response.status}). Visite /api/procore/authorize.`);
+                }
+                throw new Error(`Procore token refresh failed (${response.status}): ${errText}`);
+            }
+
+            const tokenJson = await response.json();
+            await persistTokenResponse(tokenJson, { isRefresh: true });
+            return tokenJson;
+        } catch (err) {
+            lastErr = err;
+            if (err.message?.startsWith('PROCORE_REAUTH_REQUIRED')) throw err;
+            if (attempt < (REFRESH_MAX_RETRIES || 3)) {
+                const backoffMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+                console.warn(`[procoreBridge] refresh tentativa ${attempt} falhou (${err.message}). Retry em ${backoffMs}ms`);
+                await new Promise(r => setTimeout(r, backoffMs));
+            }
+        }
     }
+    throw lastErr;
+}
 
-    const tokenJson = await response.json();
-    await persistTokenResponse(tokenJson, { isRefresh: true });
-    return tokenJson;
+/**
+ * Tenta adquirir o lock de refresh com TTL. Retorna true se conseguiu.
+ * Usado para prevenir refresh concorrente (race condition do refresh_token rotation).
+ */
+async function acquireRefreshLock() {
+    try {
+        const lockExpiresAt = Date.now() + (REFRESH_LOCK_TTL_MS || 30000);
+        await db().runTransaction(async (t) => {
+            const snap = await t.get(integrationDoc());
+            const data = snap.data() || {};
+            const heldUntil = data.refresh_lock_until?.toMillis?.() || 0;
+            if (heldUntil > Date.now()) {
+                throw new Error('LOCK_HELD');
+            }
+            t.set(integrationDoc(), {
+                refresh_lock_until: admin.firestore.Timestamp.fromMillis(lockExpiresAt),
+            }, { merge: true });
+        });
+        return true;
+    } catch (err) {
+        if (err.message === 'LOCK_HELD') return false;
+        throw err;
+    }
+}
+
+async function releaseRefreshLock() {
+    try {
+        await integrationDoc().set({
+            refresh_lock_until: admin.firestore.FieldValue.delete(),
+        }, { merge: true });
+    } catch (err) {
+        console.warn('[procoreBridge] releaseRefreshLock falhou (não crítico):', err.message);
+    }
 }
 
 /**
  * HELPER PÚBLICO — devolve um access token válido, refrescando se necessário.
- * Vai ser usado pelos chunks 1B e 1C para chamadas à API Procore.
+ *
+ * Estratégia:
+ *  - Se token ainda fresh → devolve.
+ *  - Se expira < margem → tenta adquirir lock de refresh.
+ *    - Lock adquirido → refresca e devolve novo token.
+ *    - Lock detido por outra invocação → aguarda 2s e relê (a outra terá actualizado).
+ *  - Se refresh_token rejeitado (400/401) → marca `needs_reauth: true` e lança erro claro.
  *
  * @returns {Promise<string>} access_token válido
- * @throws {Error} se a integração ainda não estiver conectada
+ * @throws {Error} se integração não conectada ou refresh_token expirou (precisa re-auth)
  */
 async function getValidAccessToken() {
     const snap = await integrationDoc().get();
@@ -171,17 +244,36 @@ async function getValidAccessToken() {
     if (!data.access_token || !data.refresh_token) {
         throw new Error('PROCORE_NOT_CONNECTED: Tokens incompletos.');
     }
+    if (data.needs_reauth) {
+        throw new Error('PROCORE_REAUTH_REQUIRED: refresh_token expirado. Visite /api/procore/authorize.');
+    }
 
     const expiresAtMs = data.expires_at?.toMillis ? data.expires_at.toMillis() : (data.expires_at || 0);
     const isExpiringSoon = Date.now() + REFRESH_SAFETY_MARGIN_MS >= expiresAtMs;
 
-    if (isExpiringSoon) {
-        console.log('[procoreBridge] Access token a expirar — a refrescar...');
-        const refreshed = await refreshAccessToken(data.refresh_token);
-        return refreshed.access_token;
+    if (!isExpiringSoon) return data.access_token;
+
+    // Token a expirar — tentar refresh com lock para evitar concorrência
+    const gotLock = await acquireRefreshLock();
+    if (gotLock) {
+        try {
+            console.log('[procoreBridge] Access token a expirar — a refrescar (lock detido)');
+            const refreshed = await refreshAccessToken(data.refresh_token);
+            return refreshed.access_token;
+        } finally {
+            await releaseRefreshLock();
+        }
     }
 
-    return data.access_token;
+    // Outra invocação está a refrescar — aguardar e relê
+    console.log('[procoreBridge] Refresh em curso noutra invocação — a aguardar...');
+    await new Promise(r => setTimeout(r, 2000));
+    const fresh = await integrationDoc().get();
+    const freshData = fresh.data() || {};
+    if (freshData.needs_reauth) {
+        throw new Error('PROCORE_REAUTH_REQUIRED: refresh_token expirado durante refresh concorrente.');
+    }
+    return freshData.access_token || data.access_token;
 }
 
 // ============================================
@@ -402,13 +494,15 @@ async function createEquipment(equipmentData) {
  *
  * Path: artifacts/casais-rfid/public/data/integrations/procore/{subcollection}/{id}
  */
-async function persistCollection(subcollection, items, idField = 'id') {
-    if (!Array.isArray(items) || items.length === 0) return 0;
+async function persistCollection(subcollection, items, idField = 'id', { mirror = false } = {}) {
+    if (!Array.isArray(items)) return 0;
 
     const colRef = integrationDoc().collection(subcollection);
     const firestore = db();
+    const serverTs = admin.firestore.FieldValue.serverTimestamp;
     let written = 0;
 
+    // Upsert incoming items
     for (let i = 0; i < items.length; i += FIRESTORE_BATCH_LIMIT) {
         const slice = items.slice(i, i + FIRESTORE_BATCH_LIMIT);
         const batch = firestore.batch();
@@ -419,16 +513,32 @@ async function persistCollection(subcollection, items, idField = 'id') {
             const docId = String(rawId);
             batch.set(
                 colRef.doc(docId),
-                {
-                    ...item,
-                    _synced_at: admin.firestore.FieldValue.serverTimestamp(),
-                },
+                { ...item, _synced_at: serverTs(), _removed_at: null },
                 { merge: true }
             );
             written++;
         });
 
         await batch.commit();
+    }
+
+    // Mirror mode: mark docs no longer returned by Procore with _removed_at
+    if (mirror && items.length > 0) {
+        const incomingIds = new Set(items.map(i => String(i?.[idField])).filter(Boolean));
+        const existing = await colRef.select().get();
+        const stale = existing.docs.filter(d => !incomingIds.has(d.id) && !d.data()._removed_at);
+
+        for (let i = 0; i < stale.length; i += FIRESTORE_BATCH_LIMIT) {
+            const batch = firestore.batch();
+            stale.slice(i, i + FIRESTORE_BATCH_LIMIT).forEach(d => {
+                batch.update(d.ref, { _removed_at: serverTs() });
+            });
+            await batch.commit();
+        }
+
+        if (stale.length > 0) {
+            console.log(`[persistCollection] ${subcollection}: ${stale.length} items marked _removed_at`);
+        }
     }
 
     return written;
@@ -598,6 +708,82 @@ async function createCostEntry({ project_id, date, description, amount }, opts =
     return result.data;
 }
 
+/**
+ * Cria uma Observation (avaria ou WorkOrder) no Procore.
+ * Endpoint: POST /rest/v1.0/projects/{project_id}/observations/items
+ */
+async function createObservation(projectId, { name, description, status = 'initiated', typeId = null, datetimeInitiated = null } = {}) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/observations/items`;
+    const payload = {
+        observation_item: {
+            name: name || 'Avaria CASAIS Fleet',
+            description: description || '',
+            status,
+            datetime_initiated: datetimeInitiated || new Date().toISOString(),
+        },
+    };
+    if (typeId) payload.observation_item.type_id = typeId;
+
+    const result = await procoreFetch(endpoint, { method: 'POST', body: payload });
+    console.log(`[procoreBridge] observation created id=${result.data?.id} project=${projectId}`);
+    return result.data;
+}
+
+/**
+ * Actualiza uma Observation existente no Procore.
+ * Endpoint: PATCH /rest/v1.0/projects/{project_id}/observations/items/{id}
+ */
+async function updateObservation(projectId, observationId, updates = {}) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/observations/items/${observationId}`;
+    const result = await procoreFetch(endpoint, {
+        method: 'PATCH',
+        body: { observation_item: updates },
+    });
+    console.log(`[procoreBridge] observation updated id=${observationId}`);
+    return result.data;
+}
+
+/**
+ * Cria um Equipment Log no Procore (uso de equipamento por dia).
+ * Requer Equipment Tool activo no projecto.
+ * Endpoint: POST /rest/v1.0/projects/{project_id}/equipment_logs
+ */
+async function createEquipmentLog(projectId, { equipmentId, date, hours, description = '' } = {}) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/equipment_logs`;
+    const payload = {
+        equipment_log: {
+            equipment_id: equipmentId,
+            date,
+            hours,
+            description,
+        },
+    };
+    const result = await procoreFetch(endpoint, { method: 'POST', body: payload });
+    console.log(`[procoreBridge] equipment_log created id=${result.data?.id} eq=${equipmentId} ${date} ${hours}h`);
+    return result.data;
+}
+
+/**
+ * Busca cost codes de um projecto Procore.
+ * Endpoint: GET /rest/v1.0/projects/{project_id}/cost_codes
+ */
+async function getCostCodes(projectId) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/cost_codes`;
+    const items = await procoreFetchAll(endpoint, { per_page: 100 });
+    return items;
+}
+
+/**
+ * Busca vendors/fornecedores da empresa Procore.
+ * Endpoint: GET /rest/v1.0/companies/{company_id}/vendors
+ */
+async function getVendors() {
+    const companyId = process.env.PROCORE_COMPANY_ID;
+    const endpoint = `${PROCORE_API_VERSION}/companies/${companyId}/vendors`;
+    const items = await procoreFetchAll(endpoint, { per_page: 100 });
+    return items;
+}
+
 // ============================================
 // HANDLERS POR ROTA
 // ============================================
@@ -706,7 +892,9 @@ async function handleStatus(req, res) {
         const now = Date.now();
 
         return res.json({
-            connected: !!data.access_token,
+            connected: !!data.access_token && !data.needs_reauth,
+            needs_reauth: !!data.needs_reauth,
+            last_refresh_error: data.last_refresh_error || null,
             expires_at: expiresAtMs ? new Date(expiresAtMs).toISOString() : null,
             expires_in_seconds: expiresAtMs ? Math.max(0, Math.floor((expiresAtMs - now) / 1000)) : 0,
             connected_at: data.connected_at?.toMillis?.()
@@ -1042,7 +1230,7 @@ async function runFullSync({ trigger = 'manual' } = {}) {
         // TODO (Phase 2): filtrar só ownership_type === 'owned' antes de persistir.
         // Maquinas Rented/Subcontracted não têm sensor RFID e não devem gerar sessões na PWA.
         // Ex: const ownedEquipment = equipment.filter(e => e.ownership_type === 'owned');
-        summary.equipment = await persistCollection('equipment', equipment);
+        summary.equipment = await persistCollection('equipment', equipment, 'id', { mirror: true });
     } catch (err) {
         console.error(`[procoreSync:${trigger}] equipment error:`, err);
         summary.errors.equipment = err.message;
@@ -1549,6 +1737,12 @@ module.exports = {
     createTimecardEntry,
     createDailyLog,
     createCostEntry,
+    // Sprint 3 — Deep Integration
+    createObservation,
+    updateObservation,
+    createEquipmentLog,
+    getCostCodes,
+    getVendors,
     // Re-exportar os secrets para que index.js os possa associar a outras functions:
     PROCORE_CLIENT_ID,
     PROCORE_CLIENT_SECRET,

@@ -195,19 +195,47 @@ async function projectProcoreToPwa() {
     // ── 1. Equipment → machine stubs ─────────────────────────────────────────
     const eqSnap = await firestore.collection(EQUIPMENT_COLLECTION).get();
 
+    // Pre-load all existing machines for name-based dedup (mach-* docs take precedence)
+    const machinesSnap = await firestore.collection(MACHINES_PATH).get();
+    const existingByProcoreId = new Map();
+    const existingByName = new Map();
+    for (const mDoc of machinesSnap.docs) {
+        const md = mDoc.data();
+        if (md.procoreEquipmentId) existingByProcoreId.set(String(md.procoreEquipmentId), mDoc);
+        const normName = normalizeStr(md.name || '');
+        if (normName && !mDoc.id.startsWith('procore_')) existingByName.set(normName, mDoc);
+    }
+
+    const activeProcoreIds = new Set();
+
     for (const doc of eqSnap.docs) {
         const e = doc.data();
         if (!e.id) continue;
 
-        const machineId = `procore_${e.id}`;
-        const machineRef = firestore.doc(`${MACHINES_PATH}/${machineId}`);
+        // Skip equipment removed from Procore (marked by persistCollection mirror mode)
+        if (e._removed_at) continue;
+        // Skip equipment renamed [REMOVIDO] (legacy workaround — no longer needed once deleted from Procore)
+        if (String(e.name || '').includes('[REMOVIDO]')) continue;
+
+        activeProcoreIds.add(String(e.id));
+
+        // Resolve target doc: prefer existing mach-* by procoreId, then by name, else new stub
+        let machineRef;
+        if (existingByProcoreId.has(String(e.id))) {
+            machineRef = existingByProcoreId.get(String(e.id)).ref;
+        } else {
+            const normName = normalizeStr(e.name || '');
+            if (normName && existingByName.has(normName)) {
+                machineRef = existingByName.get(normName).ref;
+            } else {
+                machineRef = firestore.doc(`${MACHINES_PATH}/procore_${e.id}`);
+            }
+        }
         const existing = await machineRef.get();
 
-        // Extrair RFID reader ID do Procore custom field (se já foi emparelhado antes)
         const rfidFromProcore = extractCustomField(e, 'rfidReaderId', customFieldIds.equipment);
         const isPaired = !!rfidFromProcore;
 
-        // Campos que se actualizam em TODOS os syncs (info do catálogo Procore)
         const procoreFields = {
             procoreEquipmentId: e.id,
             procoreEquipmentNumber: e.equipment_number || e.name || null,
@@ -217,14 +245,12 @@ async function projectProcoreToPwa() {
             procoreSyncedAt: serverTimestamp(),
         };
 
-        // Se o RFID já está no Procore, actualiza o pairing na PWA
         if (rfidFromProcore) {
             procoreFields.rfidReaderId = rfidFromProcore;
             procoreFields.pairingStatus = 'paired';
         }
 
         if (!existing.exists) {
-            // Stub inicial — campos operacionais ficam a zero para o admin completar
             const categoryPt = mapCategory(e.category, categoryMap);
             const stub = {
                 ...procoreFields,
@@ -242,11 +268,38 @@ async function projectProcoreToPwa() {
             };
             await machineRef.set(stub);
             machinesCreated++;
-            console.log(`[projector] machine stub criado: ${stub.name} (${machineId})`);
+            console.log(`[projector] machine stub criado: ${stub.name} (${machineRef.id})`);
         } else {
-            // Actualizar apenas campos do catálogo Procore — nunca tocar em campos operacionais
             await machineRef.set(procoreFields, { merge: true });
             machinesUpdated++;
+        }
+    }
+
+    // ── 1b. Cleanup machines whose Procore equipment was deleted ─────────────
+    let machinesArchived = 0;
+    let machinesDeleted = 0;
+    for (const mDoc of machinesSnap.docs) {
+        const md = mDoc.data();
+        if (!md.procoreEquipmentId) continue;
+        if (activeProcoreIds.has(String(md.procoreEquipmentId))) continue;
+
+        // This machine's Procore counterpart is gone
+        if (mDoc.id.startsWith('procore_')) {
+            // Pure stub — delete it
+            await mDoc.ref.delete();
+            machinesDeleted++;
+            console.log(`[projector] machine stub removido (Procore deletou): ${md.name} (${mDoc.id})`);
+        } else {
+            // Merged mach-* doc — keep operational data, flag as disconnected from Procore
+            await mDoc.ref.set({
+                procoreEquipmentId: admin.firestore.FieldValue.delete(),
+                procoreEquipmentNumber: admin.firestore.FieldValue.delete(),
+                procoreCategoryRaw: admin.firestore.FieldValue.delete(),
+                pairingStatus: 'procore_removed',
+                procoreRemovedAt: serverTimestamp(),
+            }, { merge: true });
+            machinesArchived++;
+            console.log(`[projector] machine desligada do Procore: ${md.name} (${mDoc.id})`);
         }
     }
 
@@ -299,11 +352,12 @@ async function projectProcoreToPwa() {
 
     console.log(
         `[projector] done — obras: +${obrasCreated} created, ${obrasUpdated} updated | ` +
-        `machines: +${machinesCreated} created, ${machinesUpdated} updated | ` +
+        `machines: +${machinesCreated} created, ${machinesUpdated} updated, ` +
+        `${machinesArchived} archived, ${machinesDeleted} stubs deleted | ` +
         `operators: +${operatorsCreated} pending, ${operatorsUpdated} updated`
     );
 
-    return { obrasCreated, obrasUpdated, machinesCreated, machinesUpdated, operatorsCreated, operatorsUpdated };
+    return { obrasCreated, obrasUpdated, machinesCreated, machinesUpdated, machinesArchived, machinesDeleted, operatorsCreated, operatorsUpdated };
 }
 
 module.exports = { projectProcoreToPwa, mapCategory, DEFAULT_CATEGORY_MAP };

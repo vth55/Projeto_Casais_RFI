@@ -15,7 +15,14 @@ module.exports = {
   PER_PAGE:               100,
   MAX_PAGES:              50,
   FIRESTORE_BATCH_LIMIT:  400,
-  REFRESH_SAFETY_MARGIN_MS: 5 * 60 * 1000,
+  // Margem para refresh antecipado: 15min antes de expirar tenta refresh.
+  // Maior do que o tempo entre crons (procoreScheduledSync = 1h) seria errado;
+  // 15min é confortável (token TTL 2h, próxima cron 1h depois).
+  REFRESH_SAFETY_MARGIN_MS: 15 * 60 * 1000,
+
+  // Lock para evitar refresh concorrente (race condition que invalida refresh_token).
+  REFRESH_LOCK_TTL_MS:      30 * 1000,
+  REFRESH_MAX_RETRIES:      3,
 
   MAX_RETRY_ATTEMPTS:     3,
   RETRY_BACKOFF_MINUTES:  [5, 20, 60],
