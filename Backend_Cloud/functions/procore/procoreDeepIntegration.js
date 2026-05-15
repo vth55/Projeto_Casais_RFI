@@ -30,6 +30,10 @@ const {
     getCostCodes,
     getVendors,
     archiveEquipment,
+    createEquipment,
+    updateEquipment,
+    associateEquipmentToProject,
+    createDirectoryUser,
     getValidAccessToken: _getToken,
 } = require('./procoreBridge');
 
@@ -42,6 +46,7 @@ const SESSIONS_PATH     = `${BASE}/sessions`;
 const MACHINES_PATH     = `${BASE}/machines`;
 const OBRAS_PATH        = `${BASE}/obras`;
 const AVARIAS_PATH      = `${BASE}/avarias`;
+const OPERATORS_PATH    = `${BASE}/operators`;
 const WORK_ORDERS_PATH  = `${BASE}/workOrders`;
 const SYNC_QUEUE_PATH   = `${BASE}/procoreSyncQueue`;
 const PROCORE_CACHE_PATH = `${BASE}/procore_cache`;
@@ -183,9 +188,12 @@ exports.procoreWebhookReceiver = onRequest(
         const secret = process.env.PROCORE_WEBHOOK_SECRET;
         if (secret) {
             const signature = req.headers['x-procore-signature'] || req.headers['x-webhook-signature'] || '';
-            const rawBody   = JSON.stringify(req.body); // Express already parsed JSON — re-stringify
-            const expected  = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-            if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+            const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body);
+            const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+            // timingSafeEqual exige buffers do mesmo tamanho — comparar via utf8 strings
+            const sigBuf = Buffer.from(signature, 'utf8');
+            const expBuf = Buffer.from(expected, 'utf8');
+            if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
                 console.warn('[webhook] HMAC mismatch — rejecting');
                 return res.status(401).json({ error: 'Invalid signature' });
             }
@@ -209,9 +217,10 @@ exports.procoreWebhookReceiver = onRequest(
 
 async function processWebhookEvent(resourceName, eventType, payload) {
     const now = admin.firestore.Timestamp.now();
+    // Procore envia event_type em UPPERCASE (CREATE, UPDATE, DELETE)
+    const evt = String(eventType || '').toUpperCase();
 
-    if (resourceName === 'Equipment' && eventType === 'created') {
-        // Criar stub de máquina em Firestore se não existe
+    if (resourceName === 'Equipment' && evt === 'CREATE') {
         const eqId = payload.id;
         if (!eqId) return;
         const existing = await db().collection(MACHINES_PATH)
@@ -227,10 +236,10 @@ async function processWebhookEvent(resourceName, eventType, payload) {
             createdAt: now,
             updatedAt: now,
         });
-        console.log(`[webhook] Equipment.created → stub criado procoreEquipmentId=${eqId}`);
+        console.log(`[webhook] Equipment.CREATE → stub criado procoreEquipmentId=${eqId}`);
     }
 
-    if (resourceName === 'Equipment' && eventType === 'updated') {
+    if (resourceName === 'Equipment' && evt === 'UPDATE') {
         const eqId = payload.id;
         if (!eqId) return;
         const snap = await db().collection(MACHINES_PATH)
@@ -241,12 +250,35 @@ async function processWebhookEvent(resourceName, eventType, payload) {
             updatedAt: now,
             ...(payload.name ? { name: payload.name } : {}),
         });
-        console.log(`[webhook] Equipment.updated id=${eqId}`);
+        console.log(`[webhook] Equipment.UPDATE id=${eqId}`);
     }
 
-    if (resourceName === 'Project' && eventType === 'created') {
+    if (resourceName === 'Equipment' && evt === 'DELETE') {
+        const eqId = payload.id;
+        if (!eqId) return;
+        const snap = await db().collection(MACHINES_PATH)
+            .where('procoreEquipmentId', '==', eqId).limit(1).get();
+        if (snap.empty) return;
+        const doc = snap.docs[0];
+        if (doc.id.startsWith('procore_')) {
+            await doc.ref.delete();
+            console.log(`[webhook] Equipment.DELETE → stub ${doc.id} apagado`);
+        } else {
+            await doc.ref.set({
+                procoreEquipmentId: admin.firestore.FieldValue.delete(),
+                pairingStatus: 'procore_removed',
+                procoreRemovedAt: now,
+            }, { merge: true });
+            console.log(`[webhook] Equipment.DELETE → ${doc.id} marcado procore_removed`);
+        }
+    }
+
+    if (resourceName === 'Project' && evt === 'CREATE') {
         const projectId = payload.id;
         if (!projectId) return;
+        const existing = await db().collection(OBRAS_PATH)
+            .where('procoreProjectId', '==', projectId).limit(1).get();
+        if (!existing.empty) return;
         await db().collection(OBRAS_PATH).add({
             name: payload.name || `Projecto Procore #${projectId}`,
             procoreProjectId: projectId,
@@ -256,7 +288,58 @@ async function processWebhookEvent(resourceName, eventType, payload) {
             createdAt: now,
             updatedAt: now,
         });
-        console.log(`[webhook] Project.created → obra criada procoreProjectId=${projectId}`);
+        console.log(`[webhook] Project.CREATE → obra criada procoreProjectId=${projectId}`);
+    }
+
+    if (resourceName === 'Project' && evt === 'UPDATE') {
+        const projectId = payload.id;
+        if (!projectId) return;
+        const snap = await db().collection(OBRAS_PATH)
+            .where('procoreProjectId', '==', projectId).limit(1).get();
+        if (snap.empty) return;
+        await snap.docs[0].ref.update({
+            ...(payload.name ? { name: payload.name } : {}),
+            lastSyncSource: 'procore_webhook',
+            updatedAt: now,
+        });
+        console.log(`[webhook] Project.UPDATE id=${projectId}`);
+    }
+
+    if (resourceName === 'Directory' && evt === 'CREATE') {
+        const userId = payload.id;
+        if (!userId) return;
+        const existing = await db().collection(OPERATORS_PATH)
+            .where('procoreUserId', '==', String(userId)).limit(1).get();
+        if (!existing.empty) return;
+        const fullName = [payload.first_name, payload.last_name].filter(Boolean).join(' ')
+            || payload.name || `Utilizador Procore #${userId}`;
+        await db().collection(OPERATORS_PATH).add({
+            name: fullName,
+            procoreUserId: String(userId),
+            email: payload.email_address || null,
+            role: 'operador',
+            source: 'procore_webhook',
+            pairingStatus: 'paired',
+            createdAt: now,
+            updatedAt: now,
+        });
+        console.log(`[webhook] Directory.CREATE → operator criado procoreUserId=${userId}`);
+    }
+
+    if (resourceName === 'Directory' && evt === 'UPDATE') {
+        const userId = payload.id;
+        if (!userId) return;
+        const snap = await db().collection(OPERATORS_PATH)
+            .where('procoreUserId', '==', String(userId)).limit(1).get();
+        if (snap.empty) return;
+        const fullName = [payload.first_name, payload.last_name].filter(Boolean).join(' ');
+        await snap.docs[0].ref.update({
+            ...(fullName ? { name: fullName } : {}),
+            ...(payload.email_address ? { email: payload.email_address } : {}),
+            lastSyncSource: 'procore_webhook',
+            updatedAt: now,
+        });
+        console.log(`[webhook] Directory.UPDATE id=${userId}`);
     }
 }
 
@@ -466,6 +549,17 @@ async function executeQueueItem(item) {
     } else if (operation === 'archive_equipment') {
         const result = await archiveEquipment(payload.procoreEquipmentId);
         if (!result.success) throw new Error(result.error || 'archive_equipment failed');
+    } else if (operation === 'create_equipment') {
+        const result = await createEquipment({ name: payload.name });
+        const procoreId = result.data?.id;
+        if (procoreId && payload.machineId) {
+            await db().doc(`${MACHINES_PATH}/${payload.machineId}`).update({
+                procoreEquipmentId: procoreId,
+                pairingStatus: 'paired',
+                lastSyncSource: 'pwa_created',
+                updatedAt: admin.firestore.Timestamp.now(),
+            });
+        }
     } else {
         throw new Error(`Operação desconhecida: ${operation}`);
     }
@@ -593,6 +687,157 @@ exports.onMachineDeletedToProcore = onDocumentDeleted(
         } catch (err) {
             console.error('[onMachineDeleted] erro:', err.message);
             await enqueueSync('archive_equipment', { procoreEquipmentId, machineId }, null);
+        }
+
+        return null;
+    }
+);
+
+// ─── PWA → Procore: máquina criada na PWA → criar equipamento no Procore ──────
+
+exports.onMachineCreatedToProcore = onDocumentCreated(
+    {
+        document: `artifacts/casais-rfid/public/data/machines/{machineId}`,
+        secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
+        region: 'us-central1',
+    },
+    async (event) => {
+        const machine = event.data.data();
+        const machineId = event.params.machineId;
+
+        if (!machine || !machine.name) return null;
+        // Stubs vindos do Procore não precisam de ser re-criados
+        if (machineId.startsWith('procore_')) return null;
+        if (machine.source === 'procore' || machine.source === 'procore_webhook') return null;
+        // Já emparelhado (criado pelo sync) — não duplicar
+        if (machine.procoreEquipmentId) return null;
+
+        if (!(await isProcoreConnected())) return null;
+
+        console.log(`[onMachineCreated] nova máquina ${machineId} (${machine.name}) → criar no Procore`);
+
+        try {
+            // Ler defaults da config (status, category, type obrigatórios na API v2.1)
+            const cfgSnap = await db().doc(INTEGRATION_PATH).get();
+            const defaults = cfgSnap.data()?.equipmentDefaults || {};
+            const idNum = `PWA-${Date.now().toString(36).toUpperCase()}`;
+            const payload = {
+                name: machine.name,
+                identification_number: idNum,
+                ownership: 'owned',
+                ...(defaults.status_id   ? { status_id:   defaults.status_id }   : {}),
+                ...(defaults.category_id ? { category_id: defaults.category_id } : {}),
+                ...(defaults.type_id     ? { type_id:     defaults.type_id }     : {}),
+            };
+            const result = await createEquipment(payload);
+            const procoreId = result.data?.id;
+            if (!procoreId) throw new Error('Procore não devolveu ID');
+
+            await db().doc(`${MACHINES_PATH}/${machineId}`).update({
+                procoreEquipmentId: procoreId,
+                pairingStatus: 'paired',
+                lastSyncSource: 'pwa_created',
+                updatedAt: admin.firestore.Timestamp.now(),
+            });
+            console.log(`[onMachineCreated] Procore equipment ${procoreId} criado para ${machineId}`);
+
+            // Associar ao projecto se estiver numa obra
+            const obraId = machine.localizacao?.obraId;
+            if (obraId && obraId !== 'estaleiro') {
+                const procoreProjectId = await getProcoreProjectId(obraId);
+                if (procoreProjectId) {
+                    await associateEquipmentToProject(procoreId, procoreProjectId);
+                    console.log(`[onMachineCreated] associado ao projecto ${procoreProjectId}`);
+                }
+            }
+        } catch (err) {
+            console.error(`[onMachineCreated] erro: ${err.message}`);
+            await enqueueSync('create_equipment', { machineId, name: machine.name }, null);
+        }
+
+        return null;
+    }
+);
+
+// ─── PWA → Procore: nome de máquina alterado na PWA → actualizar no Procore ───
+
+exports.onMachineUpdatedToProcore = onDocumentUpdated(
+    {
+        document: `artifacts/casais-rfid/public/data/machines/{machineId}`,
+        secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
+        region: 'us-central1',
+    },
+    async (event) => {
+        const before = event.data.before.data();
+        const after  = event.data.after.data();
+        const machineId = event.params.machineId;
+
+        if (!after.procoreEquipmentId) return null;
+        // Evitar loop: ignorar updates vindos do sync/webhook
+        if (after.lastSyncSource === 'procore_webhook' || after.lastSyncSource === 'procore_sync') return null;
+        // Só actuar se o nome mudou
+        if (before.name === after.name) return null;
+
+        if (!(await isProcoreConnected())) return null;
+
+        console.log(`[onMachineUpdated] ${machineId}: "${before.name}" → "${after.name}"`);
+
+        try {
+            await updateEquipment(after.procoreEquipmentId, { name: after.name });
+            console.log(`[onMachineUpdated] Procore equipment ${after.procoreEquipmentId} actualizado`);
+        } catch (err) {
+            console.error(`[onMachineUpdated] erro: ${err.message}`);
+        }
+
+        return null;
+    }
+);
+
+// ─── PWA → Procore: operador criado na PWA → criar no Procore Directory ──────
+
+exports.onOperatorCreatedToProcore = onDocumentCreated(
+    {
+        document: `${OPERATORS_PATH}/{operatorId}`,
+        secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
+        region: 'us-central1',
+    },
+    async (event) => {
+        const op = event.data.data();
+        const operatorId = event.params.operatorId;
+
+        if (!op || !op.name) return null;
+        if (op.source === 'procore' || op.source === 'procore_webhook') return null;
+        if (op.procoreUserId) return null;
+
+        if (!(await isProcoreConnected())) return null;
+
+        const nameParts = op.name.trim().split(/\s+/);
+        const firstName = nameParts[0] || op.name;
+        const lastName  = nameParts.slice(1).join(' ') || '';
+        // Procore exige email — gerar placeholder se ausente
+        const email = op.email || `${operatorId.toLowerCase().replace(/[^a-z0-9]/g, '')}@demo.casais.pt`;
+
+        console.log(`[onOperatorCreated] ${operatorId} (${op.name}) → criar no Procore Directory`);
+
+        try {
+            const user = await createDirectoryUser({ firstName, lastName, email });
+            const procoreId = user?.id;
+            if (!procoreId) throw new Error('Procore não devolveu ID do utilizador');
+
+            await db().doc(`${OPERATORS_PATH}/${operatorId}`).update({
+                procoreUserId: String(procoreId),
+                pairingStatus: 'paired',
+                lastSyncSource: 'pwa_created',
+                updatedAt: admin.firestore.Timestamp.now(),
+            });
+            console.log(`[onOperatorCreated] Procore user ${procoreId} criado para ${operatorId}`);
+        } catch (err) {
+            console.error(`[onOperatorCreated] erro: ${err.message}`);
+            await db().doc(`${OPERATORS_PATH}/${operatorId}`).update({
+                pairingStatus: 'unpairable',
+                pairingError: err.message.slice(0, 200),
+                updatedAt: admin.firestore.Timestamp.now(),
+            }).catch(() => {});
         }
 
         return null;

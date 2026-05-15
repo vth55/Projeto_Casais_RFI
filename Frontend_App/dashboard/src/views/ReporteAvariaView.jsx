@@ -343,12 +343,20 @@ const ReporteAvariaView = () => {
   useEffect(() => {
     const db = getFirestore();
     getDocs(collection(db, `${FIRESTORE_BASE}/machines`)).then(snap => {
-      const list = snap.docs.map(d => {
-        const data = d.data();
-        const code = data.equipmentCode || d.id;
-        const name = data.name || d.id;
-        return { id: d.id, label: `${code} — ${name}` };
-      }).sort((a, b) => a.label.localeCompare(b.label));
+      const list = snap.docs
+        .filter(d => {
+          if (d.id.startsWith('procore_')) return false;
+          const data = d.data();
+          if (data._removed_at) return false;
+          if (String(data.name || '').includes('[REMOVIDO]')) return false;
+          return true;
+        })
+        .map(d => {
+          const data = d.data();
+          const code = data.equipmentCode || d.id;
+          const name = data.name || d.id;
+          return { id: d.id, label: `${code} — ${name}` };
+        }).sort((a, b) => a.label.localeCompare(b.label));
       setMachines(list);
     }).catch(() => {}).finally(() => setLoadingMachines(false));
   }, []);

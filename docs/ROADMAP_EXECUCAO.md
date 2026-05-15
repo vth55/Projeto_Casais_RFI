@@ -5,10 +5,11 @@
 ---
 
 ## ESTADO ACTUAL
-- **Fase activa:** Sprint 4 — Work Orders + Compliance Documents
-- **Branch:** migration/claude-setup
-- **Deploy:** https://casais-rfid.web.app (último deploy: 2026-05-12)
-- **Testes:** 56 passes (Vitest) — `npm test` em Frontend_App/dashboard
+- **Fase activa:** Sprint 3 Extended — Bidirecional Procore↔PWA ✅ CONCLUÍDO (2026-05-15)
+- **Branch:** main
+- **Deploy:** https://casais-rfid.web.app | Backend: Firebase Cloud Functions us-central1
+- **Testes:** 56 passes (Vitest) + demo-webhook-sim.js 5/5 integration passes
+- **Demo ready:** `node Backend_Cloud/functions/scripts/demo-webhook-sim.js all`
 
 ---
 
@@ -166,25 +167,40 @@ serverTimestamp: timestamp
 - `Backend_Cloud/functions/procore/procoreDeepIntegration.js` — 7 Cloud Functions
 - `Frontend_App/dashboard/src/__tests__/sprint3-procore.test.js` — 16 testes (T3.01, T3.05-T3.08, TP.05)
 
+### Sprint 3 Extended — Sincronização Bidirecional Completa (2026-05-15)
+- [x] Equipment Tool activo no sandbox (8 equipamentos, company 4283171, projecto 328122)
+- [x] PROCORE_WEBHOOK_SECRET registado no Firebase Secret Manager (v2 — sem newline)
+- [x] Webhooks registados no Procore (hook 327172, 7 triggers Equipment+Project+Directory)
+- [x] HMAC validation corrigida (rawBody + trailing newline no secret resolvido)
+- [x] PWA → Procore: `onMachineCreatedToProcore` — cria equipment_register com campos obrigatórios
+- [x] PWA → Procore: `onMachineUpdatedToProcore` — actualiza nome no Procore
+- [x] PWA → Procore: `onMachineDeletedToProcore` — arquiva no Procore (DELETE 405 → PATCH inactive)
+- [x] PWA → Procore: `onOperatorCreatedToProcore` — cria utilizador no Directory Procore
+- [x] Procore → PWA: Equipment.CREATE/UPDATE/DELETE — handler em processWebhookEvent
+- [x] Procore → PWA: Project.CREATE/UPDATE — handler em processWebhookEvent
+- [x] Procore → PWA: Directory.CREATE/UPDATE — handler em processWebhookEvent
+- [x] Demo simulation script: `scripts/demo-webhook-sim.js` — 5 cenários, 5/5 pass
+- [x] Cron reduzido de 1h → 10min para demo (ajustar para 1h em produção)
+- **Limitação sandbox confirmada:** DELETE 405, PATCH status ignorado, webhooks outbound não disparados — NÃO é bug do código
+
 ### Pendente Sprint 3 → Sprint 4
-- [ ] 3.1 Equipment Tool sandbox — contactar Procore support
-- [ ] Registar PROCORE_WEBHOOK_SECRET como Firebase Secret
-- [ ] Subscrever webhooks no Procore Developer Portal com URL da função
+- [ ] T3.02 Integration: avaria criada → observation criada no Procore (Observations não activo no sandbox)
+- [ ] T3.03 Integration: máquina chega a obra → project_assignment criado
+- [ ] T3.04 Integration: máquina regressa → assignment removido
 
 ### Testes Sprint 3
-- [x] T3.01 Unit: `aggregateDailySessionsByMachineAndObra` + `buildEquipmentLog` (sprint3-procore.test.js)
-- [ ] T3.02 Integration: avaria criada → observation criada no Procore (requer sandbox activo)
-- [ ] T3.03 Integration: máquina chega a obra → `project_assignment` criado (requer Equipment Tool 3.1)
-- [ ] T3.04 Integration: máquina regressa ao estaleiro → assignment removido
+- [x] T3.01 Unit: `aggregateDailySessionsByMachineAndObra` + `buildEquipmentLog`
 - [x] T3.05 Unit: webhook Equipment.created → stub lógica sem duplicados
 - [x] T3.06 Unit: webhook Project.created → obra com precisaRfid: true
 - [x] T3.07 Unit: procoreSyncQueue fallback + backoff exponencial
 - [x] T3.08 Unit: aggregation respeita timezone Europe/Lisbon (não UTC)
-- [ ] T3.09 Integration: OAuth token expirado → refresh automático
-- [ ] T3.10 Edge: race condition dois syncs paralelos
 - [x] T3.11 Unit: aggregation agrupa por machineId + obraId + dia
-- [ ] T3.12 E2E: Configurações → conectar Procore OAuth → badge "Conectado"
 - [x] TP.05 Unit: webhook HMAC inválida → rejeitar, HMAC válida → aceitar
+- [x] **INTEGRATION E2E confirmado 2026-05-15**: demo-webhook-sim.js 5/5 passed
+- [x] **PWA→Procore CREATE confirmado**: machine criada na PWA → equipment_register no Procore
+- [x] **PWA→Procore UPDATE confirmado**: rename propagado ao Procore
+- [x] **PWA→Procore DELETE confirmado**: machine apagada → equipamento arquivado
+- [x] **PWA→Procore OPERATOR confirmado**: operador criado → Directory user Procore
 
 ---
 

@@ -9,7 +9,12 @@
       "Grep",
       "WebFetch",
       "Task",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Read(//c/Users/vitor/OneDrive/�rea de Trabalho/Projeto_Casais_RFI/Frontend_App/dashboard/**)",
+      "mcp__playwright__browser_select_option",
+      "mcp__playwright__browser_handle_dialog",
+      "PowerShell($secret = -join \\(\\(65..90\\) + \\(97..122\\) + \\(48..57\\) | Get-Random -Count 40 | ForEach-Object {[char]$_}\\); Write-Output \"Secret: $secret\"; Set-Content -Path \"$env:TEMP\\\\webhook_secret.txt\" -Value $secret -NoNewline -Encoding ASCII)",
+      "Read(//c/Users/vitor/OneDrive/�rea de Trabalho/Projeto_Casais_RFI/Backend_Cloud/functions/**)"
     ],
     "deny": []
   }

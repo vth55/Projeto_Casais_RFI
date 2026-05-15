@@ -168,3 +168,10 @@ Backend_Cloud/public/assets/
 # PLAYWRIGHT MCP — ficheiros de sessão temporários
 # ============================================
 .playwright-mcp/
+
+# ============================================
+# SCRIPTS DE RESET — ficheiros sensíveis
+# ============================================
+Backend_Cloud/functions/scripts/tests/.procore_state.json
+Backend_Cloud/functions/scripts/node_modules/
+_prints/

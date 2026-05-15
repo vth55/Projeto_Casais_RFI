@@ -1483,6 +1483,9 @@ const {
     procoreTokenRefresh,
     pullProcoreCache,
     onMachineDeletedToProcore,
+    onMachineCreatedToProcore,
+    onMachineUpdatedToProcore,
+    onOperatorCreatedToProcore,
 } = require('./procore/procoreDeepIntegration');
 
 exports.equipmentLogsDailyAgg      = equipmentLogsDailyAgg;
@@ -1493,3 +1496,6 @@ exports.procoreSyncQueueRun        = procoreSyncQueueRun;
 exports.procoreTokenRefresh        = procoreTokenRefresh;
 exports.pullProcoreCache           = pullProcoreCache;
 exports.onMachineDeletedToProcore  = onMachineDeletedToProcore;
+exports.onMachineCreatedToProcore  = onMachineCreatedToProcore;
+exports.onMachineUpdatedToProcore  = onMachineUpdatedToProcore;
+exports.onOperatorCreatedToProcore = onOperatorCreatedToProcore;

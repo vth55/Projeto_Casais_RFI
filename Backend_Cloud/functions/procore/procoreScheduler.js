@@ -70,12 +70,12 @@ function formatDate(date) {
 }
 
 // ============================================
-// CRON 1 — Sync horário (catálogo Procore → Firestore)
+// CRON 1 — Sync Procore → Firestore (10 min para demo; ajustar para 1h em produção)
 // ============================================
 
 const procoreScheduledSync = onSchedule(
     {
-        schedule: 'every 1 hours',
+        schedule: 'every 10 minutes',
         timeZone: 'Europe/Lisbon',
         secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
         region: 'us-central1',

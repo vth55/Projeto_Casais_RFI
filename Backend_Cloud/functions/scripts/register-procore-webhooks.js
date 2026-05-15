@@ -1,10 +1,12 @@
 /**
  * Regista webhooks no Procore para o sandbox 4283171
  *
+ * Fluxo correcto da API v1.0:
+ *   1. POST /webhooks/hooks → cria o hook (URL destino)
+ *   2. POST /webhooks/hooks/{id}/triggers → associa cada evento
+ *
  * Uso:
  *   node scripts/register-procore-webhooks.js [--dry-run]
- *
- * Requer token válido no Firestore (integrations/procore.access_token)
  */
 
 const admin = require('firebase-admin');
@@ -19,10 +21,15 @@ const INTEGRATION_PATH = 'artifacts/casais-rfid/public/data/integrations/procore
 const COMPANY_ID = '4283171';
 const WEBHOOK_URL = 'https://us-central1-casais-rfid.cloudfunctions.net/procoreWebhookReceiver';
 
+// Procore usa "event_type" no payload e nos triggers (não "action")
 const HOOK_TRIGGERS = [
-    { resource: 'Equipment', actions: ['create', 'update', 'delete'] },
-    { resource: 'Project', actions: ['create', 'update'] },
-    { resource: 'Directory', actions: ['create', 'update'] },
+    { resource_name: 'Equipment', event_type: 'create' },
+    { resource_name: 'Equipment', event_type: 'update' },
+    { resource_name: 'Equipment', event_type: 'delete' },
+    { resource_name: 'Project',   event_type: 'create' },
+    { resource_name: 'Project',   event_type: 'update' },
+    { resource_name: 'Directory', event_type: 'create' },
+    { resource_name: 'Directory', event_type: 'update' },
 ];
 
 function apiCall(method, path, token, body) {
@@ -63,47 +70,71 @@ async function main() {
     }
     const token = snap.data().access_token;
 
-    // Listar hooks existentes
+    // ── Passo 1: Listar hooks existentes ──────────────────────
+    console.log('\n[webhooks] === Passo 1: Listar hooks ===');
     const listRes = await apiCall('GET', `/rest/v1.0/webhooks/hooks?company_id=${COMPANY_ID}`, token);
-    console.log(`[webhooks] hooks existentes: ${JSON.stringify(listRes.data)}`);
+    console.log(`[webhooks] GET hooks → ${listRes.status}: ${JSON.stringify(listRes.data).slice(0, 500)}`);
 
     const existing = Array.isArray(listRes.data) ? listRes.data : [];
-    const existingUrls = existing.map(h => h.delivery_url || h.url);
+    let hookId = existing.find(h => h.destination_url === WEBHOOK_URL || h.delivery_url === WEBHOOK_URL)?.id;
 
-    for (const trigger of HOOK_TRIGGERS) {
-        for (const action of trigger.actions) {
-            const alreadyRegistered = existing.some(
-                h => (h.delivery_url || h.url) === WEBHOOK_URL &&
-                     h.resource_name === trigger.resource &&
-                     h.action === action
+    // ── Passo 2: Criar hook se não existir ────────────────────
+    if (!hookId) {
+        console.log('\n[webhooks] === Passo 2: Criar hook ===');
+        if (!DRY_RUN) {
+            const createRes = await apiCall('POST', `/rest/v1.0/webhooks/hooks?company_id=${COMPANY_ID}`, token, {
+                hook: {
+                    destination_url: WEBHOOK_URL,
+                    company_id: parseInt(COMPANY_ID),
+                    api_version: 'v2.0',
+                },
+            });
+            console.log(`[webhooks] POST hooks → ${createRes.status}: ${JSON.stringify(createRes.data).slice(0, 300)}`);
+            hookId = createRes.data?.id;
+        } else {
+            console.log('[webhooks] [DRY] Criaria hook novo');
+            hookId = 'DRY_HOOK_ID';
+        }
+    } else {
+        console.log(`[webhooks] Hook existente: id=${hookId}`);
+    }
+
+    if (!hookId) {
+        console.error('[webhooks] Não foi possível obter/criar hook ID — abortando.');
+        process.exit(1);
+    }
+
+    // ── Passo 3: Listar triggers do hook ──────────────────────
+    console.log(`\n[webhooks] === Passo 3: Listar triggers do hook ${hookId} ===`);
+    const triggersRes = await apiCall('GET', `/rest/v1.0/webhooks/hooks/${hookId}/triggers?company_id=${COMPANY_ID}`, token);
+    console.log(`[webhooks] GET triggers → ${triggersRes.status}: ${JSON.stringify(triggersRes.data).slice(0, 500)}`);
+    const existingTriggers = Array.isArray(triggersRes.data) ? triggersRes.data : [];
+
+    // ── Passo 4: Criar triggers em falta ──────────────────────
+    console.log(`\n[webhooks] === Passo 4: Criar triggers em falta ===`);
+    for (const trig of HOOK_TRIGGERS) {
+        const exists = existingTriggers.some(
+            t => t.resource_name === trig.resource_name && t.action === trig.action
+        );
+        if (exists) {
+            console.log(`[webhooks] SKIP (existe): ${trig.resource_name}.${trig.action}`);
+            continue;
+        }
+
+        console.log(`[webhooks] ${DRY_RUN ? '[DRY] ' : ''}CREATE trigger: ${trig.resource_name}.${trig.action}`);
+        if (!DRY_RUN) {
+            const r = await apiCall(
+                'POST',
+                `/rest/v1.0/webhooks/hooks/${hookId}/triggers?company_id=${COMPANY_ID}`,
+                token,
+                { trigger: { resource_name: trig.resource_name, event_type: trig.event_type } }
             );
-            if (alreadyRegistered) {
-                console.log(`[webhooks] SKIP (already exists): ${trigger.resource}.${action}`);
-                continue;
-            }
-
-            console.log(`[webhooks] ${DRY_RUN ? '[DRY] ' : ''}CREATE: ${trigger.resource}.${action} → ${WEBHOOK_URL}`);
-
-            if (!DRY_RUN) {
-                const res = await apiCall('POST', `/rest/v1.0/webhooks/hooks?company_id=${COMPANY_ID}`, token, {
-                    hook: {
-                        destination_url: WEBHOOK_URL,
-                        resource_name: trigger.resource,
-                        action,
-                        company_id: parseInt(COMPANY_ID),
-                        api_version: 'v1.0',
-                    },
-                });
-                if (res.status >= 200 && res.status < 300) {
-                    console.log(`[webhooks]   created id=${res.data?.id || '?'}`);
-                } else {
-                    console.error(`[webhooks]   FAILED ${res.status}:`, JSON.stringify(res.data));
-                }
-            }
+            const ok = r.status >= 200 && r.status < 300;
+            console.log(`[webhooks]   → ${r.status} ${ok ? 'OK' : 'FAILED'}: ${JSON.stringify(r.data).slice(0, 200)}`);
         }
     }
 
-    console.log('[webhooks] done');
+    console.log('\n[webhooks] done');
 }
 
 main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });

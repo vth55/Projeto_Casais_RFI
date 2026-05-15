@@ -491,6 +491,26 @@ async function createEquipment(equipmentData) {
     return { data: result.data, endpoint: 'v2.1/equipment_register' };
 }
 
+async function updateEquipment(equipmentId, fieldsToUpdate) {
+    const companyId = process.env.PROCORE_COMPANY_ID;
+    const result = await procoreFetch(
+        `/rest/v2.1/companies/${companyId}/equipment_register/${equipmentId}`,
+        { method: 'PATCH', body: { equipment: fieldsToUpdate } }
+    );
+    console.log(`[procoreBridge] equipment updated (v2.1) id=${equipmentId}`);
+    return result;
+}
+
+async function createDirectoryUser({ firstName, lastName, email }) {
+    const companyId = process.env.PROCORE_COMPANY_ID;
+    const result = await procoreFetch(
+        `/rest/v1.0/companies/${companyId}/users`,
+        { method: 'POST', body: { user: { first_name: firstName, last_name: lastName || '', email_address: email, is_employee: true } } }
+    );
+    console.log(`[procoreBridge] directory user created id=${result.data?.id} name="${firstName} ${lastName}"`);
+    return result.data;
+}
+
 // ---------- Persistência Firestore ----------
 
 /**
@@ -1765,6 +1785,7 @@ module.exports = {
     // Equipment setup
     diagnoseEquipment,
     createEquipment,
+    createDirectoryUser,
     // Bidirectional sync — custom fields & pairing
     discoverAndPersistCustomFields,
     patchEquipmentCustomField,
@@ -1774,6 +1795,7 @@ module.exports = {
     removeEquipmentFromProject,
     // Bidirectional deletion
     archiveEquipment,
+    updateEquipment,
     // Write-back (Phase 2 + 3)
     createTimecardEntry,
     createDailyLog,

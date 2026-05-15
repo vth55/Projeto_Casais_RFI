@@ -4,10 +4,10 @@ import {
   Users, Plus, Edit2, Check, X, ChevronRight, Lock, Unlock,
   Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon,
   Truck, Building2, Wallet, Leaf, Link2, Cloud, CloudOff, Activity,
-  Fuel, Wrench, BarChart3
+  Fuel, Wrench, BarChart3, CreditCard, MapPin
 } from 'lucide-react';
 import { createAllMockData } from '../utils/mockData';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, projectId } from '../config/firebase';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
@@ -739,6 +739,263 @@ const OperationalSettingsSection = () => {
   );
 };
 
+// ============================================================
+// RFID LOCATION CARDS SECTION
+// ============================================================
+const RFID_CARDS_PATH = `artifacts/${projectId}/public/data/rfidLocationCards`;
+
+const RfidCardModal = ({ card, obras, onSave, onClose, saving }) => {
+  const isEdit = !!card;
+  const [tipo, setTipo] = useState(card?.tipo || 'obra');
+  const [cardIdRaw, setCardIdRaw] = useState(
+    card ? card.id.replace(/^LOC_/i, '') : ''
+  );
+  const [obraId, setObraId] = useState(card?.obraId || '');
+  const [lat, setLat] = useState(card?.gps?.lat ?? '');
+  const [lon, setLon] = useState(card?.gps?.lon ?? '');
+  const [procoreProjectId, setProcoreProjectId] = useState(card?.procoreProjectId || '');
+
+  const obrasSorted = [...(obras || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const selectedObra = obrasSorted.find(o => o.id === obraId);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const finalId = `LOC_${cardIdRaw.toUpperCase().replace(/^LOC_/i, '')}`;
+    const gps = lat && lon ? { lat: parseFloat(lat), lon: parseFloat(lon) } : null;
+    onSave({
+      cardId: finalId,
+      tipo,
+      obraId: tipo === 'estaleiro' ? 'estaleiro' : obraId,
+      obraName: tipo === 'estaleiro' ? 'Estaleiro' : (selectedObra?.name || obraId),
+      gps,
+      procoreProjectId: procoreProjectId || null,
+    });
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={isEdit ? 'Editar Cartão RFID' : 'Novo Cartão RFID'}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID do Cartão</label>
+          <div className="flex items-center">
+            <span className="inline-flex items-center px-3 py-2 text-sm text-slate-500 bg-slate-100 dark:bg-slate-700 border border-r-0 border-slate-300 dark:border-slate-600 rounded-l-lg">LOC_</span>
+            <input
+              type="text"
+              required
+              disabled={isEdit}
+              value={cardIdRaw}
+              onChange={e => setCardIdRaw(e.target.value.toUpperCase())}
+              placeholder="ESTALEIRO_PRINCIPAL"
+              className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-r-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-50 dark:disabled:bg-slate-700"
+            />
+          </div>
+          <p className="text-xs text-slate-400 mt-1">ID final: LOC_{cardIdRaw || '…'}</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
+          <select
+            value={tipo}
+            onChange={e => setTipo(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="estaleiro">Estaleiro (parque de máquinas)</option>
+            <option value="obra">Obra</option>
+          </select>
+        </div>
+
+        {tipo === 'obra' && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Obra</label>
+            <select
+              required
+              value={obraId}
+              onChange={e => setObraId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Selecionar obra…</option>
+              {obrasSorted.map(o => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Latitude (opcional)</label>
+            <input
+              type="number"
+              step="any"
+              value={lat}
+              onChange={e => setLat(e.target.value)}
+              placeholder="41.1496"
+              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Longitude (opcional)</label>
+            <input
+              type="number"
+              step="any"
+              value={lon}
+              onChange={e => setLon(e.target.value)}
+              placeholder="-8.6110"
+              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID Projecto Procore (opcional)</label>
+          <input
+            type="text"
+            value={procoreProjectId}
+            onChange={e => setProcoreProjectId(e.target.value)}
+            placeholder="12345"
+            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p className="text-xs text-slate-400 mt-1">Usado para sincronizar localização com Procore automaticamente via RFID</p>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="ghost" onClick={onClose} type="button">Cancelar</Button>
+          <Button type="submit" loading={saving}>{isEdit ? 'Guardar' : 'Criar Cartão'}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+const RfidLocationCardsSection = () => {
+  const [cards, setCards] = useState([]);
+  const [loadingCards, setLoadingCards] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editCard, setEditCard] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const { obras } = useStore();
+
+  const loadCards = async () => {
+    setLoadingCards(true);
+    try {
+      const snap = await getDocs(collection(db, RFID_CARDS_PATH));
+      setCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } finally {
+      setLoadingCards(false);
+    }
+  };
+
+  useEffect(() => { loadCards(); }, []);
+
+  const handleSave = async (formData) => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, RFID_CARDS_PATH, formData.cardId), {
+        obraId: formData.obraId,
+        obraName: formData.obraName,
+        tipo: formData.tipo,
+        gps: formData.gps,
+        procoreProjectId: formData.procoreProjectId,
+        updatedAt: serverTimestamp(),
+      });
+      await loadCards();
+      setShowModal(false);
+      setEditCard(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (cardId) => {
+    if (!confirm(`Eliminar cartão ${cardId}?`)) return;
+    await deleteDoc(doc(db, RFID_CARDS_PATH, cardId));
+    setCards(prev => prev.filter(c => c.id !== cardId));
+  };
+
+  const estaleiro = cards.filter(c => c.tipo === 'estaleiro');
+  const obra = cards.filter(c => c.tipo !== 'estaleiro');
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">Cartões RFID de Localização</h3>
+          <p className="text-sm text-slate-500 mt-0.5">Cartões físicos associados a localizações (estaleiro ou obras). Ao passar na leitora junto com uma máquina, actualizam a sua localização automaticamente.</p>
+        </div>
+        <Button icon={Plus} onClick={() => { setEditCard(null); setShowModal(true); }}>Novo Cartão</Button>
+      </div>
+
+      {loadingCards ? (
+        <div className="text-center py-8 text-slate-400">A carregar cartões…</div>
+      ) : cards.length === 0 ? (
+        <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+          <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500 font-medium">Nenhum cartão registado</p>
+          <p className="text-sm text-slate-400 mt-1">Crie cartões para registar localizações via RFID</p>
+          <Button className="mt-4" icon={Plus} onClick={() => { setEditCard(null); setShowModal(true); }}>Criar primeiro cartão</Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {estaleiro.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Estaleiro</p>
+              <div className="space-y-2">
+                {estaleiro.map(card => (
+                  <div key={card.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                      <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white font-mono">{card.id}</p>
+                      <p className="text-xs text-slate-500">{card.obraName}{card.gps ? ` · ${card.gps.lat.toFixed(4)}, ${card.gps.lon.toFixed(4)}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditCard(card); setShowModal(true); }} />
+                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(card.id)} className="text-red-500 hover:text-red-700" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {obra.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Obras ({obra.length})</p>
+              <div className="space-y-2">
+                {obra.map(card => (
+                  <div key={card.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                      <MapPin className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white font-mono">{card.id}</p>
+                      <p className="text-xs text-slate-500">{card.obraName}{card.gps ? ` · ${card.gps.lat.toFixed(4)}, ${card.gps.lon.toFixed(4)}` : ''}{card.procoreProjectId ? ` · Procore #${card.procoreProjectId}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditCard(card); setShowModal(true); }} />
+                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(card.id)} className="text-red-500 hover:text-red-700" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showModal && (
+        <RfidCardModal
+          card={editCard}
+          obras={obras}
+          onSave={handleSave}
+          onClose={() => { setShowModal(false); setEditCard(null); }}
+          saving={saving}
+        />
+      )}
+    </div>
+  );
+};
+
 // View principal
 const ConfiguracoesView = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -773,6 +1030,7 @@ const ConfiguracoesView = () => {
   const tabs = [
     { id: 'general', label: 'Geral', icon: Settings },
     { id: 'roles', label: 'Perfis de Acesso', icon: Shield },
+    { id: 'rfid_cards', label: 'Cartões RFID', icon: CreditCard },
     { id: 'integrations', label: 'Integrações', icon: Link2 },
     { id: 'demo', label: 'Modo Demo', icon: Users },
     { id: 'notifications', label: 'Notificações', icon: Bell },
@@ -1242,6 +1500,9 @@ const ConfiguracoesView = () => {
             </div>
           </ConfigSection>
         );
+
+      case 'rfid_cards':
+        return <RfidLocationCardsSection />;
 
       case 'integrations':
         return <ProcoreIntegrationSection />;
