@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CASAIS Fleet</string>
+    <string name="title_activity_main">CASAIS Fleet</string>
+    <string name="package_name">pt.casais.fleet</string>
+    <string name="custom_url_scheme">pt.casais.fleet</string>
+</resources>

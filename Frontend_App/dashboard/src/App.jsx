@@ -137,6 +137,29 @@ export default function App() {
     initTheme();
   }, [initTheme]);
 
+  // Capacitor: quando o APK é aberto via tag NFC, recebe o URL aqui
+  useEffect(() => {
+    let listener;
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) return;
+        const { App } = await import('@capacitor/app');
+        listener = await App.addListener('appUrlOpen', ({ url }) => {
+          // url ex: "https://casais-rfid.web.app/t/MARTELO_001"
+          try {
+            const u = new URL(url);
+            if (u.pathname.startsWith('/t/')) {
+              window.history.replaceState(null, '', u.pathname);
+              setIsToolTag(true);
+            }
+          } catch (_) { /* ignore */ }
+        });
+      } catch (_) { /* not on Capacitor — ignore */ }
+    })();
+    return () => { listener?.remove?.(); };
+  }, []);
+
   // NFC global: arranca na primeira interacção do utilizador autenticado (exige gesto)
   useEffect(() => {
     if (!isAuthenticated || !currentUser || !nfcSupported || nfcActive || nfcInitRef.current) return;

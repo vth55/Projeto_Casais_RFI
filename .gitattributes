@@ -1,0 +1,10 @@
+# Garantir LF para ficheiros que correm no Linux (CI/Android build)
+* text=auto
+
+# Shell scripts e gradle wrapper precisam de LF
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Ficheiros Windows mantêm CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

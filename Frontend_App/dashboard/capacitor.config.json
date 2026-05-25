@@ -1,0 +1,11 @@
+{
+  "appId": "pt.casais.fleet",
+  "appName": "CASAIS Fleet",
+  "webDir": "../../Backend_Cloud/public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
