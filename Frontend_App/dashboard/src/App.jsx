@@ -1,4 +1,4 @@
-import React, { useEffect, useState, lazy, Suspense, useCallback } from 'react';
+import React, { useEffect, useState, lazy, Suspense, useCallback, useRef } from 'react';
 import { getDocs, collection } from 'firebase/firestore';
 import { db, projectId } from './config/firebase';
 import { createAllMockData } from './utils/mockData';
@@ -9,6 +9,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PWAPrompt from './components/PWAPrompt';
 import useAuthStore from './store/useAuthStore';
 import useAvariasStore from './store/useAvariasStore';
+import useNfcStore from './store/useNfcStore';
+import NfcOverlay from './components/NfcOverlay';
 
 // Loading fallback para lazy components
 const ViewLoader = () => (
@@ -38,6 +40,9 @@ const MobileHubView = lazy(() => import('./views/MobileHubView'));
 // Machine QR View - standalone page via QR Code (/m/:machineId)
 const MachineQrView = lazy(() => import('./views/MachineQrView'));
 
+// Tool Tag Page - abre quando telemóvel lê tag NFC (/t/:tagId)
+const ToolTagPage = lazy(() => import('./pages/ToolTagPage'));
+
 // Views com lazy loading (code splitting)
 const DashboardView = lazy(() => import('./views/DashboardView'));
 const ObrasView = lazy(() => import('./views/ObrasView'));
@@ -51,6 +56,7 @@ const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
 const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
 const SessoesCorrigidasView = lazy(() => import('./views/SessoesCorrigidasView'));
 const EstaleiroView = lazy(() => import('./views/EstaleiroView'));
+const ObraMenuLayout = lazy(() => import('./views/obra/ObraMenuLayout'));
 
 // Dashboard Router (perfis)
 import DashboardRouter from './views/dashboards/DashboardRouter';
@@ -60,12 +66,15 @@ export default function App() {
   const { initTheme } = useThemeStore();
   const { currentUser, isAuthenticated, authLoading, getRole, initAuth } = useAuthStore();
   const currentRole = getRole(currentUser?.systemRole);
+  const { active: nfcActive, supported: nfcSupported, startListening } = useNfcStore();
+  const nfcInitRef = useRef(false);
 
   // Verificar se é página de validação ou reporte avaria (standalone routes)
   const [validationToken, setValidationToken] = useState(null);
   const [isReporteAvaria, setIsReporteAvaria] = useState(false);
   const [isMobileHub, setIsMobileHub] = useState(false);
   const [isMachineQr, setIsMachineQr] = useState(false);
+  const [isToolTag, setIsToolTag] = useState(false);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -92,6 +101,11 @@ export default function App() {
       setIsMachineQr(true);
     }
 
+    // Rota Tool Tag NFC (/t/:tagId)
+    if (/\/t\/[^/]+/.test(path)) {
+      setIsToolTag(true);
+    }
+
     // Sincronizar URL com activeView no carregamento inicial (deep links)
     const PATH_TO_VIEW = {
       '/obras': 'obras-todas',
@@ -111,12 +125,36 @@ export default function App() {
     if (mappedView) {
       setActiveView(mappedView);
     }
+
+    // Rota /obras/:obraId — menu de obra
+    if (/^\/obras\/[^/]+/.test(path)) {
+      setActiveView('obra-detalhe');
+    }
   }, []);
 
   // Inicializar tema ao carregar
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  // NFC global: arranca na primeira interacção do utilizador autenticado (exige gesto)
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser || !nfcSupported || nfcActive || nfcInitRef.current) return;
+
+    const onFirstGesture = () => {
+      if (nfcInitRef.current) return;
+      nfcInitRef.current = true;
+      startListening(currentUser);
+    };
+
+    document.addEventListener('click', onFirstGesture, { once: true });
+    document.addEventListener('touchstart', onFirstGesture, { once: true, passive: true });
+
+    return () => {
+      document.removeEventListener('click', onFirstGesture);
+      document.removeEventListener('touchstart', onFirstGesture);
+    };
+  }, [isAuthenticated, currentUser, nfcSupported, nfcActive, startListening]);
 
   // Inicializar Firebase Auth (listener de sessão persistente)
   useEffect(() => {
@@ -169,6 +207,7 @@ export default function App() {
 
   // Memoizar renderView para evitar re-renders desnecessários
   const renderView = useCallback(() => {
+    if (activeView === 'obra-detalhe') return <ObraMenuLayout />;
     if (activeView.startsWith('obras')) return <ObrasView />;
     if (activeView === 'estaleiro') return <EstaleiroView />;
     if (activeView.startsWith('maquinas')) return <MaquinasView />;
@@ -200,6 +239,16 @@ export default function App() {
       <ErrorBoundary>
         <Suspense fallback={<ViewLoader />}>
           <MachineQrView />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (isToolTag) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>}>
+          <ToolTagPage />
         </Suspense>
       </ErrorBoundary>
     );
@@ -272,6 +321,8 @@ export default function App() {
           {renderView()}
         </Suspense>
       </Layout>
+      {/* NFC global overlay — aparece em qualquer vista quando tag é lida */}
+      <NfcOverlay />
       {/* DevTools — apenas para roles com showDevTools: true (admin, it) */}
       {currentRole?.showDevTools && (
         <Suspense fallback={null}>

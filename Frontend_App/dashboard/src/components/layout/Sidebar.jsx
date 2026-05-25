@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, Truck, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
-  Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse,
+  Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
+import useNfcStore from '../../store/useNfcStore';
 
 const navigation = [
   { id: 'dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
@@ -18,7 +19,7 @@ const navigation = [
     ],
   },
   { id: 'maquinas',    label: 'Equipamentos',   icon: Truck },
-  { id: 'estaleiro',   label: 'Estaleiro',      icon: Warehouse },
+  { id: 'estaleiro',   label: 'Armazém',        icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
     submenu: [
@@ -49,6 +50,7 @@ const navigation = [
 const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollapse }) => {
   const { activeView, setActiveView, machines, sessions } = useStore();
   const { currentUser, canAccess, logout, getRole } = useAuthStore();
+  const { active: nfcActive, supported: nfcSupported } = useNfcStore();
 
   const [expandedMenus, setExpandedMenus] = useState(() => {
     for (const item of navigation) {
@@ -275,6 +277,19 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
           })}
         </ul>
       </nav>
+
+      {/* NFC status indicator */}
+      {nfcSupported && (
+        <div className="px-4 py-2 border-t border-slate-700/50">
+          <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${nfcActive ? 'bg-emerald-500/10' : 'bg-slate-800/50'}`}>
+            <Nfc className={`w-3.5 h-3.5 flex-shrink-0 ${nfcActive ? 'text-emerald-400' : 'text-slate-500'}`} />
+            <span className={`text-xs ${nfcActive ? 'text-emerald-400' : 'text-slate-500'}`}>
+              NFC {nfcActive ? 'activo' : 'inactivo'}
+            </span>
+            {nfcActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-auto" />}
+          </div>
+        </div>
+      )}
 
       {/* User */}
       <div className="p-3 border-t border-slate-700/50">

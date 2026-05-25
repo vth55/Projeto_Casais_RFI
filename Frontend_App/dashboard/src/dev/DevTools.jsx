@@ -1134,8 +1134,10 @@ const DevTools = () => {
   const [message, setMessage] = useState(null);
   const [lastCreatedAlert, setLastCreatedAlert] = useState(null);
   const [emailPreview, setEmailPreview] = useState(null);
+  const [rfidMachineId, setRfidMachineId] = useState('');
+  const [rfidOperatorId, setRfidOperatorId] = useState('');
 
-  const { setActiveView } = useStore();
+  const { setActiveView, machines, operators } = useStore();
 
   // Mostrar mensagem temporária
   const showMessage = (text, type = 'success') => {
@@ -1237,60 +1239,58 @@ const DevTools = () => {
     setLoading(false);
   };
 
-  // Simular scan RFID
+  // Simular scan RFID — chama o HTTP endpoint real (igual ao kiosk físico)
+  // Isto garante que o Procore recebe os dados exactamente como em produção
   const simulateRfidScan = async (action = 'start') => {
     setLoading(true);
     try {
-      const operator = TEST_DATA.operators[0];
-      const machine = TEST_DATA.machines[0];
+      const machineId = rfidMachineId || TEST_DATA.machines[0].id;
+      const operatorId = rfidOperatorId || TEST_DATA.operators[0].id;
+      const operatorData = operators.find(o => o.id === operatorId) || TEST_DATA.operators[0];
+      // cardId é o campo RFID do operador; fallback para o ID do operador
+      const cardId = operatorData.cardId || operatorId;
 
-      const sessionsRef = collection(db, `${basePath}/sessions`);
-      const q = query(sessionsRef, where('machineId', '==', machine.id), where('status', '==', 'OPEN'));
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty && action === 'start') {
-        const sessionId = generateId('session');
-        await setDoc(doc(db, `${basePath}/sessions`, sessionId), {
-          id: sessionId,
-          cardId: operator.id,
-          machineId: machine.id,
-          startTime: Timestamp.now(),
-          endTime: null,
-          durationHours: 0,
-          status: 'OPEN',
-          isTestData: true,
-        });
-
-        await setDoc(doc(db, `${basePath}/machines`, machine.id), {
-          ...machine,
-          status: 'ACTIVE',
-          lastOperator: operator.id,
-        }, { merge: true });
-
-        showMessage(`Sessão iniciada: ${operator.name}`);
-      } else if (!snapshot.empty && action === 'stop') {
-        const sessionDoc = snapshot.docs[0];
-        const sessionData = sessionDoc.data();
-        const startTime = sessionData.startTime.toDate();
-        const endTime = new Date();
-        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-
-        await setDoc(doc(db, `${basePath}/sessions`, sessionDoc.id), {
-          ...sessionData,
-          endTime: Timestamp.fromDate(endTime),
-          durationHours,
-          status: 'CLOSED',
-        });
-
-        await setDoc(doc(db, `${basePath}/machines`, machine.id), {
-          ...machine,
-          status: 'IDLE',
-        }, { merge: true });
-
-        showMessage(`Sessão fechada: ${durationHours.toFixed(2)}h`);
-      } else {
-        showMessage(snapshot.empty ? 'Nenhuma sessão para fechar' : 'Já existe sessão aberta', 'error');
+      if (!rfidMachineId) {
+        // Modo demo: escrever directo no Firestore (máquina de teste não existe no Procore)
+        const sessionsRef = collection(db, `${basePath}/sessions`);
+        const q = query(sessionsRef, where('machineId', '==', machineId), where('status', '==', 'OPEN'));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty && action === 'start') {
+          const sessionId = generateId('session');
+          await setDoc(doc(db, `${basePath}/sessions`, sessionId), {
+            id: sessionId, cardId, machineId,
+            startTime: Timestamp.now(), endTime: null, durationHours: 0,
+            status: 'OPEN', isTestData: true,
+          });
+          await setDoc(doc(db, `${basePath}/machines`, machineId), { status: 'ACTIVE', lastOperator: cardId }, { merge: true });
+          showMessage(`[DEMO] Sessão iniciada: ${operatorData.name}`);
+        } else if (!snapshot.empty && action === 'stop') {
+          const sessionDoc = snapshot.docs[0];
+          const sessionData = sessionDoc.data();
+          const endTime = new Date();
+          const durationHours = (endTime - sessionData.startTime.toDate()) / (1000 * 60 * 60);
+          await setDoc(doc(db, `${basePath}/sessions`, sessionDoc.id), { ...sessionData, endTime: Timestamp.fromDate(endTime), durationHours, status: 'CLOSED' });
+          await setDoc(doc(db, `${basePath}/machines`, machineId), { status: 'IDLE' }, { merge: true });
+          showMessage(`[DEMO] Sessão fechada: ${durationHours.toFixed(2)}h`);
+        } else {
+          showMessage(snapshot.empty ? 'Nenhuma sessão para fechar' : 'Já existe sessão aberta', 'error');
+        }
+        return;
       }
+
+      // Modo real: chamar HTTP endpoint igual ao kiosk físico → Procore recebe os dados
+      const endpoint = 'https://us-central1-casais-rfid.cloudfunctions.net/handleSessionTrigger';
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardId, machineId }),
+      });
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
+
+      const statusLabel = result.status || result.action || 'OK';
+      showMessage(`✓ ${statusLabel} — ${operatorData.name} / ${machineId}`);
+      console.log('[DevTools RFID] endpoint response:', result);
     } catch (error) {
       console.error('Erro ao simular scan:', error);
       showMessage(`Erro: ${error.message}`, 'error');
@@ -1549,6 +1549,46 @@ const DevTools = () => {
                 Simular leituras de cartão RFID
               </p>
 
+              {/* Selector Máquina */}
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Máquina</label>
+                <select
+                  value={rfidMachineId}
+                  onChange={e => setRfidMachineId(e.target.value)}
+                  className="w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white"
+                >
+                  <option value="">— Demo: {TEST_DATA.machines[0].name} —</option>
+                  {machines.filter(m => m.procoreEquipmentId).map(m => (
+                    <option key={m.id} value={m.id}>{m.name} {m.status === 'ACTIVE' ? '🟢' : ''}</option>
+                  ))}
+                  {machines.filter(m => !m.procoreEquipmentId).length > 0 && (
+                    <optgroup label="Sem Procore ID">
+                      {machines.filter(m => !m.procoreEquipmentId).map(m => (
+                        <option key={m.id} value={m.id}>{m.name} (sem Procore)</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {/* Selector Operador */}
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Operador</label>
+                <select
+                  value={rfidOperatorId}
+                  onChange={e => setRfidOperatorId(e.target.value)}
+                  className="w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white"
+                >
+                  <option value="">— Demo: {TEST_DATA.operators[0].name} —</option>
+                  {operators.filter(o => o.procoreUserId).map(o => (
+                    <option key={o.id} value={o.id}>{o.name} ✓</option>
+                  ))}
+                  {operators.filter(o => !o.procoreUserId).map(o => (
+                    <option key={o.id} value={o.id}>{o.name} (sem Procore)</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => simulateRfidScan('start')}
@@ -1571,10 +1611,15 @@ const DevTools = () => {
                 </button>
               </div>
 
-              <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                <p className="font-medium mb-1">Dados da simulação:</p>
-                <p><strong>Operador:</strong> {TEST_DATA.operators[0].name}</p>
-                <p><strong>Máquina:</strong> {TEST_DATA.machines[0].name}</p>
+              <div className="mt-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-500">
+                {rfidMachineId
+                  ? `Máquina: ${machines.find(m => m.id === rfidMachineId)?.name || rfidMachineId}`
+                  : `Máquina: ${TEST_DATA.machines[0].name} (demo)`
+                } &nbsp;|&nbsp;
+                {rfidOperatorId
+                  ? `Op: ${operators.find(o => o.id === rfidOperatorId)?.name || rfidOperatorId}`
+                  : `Op: ${TEST_DATA.operators[0].name} (demo)`
+                }
               </div>
             </div>
           )}

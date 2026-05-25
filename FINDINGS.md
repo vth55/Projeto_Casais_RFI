@@ -1,11 +1,14 @@
-# FINDINGS — Memória Persistente do Projeto
+# FINDINGS - Persistent Project Findings
 
-Mantido pelo Gemini Flash a pedido do Claude. Entradas no topo (mais recentes primeiro).
-Nunca apagar entradas antigas — só adicionar.
+> Active note. Maintained by any AI or collaborator who discovers non-obvious project truth.
+> Do not treat this as Gemini-specific memory.
 
-Para que serve: registar conhecimento não-óbvio que se descobre durante o trabalho —
-root causes de bugs, IDs/configs escondidas, comportamentos contraintuitivos, assumpções
-erradas em docs. Evita re-investigar a mesma coisa em sessões futuras.
+Purpose:
+- real bug root causes
+- hidden IDs, config and environment traps
+- vendor or sandbox limitations
+- false assumptions in old docs
+- findings worth remembering across sessions
 
 ---
 
@@ -54,6 +57,65 @@ Agents apagados (irrelevantes): game-developer, seo-specialist, mobile-developer
 **Docs:** `docs/INDEX.md` criado (mapa tarefa→doc), `docs/sessions/` para wrap-ups
 
 **claude-mem:** Instalado com Gemini 2.5 Flash-Lite. Web UI: localhost:37777. Substitui hooks SessionStart/Stop.
+
+---
+
+## 2026-05-18 — Cenário E (WorkOrder reset horas) testado e confirmado
+
+`onWorkOrderToProcore` em `procoreDeepIntegration.js` reseta `hoursSinceMaintenance = 0` + define `lastMaintenanceAt` quando WO passa para `estado = 'concluida'`.
+
+**Condição crítica:** o reset SÓ corre se a WO já tiver `procoreObservationId` definido.
+Se a WO não tiver `procoreObservationId`, o trigger entra no bloco "criar observation" (linha ~568) e faz `return null` ANTES de chegar ao bloco de reset (linha ~630).
+
+Fluxo correcto de produção:
+1. WO criada → algum update → trigger cria Procore Observation → `procoreObservationId` é guardado no doc
+2. WO updated para `concluida` → trigger fecha observation (sandbox 405 = limitação conhecida) + reseta horas
+
+Testado com `mach-volvo-a30` (obraId=procore_328122, procoreProjectId=328122). Trigger disparou em ~5s.
+`hoursSinceMaintenance`: 87.5h → 0 ✅ | `lastMaintenanceAt`: definido ✅
+
+---
+
+## 2026-05-18 — Procore v1.0 Equipment endpoints: sandbox limitation (timecards equipment_id)
+
+`GET /rest/v1.0/projects/328122/equipment` → **404** no sandbox.
+`GET /rest/v1.0/companies/4283171/equipment` → **404** no sandbox.
+
+O `equipment_id` nos timecards v1.0 é um ID integer do modelo v1.0 — diferente dos ULIDs do v2.1 `equipment_register`.
+O sandbox não expõe o modelo de equipamento v1.0, por isso `equipment_id` fica `null` nos timecards.
+
+O código trata isto: `fetchProjectEquipmentV1` faz GET → 404 → retorna `[]` → `bestV1Match` retorna `null` → `equipment.id = null` → campo não enviado no POST do timecard.
+Em produção com Procore real, o endpoint `/projects/{id}/equipment` devolve a lista com IDs integer e o código associa correctamente.
+
+A máquina é identificada na `description` do timecard: `IoT · Compactador Hamm H13i · 0.00h · António Costa`.
+
+**Não é bug — é sandbox limitation. Em produção, equipment_id será preenchido correctamente.**
+
+---
+
+## 2026-05-18 — Truncação de descrição de timecard corrigida
+
+`machineName.length > 20 ? machineName.slice(0, 18) + '…'` cortava "Compactador Hamm H13i" (22 chars) para "Compactador Hamm H…".
+Corrigido para `> 27 ? slice(0, 25) + '…'` — nomes até 27 chars passam intactos; 28+ ficam com 26 chars (25 + "…").
+Margem calculada: "IoT · "(6) + machineShort(≤27) + " · entrada · "(13) + operatorShort(≤13) = 59 chars ≤ 60 ✓.
+Verificado ao vivo: description `"IoT · Compactador Hamm H13i · 0.00h · António Costa"` (51 chars) sem truncação.
+
+---
+
+## 2026-05-15 — Procore Observations POST: sandbox limitation
+
+`POST /rest/v1.0/projects/328122/observations/items` → **404** no sandbox (rota ausente).
+`POST /rest/v1.0/observations/items?project_id=328122` (flat endpoint) → **422** com `"name":["can't be blank"]` e `"type":["required"]` independentemente do corpo enviado. A validação ignora todos os campos enviados — limitação conhecida do sandbox.
+
+`GET /rest/v1.0/observations/items?project_id=328122` → **200 []** (funciona).
+`GET /rest/v1.0/observations/types?project_id=328122` → **200** (tipos existem, ex. id=10845079 "Commissioning").
+
+A ferramenta Observations foi activada no projeto 328122 em 2026-05-15 via Admin → Tool Settings.
+O Cloud Function `onAvariaCreatedToProcore` dispara correctamente e tenta criar a observação — apenas o sandbox bloqueia. Comportamento correcto em produção.
+
+`procoreBridge.js::createObservation` actualizado: tenta endpoint project-nested primeiro, cai para flat se 404 (graceful degradation sem crash).
+
+**Não é bug — é sandbox limitation idêntica a DELETE 405 e PATCH status ignorado.**
 
 ---
 

@@ -36,6 +36,7 @@ const {
     PROCORE_COMPANY_ID: _PCID,
     associateEquipmentToProject,
     removeEquipmentFromProject,
+    deleteTimecardEntry,
 } = require('./procore/procoreBridge');
 
 if (!admin.apps.length) {
@@ -454,10 +455,14 @@ exports.handleSessionTrigger = onRequest(
             .get();
 
         if (activeSessionQuery.empty) {
-            const operatorDocRef = db.doc(`${OPERATORS_PATH}/${normalizedCard}`);
-            const operatorSnap = await operatorDocRef.get();
+            // Query by cardId field (doc IDs are lowercase, cardId field stores the value)
+            const operatorQuery = await db.collection(OPERATORS_PATH)
+                .where('cardId', '==', normalizedCard)
+                .limit(1)
+                .get();
+            const operatorSnap = operatorQuery.empty ? null : operatorQuery.docs[0];
 
-            if (!operatorSnap.exists) {
+            if (!operatorSnap) {
                 await db.collection(UNREGISTERED_SCANS_PATH).doc(normalizedCard).set({
                     id: normalizedCard,
                     machineId: normalizedMachine,
@@ -557,8 +562,10 @@ exports.handleSessionTrigger = onRequest(
                 const mDoc = await t.get(machineRef);
                 if (!mDoc.exists) return;
                 const newTotal = (mDoc.data().totalHours || 0) + durationHours;
+                const newSinceMaint = (mDoc.data().hoursSinceMaintenance || 0) + durationHours;
                 t.update(machineRef, {
                     totalHours: newTotal,
+                    hoursSinceMaintenance: newSinceMaint,
                     status: 'IDLE',
                     lastOperator: normalizedCard
                 });
@@ -793,8 +800,10 @@ exports.autoCloseStuckSessions = onSchedule(
                         const mDoc = await t.get(machineRef);
                         if (mDoc.exists) {
                             const newTotal = (mDoc.data().totalHours || 0) + durationHours;
+                            const newSinceMaint = (mDoc.data().hoursSinceMaintenance || 0) + durationHours;
                             t.update(machineRef, {
                                 totalHours: newTotal,
+                                hoursSinceMaintenance: newSinceMaint,
                                 status: 'IDLE',
                             });
                         }
@@ -1328,11 +1337,23 @@ exports.onSessionCorrected = onDocumentUpdated(
         console.log(`[onSessionCorrected] session ${event.params.sessionId} — re-exporting corrected times to Procore`);
 
         try {
+            // Apagar timecard errado no Procore antes de criar o correcto
+            const oldTimecardId = after.procoreExport?.timecardId;
+            const oldProjectId  = after.procoreExport?.projectId;
+            if (oldTimecardId && oldProjectId) {
+                try {
+                    await deleteTimecardEntry(oldProjectId, oldTimecardId);
+                } catch (deleteErr) {
+                    // Sandbox may return 405/empty body — non-fatal, continue with re-export
+                    console.warn('[onSessionCorrected] delete old timecard failed (sandbox limitation):', deleteErr.message);
+                }
+            }
+
             // Invalidar export anterior para forçar re-criação
             await event.data.after.ref.update({
                 'procoreExport.exported': false,
                 'procoreExport.reason': 'corrected_re_export',
-                'procoreExport.previousTimecardId': after.procoreExport.timecardId || null,
+                'procoreExport.previousTimecardId': oldTimecardId || null,
             });
 
             // Re-exportar com os novos horários (que já estão no doc)
@@ -1476,6 +1497,7 @@ exports.detectDispatchTimeout = onSchedule(
 // ============================================
 const {
     equipmentLogsDailyAgg,
+    manpowerLogsDailyAgg,
     procoreWebhookReceiver,
     onAvariaCreatedToProcore,
     onWorkOrderToProcore,
@@ -1486,16 +1508,19 @@ const {
     onMachineCreatedToProcore,
     onMachineUpdatedToProcore,
     onOperatorCreatedToProcore,
+    onMachineTotalHoursUpdated,
 } = require('./procore/procoreDeepIntegration');
 
-exports.equipmentLogsDailyAgg      = equipmentLogsDailyAgg;
-exports.procoreWebhookReceiver     = procoreWebhookReceiver;
-exports.onAvariaCreatedToProcore   = onAvariaCreatedToProcore;
-exports.onWorkOrderToProcore       = onWorkOrderToProcore;
-exports.procoreSyncQueueRun        = procoreSyncQueueRun;
-exports.procoreTokenRefresh        = procoreTokenRefresh;
-exports.pullProcoreCache           = pullProcoreCache;
-exports.onMachineDeletedToProcore  = onMachineDeletedToProcore;
-exports.onMachineCreatedToProcore  = onMachineCreatedToProcore;
-exports.onMachineUpdatedToProcore  = onMachineUpdatedToProcore;
-exports.onOperatorCreatedToProcore = onOperatorCreatedToProcore;
+exports.equipmentLogsDailyAgg       = equipmentLogsDailyAgg;
+exports.manpowerLogsDailyAgg        = manpowerLogsDailyAgg;
+exports.procoreWebhookReceiver      = procoreWebhookReceiver;
+exports.onAvariaCreatedToProcore    = onAvariaCreatedToProcore;
+exports.onWorkOrderToProcore        = onWorkOrderToProcore;
+exports.procoreSyncQueueRun         = procoreSyncQueueRun;
+exports.procoreTokenRefresh         = procoreTokenRefresh;
+exports.pullProcoreCache            = pullProcoreCache;
+exports.onMachineDeletedToProcore   = onMachineDeletedToProcore;
+exports.onMachineCreatedToProcore   = onMachineCreatedToProcore;
+exports.onMachineUpdatedToProcore   = onMachineUpdatedToProcore;
+exports.onOperatorCreatedToProcore  = onOperatorCreatedToProcore;
+exports.onMachineTotalHoursUpdated  = onMachineTotalHoursUpdated;

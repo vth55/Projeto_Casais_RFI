@@ -20,4 +20,4 @@ Decidimos utilizar o **Arduino Uno** como o nó de hardware principal para as m�
 
 ## Referências
 - `arduino_rfid_simple/arduino_rfid_led.ino`
-- `DOCS_OPERATIONS.md` (Secção de Hardware)
+- `docs/archive/root/DOCS_OPERATIONS.md` (Secção de Hardware)

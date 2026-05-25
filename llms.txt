@@ -1,29 +1,62 @@
-# Casais Fleet Intelligence - AI Context
+# Casais Fleet Intelligence - LLM Entry Point
 
-## Project Overview
-A professional-grade PWA system for construction fleet management, designed for the Casais Group. It bridges field IoT/NFC data with Procore ERP.
+This file tells any LLM how to read and update project documentation without making the repo noisier.
 
-## Key Technical Details
-- **Architecture**: PWA (Frontend) + Cloud Functions (Backend) + Firebase (Database) + Arduino/Raspberry Pi (Hardware).
-- **Frontend Stack**: React 19, Vite, Tailwind CSS v4, Zustand.
-- **Backend Stack**: Firebase Functions v2 (Node.js), Firestore.
-- **Integration**: Bi-directional sync with Procore API (Authenticated via Firebase Auth Middleware).
-- **Security**: JWT verification on all bridge routes; `authFetch` utility for frontend.
+## Read Order
 
-## 🎨 Visual Identity & Brand Constraints
-- **Primary Brand Color**: Casais Blue `#005EB8`. 
-- **Color Constraint**: ❌ **NEVER USE PURPLE/VIOLET** (Brand restriction). 
+1. `README.md`
+2. `docs/INDEX.md`
+3. `docs/ROADMAP_EXECUCAO.md`
+4. `FINDINGS.md`
+5. `docs/DOCUMENTATION_POLICY.md`
+6. `docs/architecture/DATA_MODEL_CURRENT.md`
+7. `docs/integrations/project_procore_integration.md`
+8. `CLAUDE.md`
 
-## Responsive Targets
-- **Mobile SE**: 320px (Strict layout stability).
-- **Smartphone**: 390px (Standard mobile view).
-- **Tablet**: 768px+ (Field supervisor view).
-- **Desktop**: Full analytics dashboard.
+If those files conflict with older docs, the newer active docs above win.
 
-## Folder Structure Core
-- `/Frontend_App/dashboard`: The React PWA.
-- `/.agent`: System rules and agent specialization (Gemini & Claude).
-- `/docs`: Technical ADRs and Operations manuals.
+## Canonical Sources
 
----
-*Created by Gemini (Architect) for external AI orchestration.*
+- Current execution state: `docs/ROADMAP_EXECUCAO.md`
+- Non-obvious bugs, quirks, sandbox limits: `FINDINGS.md`
+- Documentation governance: `docs/DOCUMENTATION_POLICY.md`
+- Current data model: `docs/architecture/DATA_MODEL_CURRENT.md`
+- Current Procore status: `docs/integrations/project_procore_integration.md`
+- Persistent AI memory: `obsidian-vault/00 Home.md`
+
+## Historical Sources
+
+Treat these as archive or supporting context, not primary truth:
+
+- `docs/archive/`
+- `PATHFINDER-2026-05-07/`
+- `docs/sessions/`
+
+## Rules For LLMs
+
+- Do not create new "master" docs in the repo root.
+- Do not update historical snapshots to reflect new state; create or update active docs instead.
+- Do not use `docs/sessions/` as the main source of truth.
+- When discovering a real bug, hidden config, external limitation, or wrong assumption, append it to `FINDINGS.md`.
+- When changing architecture, schema, or workflows, update the active docs in `docs/` in the same change.
+- Prefer short current-state docs over long narrative retrospectives.
+
+## Documentation Write Targets
+
+- Architecture and data contracts: `docs/architecture/`
+- Standards and coding conventions: `docs/standards/`
+- Integrations: `docs/integrations/`
+- Runbooks and troubleshooting: `docs/operations/`
+- Historical material: `docs/archive/`
+- Session summaries and screenshots: `docs/sessions/`
+
+## Current Stack
+
+- Frontend: React 19 + Vite + Zustand + Tailwind
+- Backend: Firebase Cloud Functions v2
+- Data: Firestore under `artifacts/casais-rfid/public/data/`
+- Integration: Procore sandbox currently centered on company `4283171`
+
+## Final Rule
+
+If the docs and the code disagree, trust the code first, then fix the active docs.

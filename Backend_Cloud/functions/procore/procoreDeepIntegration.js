@@ -25,6 +25,7 @@ const {
     PROCORE_CLIENT_SECRET,
     PROCORE_COMPANY_ID,
     createEquipmentLog,
+    createManpowerLog,
     createObservation,
     updateObservation,
     getCostCodes,
@@ -32,6 +33,7 @@ const {
     archiveEquipment,
     createEquipment,
     updateEquipment,
+    patchEquipmentCustomFields,
     associateEquipmentToProject,
     createDirectoryUser,
     getValidAccessToken: _getToken,
@@ -54,6 +56,18 @@ const PROCORE_CACHE_PATH = `${BASE}/procore_cache`;
 const db = () => admin.firestore();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Mapeia prioridade interna do Casais Fleet para o enum de priority do Procore Observations.
+ * Procore aceita: 'urgent' | 'high' | 'medium' | 'low'
+ */
+function mapPriorityToProcore(prioridade) {
+    const p = (prioridade || '').toLowerCase().trim();
+    if (p === 'alta' || p === 'critica' || p === 'crítica' || p === 'grave') return 'urgent';
+    if (p === 'media' || p === 'média') return 'high';
+    if (p === 'baixa') return 'low';
+    return 'medium';
+}
 
 async function isProcoreConnected() {
     const snap = await db().doc(INTEGRATION_PATH).get();
@@ -169,6 +183,123 @@ exports.equipmentLogsDailyAgg = onSchedule(
         }
 
         console.log(`[equipmentLogsDailyAgg] done — created=${created} enqueued=${enqueued}`);
+        return null;
+    }
+);
+
+// ─── 3.4 Manpower Logs Daily Aggregation ─────────────────────────────────────
+
+/**
+ * Às 23:50 agrega sessões do dia → Manpower Logs no Daily Log do Procore.
+ * Mostra quem trabalhou em cada obra (por operador), estruturado na secção
+ * "Manpower" do Daily Log — visível em Project → Daily Log no painel Procore.
+ */
+exports.manpowerLogsDailyAgg = onSchedule(
+    {
+        schedule: 'every day 23:50',
+        timeZone: 'Europe/Lisbon',
+        secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
+        region: 'us-central1',
+        memory: '512MiB',
+    },
+    async () => {
+        if (!(await isProcoreConnected())) {
+            console.log('[manpowerLogsDailyAgg] não conectado — skip');
+            return null;
+        }
+
+        const today = new Date();
+        const startOfDay = new Date(today); startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay   = new Date(today); endOfDay.setHours(23, 59, 59, 999);
+        const dateStr = formatDate(today);
+
+        const snap = await db().collection(SESSIONS_PATH)
+            .where('status', 'in', ['CLOSED', 'AUTO_CLOSED'])
+            .where('endTime', '>=', admin.firestore.Timestamp.fromDate(startOfDay))
+            .where('endTime', '<=', admin.firestore.Timestamp.fromDate(endOfDay))
+            .get();
+
+        if (snap.empty) {
+            console.log('[manpowerLogsDailyAgg] nenhuma sessão hoje');
+            return null;
+        }
+
+        // Agrupa por cardId × (obraId ou machineId como proxy) → soma horas + lista máquinas
+        // Nota: sessions têm `cardId` (RFID) e podem ter `obraId` undefined → usa machineId como fallback
+        const groups = {};
+        for (const doc of snap.docs) {
+            const s = doc.data();
+            const opKey = s.cardId || s.operatorId;
+            if (!opKey) continue; // sessão sem operador (equipment-only)
+            // Usa obraId da sessão se existir; senão agrupa por machineId (proxy para resolver depois)
+            const obraProxy = s.obraId || s.machineId || 'default';
+            const key = `${opKey}::${obraProxy}`;
+            if (!groups[key]) {
+                groups[key] = {
+                    operatorKey: opKey,
+                    obraId: s.obraId,
+                    machineIdFallback: s.machineId, // para lookup do obraId quando undefined
+                    totalHours: 0,
+                    machines: new Set(),
+                };
+            }
+            groups[key].totalHours += s.durationHours || 0;
+            if (s.machineId) groups[key].machines.add(s.machineId);
+        }
+
+        let created = 0, skipped = 0;
+
+        for (const g of Object.values(groups)) {
+            // Resolver Procore user ID (cardId → operador → procoreUserId)
+            let procoreUserId = null;
+            const opSnap = await db().doc(`${OPERATORS_PATH}/${g.operatorKey}`).get();
+            if (opSnap.exists) {
+                procoreUserId = opSnap.data()?.procoreUserId;
+            } else {
+                // Fallback: query por cardId (ex: "OP-ANTONIO-COSTA")
+                const q = await db().collection(OPERATORS_PATH)
+                    .where('cardId', '==', g.operatorKey).limit(1).get();
+                if (!q.empty) procoreUserId = q.docs[0].data()?.procoreUserId;
+            }
+            if (!procoreUserId) { skipped++; continue; }
+
+            // Resolver projecto Procore — fallback à máquina se obraId da sessão estiver ausente
+            let resolvedObraId = g.obraId;
+            if (!resolvedObraId && g.machineIdFallback) {
+                const m = await getMachineData(g.machineIdFallback);
+                resolvedObraId = m?.obraId;
+            }
+            const procoreProjectId = await getProcoreProjectId(resolvedObraId);
+            if (!procoreProjectId) { skipped++; continue; }
+
+            const hours = Math.round(g.totalHours * 100) / 100;
+            if (hours <= 0) { skipped++; continue; }
+
+            // Descrição com lista de máquinas
+            const machineNames = [];
+            for (const machId of g.machines) {
+                const m = await getMachineData(machId);
+                if (m?.name) machineNames.push(m.name);
+            }
+            const description = machineNames.length > 0
+                ? `IoT — ${machineNames.join(', ')}`
+                : 'IoT — CASAIS Fleet';
+
+            try {
+                await createManpowerLog(procoreProjectId, {
+                    date: dateStr,
+                    loginInfoId: procoreUserId,
+                    hours,
+                    description,
+                });
+                created++;
+            } catch (err) {
+                console.error(`[manpowerLogsDailyAgg] falha op=${g.operatorKey}:`, err.message);
+                skipped++;
+            }
+        }
+
+        console.log(`[manpowerLogsDailyAgg] done — created=${created} skipped=${skipped}`);
         return null;
     }
 );
@@ -370,18 +501,22 @@ exports.onAvariaCreatedToProcore = onDocumentCreated(
         const machineName  = machine?.name || avaria.machineId || 'Máquina';
         const obraName     = avaria.obraName || machine?.localizacao?.obraName || 'Obra';
 
+        const prioridadeRaw = avaria?.prioridade || avaria?.severity || avaria?.tipo || '';
+        const procorePriority = mapPriorityToProcore(prioridadeRaw);
+
         try {
             const observation = await createObservation(procoreProjectId, {
-                name: `Avaria: ${avaria.tipo || 'Geral'} — ${machineName}`,
+                name: `Avaria: ${avaria?.tipo || 'Geral'} — ${machineName}`,
                 description: [
                     `Máquina: ${machineName}`,
                     `Obra: ${obraName}`,
-                    `Descrição: ${avaria.descricao || ''}`,
-                    `Prioridade: ${avaria.prioridade || 'normal'}`,
-                    `Reportado por: ${avaria.reportadoPor || 'Sistema'}`,
+                    `Descrição: ${avaria?.descricao || ''}`,
+                    `Prioridade: ${avaria?.prioridade || 'normal'}`,
+                    `Reportado por: ${avaria?.reportadoPor || 'Sistema'}`,
                 ].join('\n'),
                 status: 'initiated',
-                datetimeInitiated: avaria.createdAt?.toDate
+                priority: procorePriority,
+                datetimeInitiated: avaria?.createdAt?.toDate
                     ? avaria.createdAt.toDate().toISOString()
                     : new Date().toISOString(),
             });
@@ -432,16 +567,18 @@ exports.onWorkOrderToProcore = onDocumentUpdated(
         // Criar observation quando WorkOrder é criada (ou estado muda para atribuida)
         if (!before.procoreObservationId && !after.procoreObservationId) {
             try {
+                const woPriority = mapPriorityToProcore(after?.prioridade || after?.severity || '');
                 const obs = await createObservation(procoreProjectId, {
-                    name: `OS ${after.numero || woId}: ${after.tipo || 'Manutenção'} — ${machineName}`,
+                    name: `OS ${after?.numero || woId}: ${after?.tipo || 'Manutenção'} — ${machineName}`,
                     description: [
-                        `OS: ${after.numero || woId}`,
-                        `Tipo: ${after.tipo || 'N/A'}`,
+                        `OS: ${after?.numero || woId}`,
+                        `Tipo: ${after?.tipo || 'N/A'}`,
                         `Máquina: ${machineName}`,
-                        `Prioridade: ${after.prioridade || 'normal'}`,
-                        after.descricao ? `Descrição: ${after.descricao}` : null,
+                        `Prioridade: ${after?.prioridade || 'normal'}`,
+                        after?.descricao ? `Descrição: ${after.descricao}` : null,
                     ].filter(Boolean).join('\n'),
                     status: 'initiated',
+                    priority: woPriority,
                 });
                 await event.data.after.ref.update({ procoreObservationId: obs?.id || null });
                 console.log(`[onWorkOrderToProcore] observation criada para WO ${woId}`);
@@ -449,6 +586,24 @@ exports.onWorkOrderToProcore = onDocumentUpdated(
                 console.error(`[onWorkOrderToProcore] create failed ${woId}:`, err.message);
                 await enqueueSync('create_observation_workorder', { woId, procoreProjectId }, procoreProjectId);
             }
+
+            // Registar início de manutenção no Equipment Log (M3)
+            if (after?.machineId && machine?.procoreEquipmentId) {
+                const eqId = machine.procoreEquipmentId;
+                const woNum = after?.numero || woId || 'S/N';
+                try {
+                    await createEquipmentLog(procoreProjectId, {
+                        equipmentId: eqId,
+                        date: new Date().toISOString().split('T')[0],
+                        hours: 0,
+                        description: `Manutenção iniciada — OS ${woNum}: ${after?.descricao || after?.tipo || 'Manutenção'}`,
+                    });
+                    console.log(`[onWorkOrderToProcore] equipment log criado para OS ${woNum}`);
+                } catch (elErr) {
+                    console.warn(`[onWorkOrderToProcore] equipment log failed (non-fatal): ${elErr.message}`);
+                }
+            }
+
             return null;
         }
 
@@ -468,6 +623,23 @@ exports.onWorkOrderToProcore = onDocumentUpdated(
                     observationId: after.procoreObservationId,
                     updates: { status: 'closed' },
                 }, procoreProjectId);
+            }
+        }
+
+        // Reset hoursSinceMaintenance na máquina quando manutenção concluída
+        if (becameConcluida) {
+            const machineId = after.machineId;
+            if (machineId) {
+                const machineRef = db().doc(`${MACHINES_PATH}/${machineId}`);
+                const machineSnap = await machineRef.get();
+                if (machineSnap.exists) {
+                    await machineRef.update({
+                        hoursSinceMaintenance: 0,
+                        lastMaintenanceAt: admin.firestore.Timestamp.now(),
+                        hoursAtLastMaintenance: machineSnap.data().totalHours || 0,
+                    });
+                    console.log(`[onWorkOrder] manutenção concluída — hoursSinceMaintenance reset para ${machineId}`);
+                }
             }
         }
 
@@ -838,6 +1010,77 @@ exports.onOperatorCreatedToProcore = onDocumentCreated(
                 pairingError: err.message.slice(0, 200),
                 updatedAt: admin.firestore.Timestamp.now(),
             }).catch(() => {});
+        }
+
+        return null;
+    }
+);
+
+// ─── Horas totais da máquina → notas do equipamento Procore ──────────────────
+//
+// Dispara quando totalHours ou hoursSinceMaintenance muda numa máquina.
+// Escreve um resumo de hodómetro no campo notes do equipamento Procore:
+//   "Horas totais (IoT): 234.5h | Desde última manutenção: 47.2h | 2026-05-15"
+
+exports.onMachineTotalHoursUpdated = onDocumentUpdated(
+    {
+        document: `${MACHINES_PATH}/{machineId}`,
+        secrets: [PROCORE_CLIENT_ID, PROCORE_CLIENT_SECRET, PROCORE_COMPANY_ID],
+        region: 'us-central1',
+    },
+    async (event) => {
+        const before = event.data.before.data();
+        const after  = event.data.after.data();
+
+        const hoursChanged = before.totalHours !== after.totalHours;
+        const maintenanceChanged = before.hoursSinceMaintenance !== after.hoursSinceMaintenance;
+        if (!hoursChanged && !maintenanceChanged) return null;
+
+        const procoreEquipmentId = after.procoreEquipmentId;
+        if (!procoreEquipmentId) return null;
+
+        // Evitar loop com updates vindos do sync Procore
+        if (after.lastSyncSource === 'procore_webhook' || after.lastSyncSource === 'procore_sync') return null;
+
+        if (!(await isProcoreConnected())) return null;
+
+        const totalHours = typeof after.totalHours === 'number' ? after.totalHours : 0;
+        const sinceMaint = typeof after.hoursSinceMaintenance === 'number' ? after.hoursSinceMaintenance : null;
+
+        const obraName = after.currentObra || after.currentProject || 'n/d';
+        const operatorName = after.currentOperator || after.lastOperator || 'n/d';
+        const timestamp = new Date().toLocaleString('pt-PT', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+        });
+
+        const notes = [
+            `Total IoT: ${totalHours.toFixed(1)}h`,
+            sinceMaint != null ? `Desde manut: ${sinceMaint.toFixed(1)}h` : 'Desde manut: --',
+            obraName,
+            operatorName,
+            timestamp,
+        ].join('  •  ');
+
+        try {
+            await updateEquipment(procoreEquipmentId, { notes });
+            console.log(`[onMachineTotalHours] ${event.params.machineId}: ${notes}`);
+        } catch (err) {
+            console.error(`[onMachineTotalHours] erro (não crítico):`, err.message);
+            await enqueueSync('update_equipment_notes', { equipmentId: procoreEquipmentId, notes });
+        }
+
+        try {
+            const cfResult = await patchEquipmentCustomFields(after.procoreEquipmentId, {
+                totalHours: after.totalHours,
+                hoursSinceMaintenance: after.hoursSinceMaintenance ?? null,
+                lastMaintenanceAt: after.lastMaintenanceAt ? new Date(after.lastMaintenanceAt.toDate()).toISOString() : null,
+                currentObra: after.currentObra || after.currentProject || null,
+                currentOperator: after.currentOperator || after.lastOperator || null,
+            });
+            if (cfResult.patched) console.log(`[onMachineTotalHoursUpdated] custom fields patched: ${cfResult.fields.join(', ')}`);
+        } catch (cfErr) {
+            console.warn(`[onMachineTotalHoursUpdated] custom fields patch failed (non-fatal): ${cfErr.message}`);
         }
 
         return null;

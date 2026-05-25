@@ -1,440 +1,159 @@
-# 💾 ARQUITETURA DE DADOS - CASAIS FLEET INTELLIGENCE
+# ARQUITETURA DE DADOS
 
-> **Data:** 07 Dezembro 2025  
-> **Status:** ✅ Estrutura Completa Definida  
-> **Plataforma:** Firebase Firestore (Cloud Database)
+Current detailed data architecture, aligned to the operational model on `2026-05-18`.
 
----
+For the short canonical contract read `docs/architecture/DATA_MODEL_CURRENT.md` first.
+For the old snapshot read `docs/archive/architecture/ARQUITETURA_DADOS.legacy.md`.
 
-## 🎯 ONDE SÃO GUARDADOS OS DADOS?
+## Base Path
 
-### **Resposta Curta:**
-**Firebase Firestore** - Base de dados NoSQL na cloud (Google Cloud Platform)
+`artifacts/casais-rfid/public/data/`
 
-### **Resposta Detalhada:**
-- **Plataforma:** Firebase (Google)
-- **Tipo:** NoSQL Database (documentos)
-- **Localização:** Cloud (servidores Google)
-- **Acesso:** Via Internet (HTTPS)
-- **Backup:** Automático (Google)
-- **Escalabilidade:** Automática (cresce conforme necessário)
+## Data Model Shape
 
----
+The system is centered on:
 
-## 📂 ESTRUTURA COMPLETA DO FIRESTORE
+- operators
+- machines
+- sessions
+- system settings
+- maintenance and work-order flows
+- RFID location flows
+- Procore integration state
 
-### **Caminho Base:**
-```
-artifacts/
-└── casais-rfid/
-    └── public/
-        └── data/
-```
+## Core Collections
 
-### **Collections (Coleções de Dados):**
+### `operators/`
 
-```
-artifacts/casais-rfid/public/data/
-│
-├── 📋 operators/                    (Operadores/Cartões RFID)
-│   └── {cardId}/
-│       ├── name: string
-│       ├── email: string              ← NOVO (para validações)
-│       └── registeredAt: timestamp
-│
-├── 🚜 machines/                     (Máquinas/Equipamentos)
-│   └── {machineId}/
-│       ├── name: string
-│       ├── displayName: string        ← NOVO
-│       ├── category: {                ← NOVO (Tipo de Equipamento)
-│       │   id: string
-│       │   name: string
-│       │   code: string
-│       │ }
-│       ├── location: {                ← NOVO (Obra/Estaleiro)
-│       │   workId: string
-│       │   workName: string
-│       │   gps: { lat, lng }
-│       │   lastUpdated: timestamp
-│       │   updatedBy: string
-│       │ }
-│       ├── status: "ACTIVE" | "IDLE" | "MAINTENANCE" | "IN_TRANSIT"
-│       ├── totalHours: number
-│       ├── consumptionRate: number    (L/h)
-│       ├── co2Factor: number          (kg CO₂ por litro)
-│       ├── currentTariff: {           ← NOVO (Custo Horário)
-│       │   id: string
-│       │   type: "MACHINE_ONLY" | "MACHINE_AND_OPERATOR"
-│       │   machineCostPerHour: number
-│       │   operatorCostPerHour: number
-│       │   totalCostPerHour: number
-│       │   validFrom: timestamp
-│       │   validUntil: timestamp | null
-│       │ }
-│       ├── tariffHistory: []          ← NOVO (Histórico de custos)
-│       ├── locationHistory: []        ← NOVO (Trilho de Auditoria Interno)
-│       │   └── { from, to, timestamp, cardId }
-│       ├── alerts: []                 ← NOVO (Alertas configuráveis)
-│       │   └── {
-│       │       name: "ALERTA_ATENCAO" | "ALERTA_CRITICO"
-│       │       hours: number
-│       │       type: "WARNING" | "CRITICAL"
-│       │       action: "NOTIFY" | "AUTO_CLOSE"
-│       │   }
-│       ├── maintenanceThresholdHours: number
-│       ├── partialHours: number       ← NOVO (Horas desde última manutenção)
-│       ├── createdAt: timestamp
-│       ├── createdBy: string
-│       ├── lastModified: timestamp
-│       └── lastModifiedBy: string
-│
-├── 📂 machine_categories/              ← NOVO (Tipos de Equipamento)
-│   └── {categoryId}/
-│       ├── id: string
-│       ├── name: string
-│       ├── code: string
-│       ├── description: string
-│       ├── defaultConsumptionRate: number
-│       ├── defaultCo2Factor: number
-│       ├── namingPattern: string
-│       ├── autoNumbering: boolean
-│       ├── nextNumber: number
-│       ├── isActive: boolean
-│       ├── machineCount: number
-│       ├── createdAt: timestamp
-│       └── createdBy: string
-│
-├── 🏗️ works/                         ← NOVO (Obras/Estaleiros)
-│   └── {workId}/
-│       ├── id: string
-│       ├── name: string
-│       ├── location: {
-│       │   address: string
-│       │   gps: { latitude, longitude }
-│       │ }
-│       ├── status: "ACTIVE" | "COMPLETED" | "SUSPENDED"
-│       ├── startDate: timestamp
-│       ├── endDate: timestamp | null
-│       └── createdAt: timestamp
-│
-├── ⏱️ sessions/                      (Sessões de Trabalho)
-│   └── {sessionId}/
-│       ├── cardId: string
-│       ├── machineId: string
-│       ├── startTime: timestamp
-│       ├── endTime: timestamp | null
-│       ├── durationHours: number
-│       ├── status: "OPEN" | "CLOSED"
-│       ├── closeReason: string        ← NOVO
-│       │   "MANUAL" | "AUTO_CLOSE" | "MACHINE_SWITCH" | "OPERATOR_SWITCH"
-│       ├── autoClosed: boolean        ← NOVO
-│       ├── originalStartTime: timestamp      ← NOVO (Histórico)
-│       ├── originalEndTime: timestamp        ← NOVO
-│       ├── originalDurationHours: number     ← NOVO
-│       ├── correctedStartTime: timestamp | null  ← NOVO
-│       ├── correctedEndTime: timestamp | null   ← NOVO
-│       ├── correctedDurationHours: number | null ← NOVO
-│       ├── wasCorrected: boolean      ← NOVO
-│       ├── correctedAt: timestamp | null
-│       ├── correctedBy: string | null
-│       ├── tariff: {                  ← NOVO (Custo Horário usado)
-│       │   id: string
-│       │   type: string
-│       │   machineCostPerHour: number
-│       │   operatorCostPerHour: number
-│       │   totalCostPerHour: number
-│       │   snapshot: {
-│       │       validFrom: timestamp
-│       │       validUntil: timestamp | null
-│       │   }
-│       │ }
-│       ├── costs: {                   ← NOVO (Custos calculados)
-│       │   hours: number
-│       │   costPerHour: number
-│       │   totalCost: number
-│       │   breakdown: {
-│       │       machineCost: number
-│       │       operatorCost: number
-│       │   }
-│       │ }
-│       └── workId: string             ← NOVO (Obra onde aconteceu)
-│
-├── ⚠️ alerts/                        ← NOVO (Alertas e Validações)
-│   └── {alertId}/
-│       ├── id: string
-│       ├── alertName: "ALERTA_ATENCAO" | "ALERTA_CRITICO"
-│       ├── machineId: string
-│       ├── operatorId: string
-│       ├── sessionId: string
-│       ├── type: "AUTO_CLOSE" | "MANUAL_CLOSE_AFTER_ALERT"
-│       ├── status: "PENDING" | "RESOLVED" | "EXPIRED"
-│       ├── createdAt: timestamp
-│       ├── resolvedAt: timestamp | null
-│       ├── validationToken: string    (Token único para link)
-│       ├── validationLink: string
-│       ├── originalHours: number
-│       ├── correctedHours: number | null
-│       └── operatorEmail: string
-│
-├── 🔧 maintenance/                   (Histórico de Manutenções)
-│   └── {maintenanceId}/
-│       ├── id: string
-│       ├── machineId: string
-│       ├── type: "PREVENTIVE" | "CORRECTIVE"
-│       ├── date: timestamp
-│       ├── hoursReset: number
-│       ├── partsReplaced: []           (Lista de peças)
-│       ├── cost: number | null
-│       ├── performedBy: "INTERNAL" | "EXTERNAL"
-│       ├── photos: []                 (URLs das fotos)
-│       ├── notes: string
-│       └── createdAt: timestamp
-│
-├── 🚨 breakdowns/                     ← NOVO (Avarias Reportadas)
-│   └── {breakdownId}/
-│       ├── id: string
-│       ├── machineId: string
-│       ├── reportedBy: string         (Operador)
-│       ├── date: timestamp
-│       ├── shortDescription: string
-│       ├── longDescription: string
-│       ├── urgency: 1 | 2 | 3 | 4     (Escala de gravidade)
-│       ├── status: "PENDING" | "RESOLVED"
-│       ├── photos: []                 (URLs das fotos)
-│       ├── resolution: string | null
-│       └── createdAt: timestamp
-│
-├── 📍 location_cards/                 (Definição de Hardware RFID de Obra)
-│   └── {cardId}/
-│       ├── id: string (LOC_XXXX)
-│       ├── obraId: string
-│       ├── obraName: string
-│       ├── gps: { lat, lng }
-│       └── createdAt: timestamp
-│
-├── 🔐 unregistered_scans/             (Logs de Segurança)
-│   └── {cardId}/
-│       ├── id: string
-│       ├── machineId: string
-│       ├── timestamp: timestamp
-│       ├── type: "access_attempt" | "registration_scan"
-│       └── resolved: boolean
-│
-├── 📥 scan_buffer/                    (Buffer para Auto-fill)
-│   └── latest/
-│       ├── cardId: string
-│       ├── machineId: string
-│       └── timestamp: timestamp
-│
-└── 👥 users/                          ← NOVO (Utilizadores do Sistema)
-    └── {userId}/
-        ├── id: string
-        ├── email: string
-        ├── name: string
-        ├── role: "OPERATOR" | "FLEET_MANAGER" | "FINANCIAL_MANAGER"
-        ├── createdAt: timestamp
-        └── lastLogin: timestamp
-```
+Purpose:
 
----
+- operator identity
+- RFID / operator linkage
+- contact fields used for alerts and Procore matching
 
-## 💰 CONSIDERAÇÕES DE CUSTOS
+Common fields:
 
-### **Firebase Firestore (Plano Gratuito):**
-- ✅ **50,000 leituras/dia** (gratuito)
-- ✅ **20,000 escritas/dia** (gratuito)
-- ✅ **20,000 eliminações/dia** (gratuito)
-- ✅ **1 GB de armazenamento** (gratuito)
+- `name`
+- `email`
+- `phone`
+- `role`
+- `procoreUserId` when synced
 
-### **Firebase Firestore (Plano Pago - Pay as you go):**
-- 💰 **$0.06 por 100,000 leituras**
-- 💰 **$0.18 por 100,000 escritas**
-- 💰 **$0.02 por 100,000 eliminações**
-- 💰 **$0.18 por GB de armazenamento/mês**
+### `machines/`
 
-### **Estimativa para Protótipo:**
-- **Leituras:** ~10,000/dia (bem dentro do gratuito)
-- **Escritas:** ~5,000/dia (bem dentro do gratuito)
-- **Armazenamento:** ~100 MB (bem dentro do gratuito)
+Purpose:
 
-**Conclusão:** Para protótipo, plano gratuito é suficiente! ✅
+- fleet inventory
+- operational state
+- cost model
+- maintenance state
+- Procore linkage
 
-### **Estimativa para Produção (Casais):**
-- **Leituras:** ~50,000-100,000/dia (pode precisar plano pago)
-- **Escritas:** ~20,000-50,000/dia (pode precisar plano pago)
-- **Armazenamento:** ~5-10 GB/ano (pode precisar plano pago)
+Common fields:
 
-**Custo Estimado:** ~$50-150/mês (depende do uso)
+- `name`
+- `category`
+- `status`
+- `totalHours`
+- `partialHours`
+- `consumptionRate`
+- `co2Factor`
+- `maintenanceInterval`
+- `currentTariff`
+- `tariffHistory[]`
+- `procoreEquipmentId`
 
----
+Important rules:
 
-## 🔒 SEGURANÇA E BACKUP
+- local admin-managed cost fields are not to be overwritten by Procore sync
+- `tariffHistory[]` is append-only
+- `partialHours` is part of the maintenance lifecycle, not a free-form counter
 
-### **Backup Automático:**
-- ✅ Firebase faz backup automático
-- ✅ Dados replicados em múltiplos servidores
-- ✅ 99.999% de disponibilidade (SLA Google)
+### `sessions/`
 
-### **Segurança:**
-- ✅ Dados encriptados em trânsito (HTTPS)
-- ✅ Dados encriptados em repouso
-- ✅ Regras de segurança Firestore (controlo de acesso)
-- ✅ Autenticação Firebase Auth
+Purpose:
 
-### **Regras de Segurança (Firestore Rules):**
-```javascript
-// Exemplo de regras (a implementar)
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Operadores: só ler seus próprios dados
-    match /operators/{cardId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.token.role == 'FLEET_MANAGER';
-    }
-    
-    // Máquinas: todos podem ler, só gestores podem escrever
-    match /machines/{machineId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.token.role == 'FLEET_MANAGER';
-    }
-    
-    // Sessões: todos podem ler, sistema escreve
-    match /sessions/{sessionId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null; // Cloud Function escreve
-    }
-  }
-}
-```
+- machine usage tracking
+- billing/cost snapshots
+- maintenance hour accumulation
+- Procore timecard export source
 
----
+Common fields:
 
-## 📊 ESTIMATIVA DE VOLUME DE DADOS
+- `cardId`
+- `machineId`
+- `startTime`
+- `endTime`
+- `durationHours`
+- `status`
+- close reason or close method field
+- `costs`
+- tariff snapshot data
+- `obraId` where relevant
 
-### **Por Máquina (por ano):**
-- **Sessões:** ~500-1000 sessões/ano
-- **Tamanho por sessão:** ~2 KB
-- **Total por máquina:** ~1-2 MB/ano
+Important rules:
 
-### **Por Obra (por ano):**
-- **Máquinas:** 10-50 máquinas
-- **Sessões:** ~5,000-50,000 sessões/ano
-- **Total por obra:** ~10-100 MB/ano
+- once closed, session cost and tariff snapshot data is immutable
+- export logic depends on these snapshots being trustworthy
 
-### **Sistema Completo (100 máquinas, 10 obras, 1 ano):**
-- **Sessões:** ~50,000-100,000 sessões
-- **Armazenamento:** ~100-200 MB
-- **Muito abaixo do limite gratuito!** ✅
+### `settings/system`
 
----
+Purpose:
 
-## 🔄 SINCRONIZAÇÃO E OFFLINE
+- global operational parameters
+- fuel and CO2 factors
+- maintenance defaults
 
-### **PWA Offline:**
-- ✅ Service Worker cacheia dados
-- ✅ Funciona offline (modo leitura)
-- ✅ Sincroniza quando volta conexão
+### `maintenance_schedules/`
 
----
+Purpose:
 
-## 🎯 VANTAGENS DO FIRESTORE
+- planned maintenance records
+- planning views and schedule UX
 
-### **✅ Escalabilidade:**
-- Cresce automaticamente
-- Sem limite de dados (paga o que usa)
-- Performance constante
+### `workOrders/`
 
-### **✅ Real-time:**
-- Dados atualizados em tempo real
-- Sem precisar refrescar
-- Sincronização automática
+Purpose:
 
-### **✅ Simplicidade:**
-- Sem servidor próprio
-- Sem gestão de base de dados
-- Google gere tudo
+- maintenance execution lifecycle
+- controlled reset flows tied to completed maintenance
 
-### **✅ Segurança:**
-- Encriptação automática
-- Backup automático
-- Regras de acesso flexíveis
+### `location_cards/`
 
----
+Legacy location-card collection still used in frontend flows.
 
-## ⚠️ LIMITAÇÕES E CONSIDERAÇÕES
+### `rfidLocationCards/`
 
-### **Limitações:**
-- ❌ Não é SQL (não há JOINs complexos)
-- ❌ Queries limitadas (máx. 10 filtros)
-- ❌ Custo pode aumentar com escala
+Newer location-card collection used by backend RFID handling and configuration UI.
 
-### **Soluções:**
-- ✅ Estrutura bem organizada (evita queries complexas)
-- ✅ Agregações no frontend (se necessário)
-- ✅ Monitorizar custos
+### `machineLocationEvents/`
 
----
+Audit trail for machine location changes:
 
-## 🔄 ALTERNATIVAS (Se Necessário)
+- RFID swipes
+- manual dispatch
+- corrections
+- transit/location history
 
-### **Opção 1: Firebase Firestore** ✅ (Atual)
-- **Vantagens:** Real-time, escalável, simples
-- **Desvantagens:** Custo pode aumentar
-- **Recomendação:** Manter para protótipo e produção
+### `integrations/procore`
 
-### **Opção 2: MongoDB Atlas**
-- **Vantagens:** Mais flexível, SQL-like queries
-- **Desvantagens:** Mais complexo, precisa servidor
-- **Recomendação:** Só se Firestore não servir
+Purpose:
 
-### **Opção 3: PostgreSQL (Cloud)**
-- **Vantagens:** SQL completo, relacional
-- **Desvantagens:** Mais complexo, precisa servidor
-- **Recomendação:** Só se precisar de queries muito complexas
+- token storage
+- connection state
+- sync metadata
+- default project settings
 
-### **Opção 4: Híbrido (Firestore + Cloud Storage)**
-- **Firestore:** Dados estruturados
-- **Cloud Storage:** Fotos, ficheiros grandes
-- **Recomendação:** Usar para fotos de manutenções/avarias
+## Transitional Areas To Treat Carefully
 
----
+- `location_cards` and `rfidLocationCards` coexist
+- older docs may say `procoreId` where code now uses `procoreEquipmentId` or `procoreUserId`
+- older phase-based Procore docs are historical, not current operational truth
 
-## ✅ RECOMENDAÇÃO FINAL
+## Code References
 
-### **Para Protótipo:**
-✅ **Firebase Firestore** (Plano Gratuito)
-- Suficiente para desenvolvimento
-- Sem custos
-- Fácil de usar
-
-### **Para Produção (Casais):**
-✅ **Firebase Firestore** (Plano Pago)
-- Escalável
-- Confiável
-- Custo razoável (~$50-150/mês)
-- **OU** MongoDB Atlas se precisar de mais flexibilidade
-
-### **Para Fotos/Ficheiros:**
-✅ **Firebase Cloud Storage**
-- Armazenar fotos de manutenções
-- Armazenar fotos de avarias
-- 5 GB gratuito, depois $0.026/GB/mês
-
----
-
-## 📋 CHECKLIST DE IMPLEMENTAÇÃO
-
-- [ ] Verificar estrutura Firestore atual
-- [ ] Criar collections novas (machine_categories, works, alerts, etc.)
-- [ ] Migrar dados existentes (se necessário)
-- [ ] Configurar regras de segurança Firestore
-- [ ] Configurar Firebase Cloud Storage (para fotos)
-- [ ] Testar queries de todas as novas features
-- [ ] Monitorizar custos (Firebase Console)
-- [ ] Configurar alertas de custo (se necessário)
-
----
-
-**Última atualização:** 07 Dezembro 2025
-
+- `Backend_Cloud/functions/index.js`
+- `Backend_Cloud/functions/procore/procoreBridge.js`
+- `Backend_Cloud/functions/procore/procoreSessionExporter.js`
+- `Backend_Cloud/functions/procore/procoreDeepIntegration.js`
+- `Frontend_App/dashboard/src/store/useStore.js`

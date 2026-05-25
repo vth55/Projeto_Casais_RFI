@@ -20,4 +20,4 @@ Decidimos utilizar o **Procore** como a fonte de verdade para projetos e equipam
 
 ## Referências
 - `Backend_Cloud/functions/procore/`
-- `DOCS_ROADMAP.md` (Fases 0-7)
+- `docs/archive/root/DOCS_ROADMAP.md` (Fases 0-7)

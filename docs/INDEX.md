@@ -1,42 +1,50 @@
-# Docs Index — Casais Fleet Intelligence
+# Docs Index
 
-Mapa de "se tarefa = X → lê doc Y". Claude consulta este ficheiro quando a memory file não chega.
+Mapa de leitura da documentacao ativa.
 
-## Arquitectura & Schema
+## Fontes canonicas
 
-| Tarefa | Ler |
-|--------|-----|
-| Schema Firestore completo (todas as coleções, campos, tipos) | `docs/architecture/ARQUITETURA_DADOS.md` |
-| Decisões de arquitectura passadas (ADRs) | `docs/architecture/ADR/` |
-| Como funciona o trigger RFID → sessão | `Backend_Cloud/functions/index.js` ~L1 |
-| Tarifários — lógica completa | `Backend_Cloud/functions/index.js` ~L223 + `docs/architecture/ARQUITETURA_DADOS.md` |
+- Estado atual de execucao: `docs/ROADMAP_EXECUCAO.md`
+- Bugs reais, descobertas e limites do sandbox: `FINDINGS.md`
+- Contexto operacional para agentes: `CLAUDE.md`
+- Politica de documentacao: `docs/DOCUMENTATION_POLICY.md`
+- Memoria duravel e handoff entre IAs: `obsidian-vault/00 Home.md`
 
-## Procore Integration
+## Arquitetura e dados
 
-| Tarefa | Ler |
-|--------|-----|
-| Estado atual da integração (fases, bugs, TODOs) | `docs/integrations/project_procore_status.md` |
-| OAuth flow detalhado | `Backend_Cloud/functions/procore/procoreBridge.js` |
-| Exportar sessões → Timecards | `Backend_Cloud/functions/procore/procoreSessionExporter.js` |
+| Pergunta | Ler |
+| --- | --- |
+| Modelo de dados operacional atual | `docs/architecture/DATA_MODEL_CURRENT.md` |
+| Modelo de dados historico / detalhado | `docs/architecture/ARQUITETURA_DADOS.md` |
+| Schema Firebase e contratos | `docs/standards/FIREBASE_SCHEMAS.md` |
+| Padroes de codigo | `docs/standards/CODE_PATTERNS.md` |
+| Decisoes de arquitetura | `docs/architecture/ADR/` |
 
-## Features & Estado
+## Procore
 
-| Tarefa | Ler |
-|--------|-----|
-| O que está feito / em progresso / pendente | `DOCS_ROADMAP.md` (pode estar desatualizado — verificar código) |
-| Histórico de decisões | `DOCS_HISTORY.md` |
-| Bugs e descobertas não-óbvias | `FINDINGS.md` |
+| Pergunta | Ler |
+| --- | --- |
+| Estado atual e limites conhecidos | `docs/integrations/project_procore_integration.md` |
+| OAuth, sync e endpoints | `Backend_Cloud/functions/procore/procoreBridge.js` |
+| Exportacao de sessoes/timecards | `Backend_Cloud/functions/procore/procoreSessionExporter.js` |
+| Achados recentes de sandbox | `FINDINGS.md` |
 
-## Standards & Padrões
+## Operacao
 
-| Tarefa | Ler |
-|--------|-----|
-| Padrões de código usados no projecto | `docs/standards/CODE_PATTERNS.md` |
-| Schemas Firebase detalhados | `docs/standards/FIREBASE_SCHEMAS.md` |
+| Pergunta | Ler |
+| --- | --- |
+| Troubleshooting e recovery | `docs/operations/TROUBLESHOOTING.md` |
+| Ultimas sessoes de trabalho | `docs/sessions/` |
+| Ultimo wrap-up automatico | `.claude/memory/runtime/last_wrapup.md` |
 
-## Sessões de Trabalho
+## Design e produto
 
-| Tarefa | Ler |
-|--------|-----|
-| O que foi feito nas últimas sessões | `docs/sessions/` (ficheiros por data) |
-| Última sessão | `.claude/memory/runtime/last_wrapup.md` |
+| Pergunta | Ler |
+| --- | --- |
+| Design system Casais | `docs/design/DESIGN_SYSTEM_CASAIS.md` |
+| Logotipo e branding | `docs/design/INSTRUCOES_LOGOTIPO.md` |
+
+## O que nao e canonico
+
+- `docs/archive/` contem snapshots, briefings antigos e docs superadas.
+- Ficheiros historicos na raiz podem continuar uteis para contexto, mas nao devem prevalecer sobre `docs/ROADMAP_EXECUCAO.md`, `FINDINGS.md` e o codigo atual.

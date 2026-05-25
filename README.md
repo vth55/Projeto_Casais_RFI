@@ -1,35 +1,38 @@
-# 🚜 CASAIS FLEET INTELLIGENCE
+# CASAIS Fleet Intelligence
 
-> **O Futuro da Construção passa pela Inteligência de Campo.**
+Projeto de gestao de frota e operacao em campo para o Grupo Casais.
 
-O *Casais Fleet Intelligence* é um ecossistema industrial projetado para o Grupo Casais, que transforma ativos físicos (máquinas e equipamentos) em fontes de dados em tempo real, totalmente integradas com o ERP Procore.
+## Entrada rapida
 
----
+- Estado atual de execucao: `docs/ROADMAP_EXECUCAO.md`
+- Mapa de documentacao canonica: `docs/INDEX.md`
+- Politica de documentacao: `docs/DOCUMENTATION_POLICY.md`
+- Quirks, bugs reais e limites externos: `FINDINGS.md`
+- Contexto operacional para agentes: `CLAUDE.md`
+- Memoria duravel multi-IA: `obsidian-vault/00 Home.md`
 
-## 📚 Portal de Documentação (Wikipedia)
+## Estrutura
 
-Para garantir a continuidade e o rigor técnico, a documentação está organizada em **4 Pilares Mestres**:
+- `Frontend_App/dashboard/` - PWA React/Vite
+- `Backend_Cloud/functions/` - Cloud Functions e integracao Procore
+- `docs/` - documentacao ativa, ADRs, standards, troubleshooting e sessoes
+- `obsidian-vault/` - memoria curada para IA e handoff entre ferramentas
 
-1.  📖 **[Histórico e Decisões](DOCS_HISTORY.md)**: Registo cronológico de todas as sessões, decisões de arquitetura e evolução do projeto (2024-2026).
-2.  🏗️ **[Arquitetura Técnica](DOCS_ARCHITECTURE.md)**: O manual do sistema. Detalhes sobre Cloud Functions, Database Schema, PWA e Integração Procore.
-3.  🗺️ **[Estado e Roadmap](DOCS_ROADMAP.md)**: O ponto de situação atual. Requisitos pedidos vs. Execução e planos para Inovação V3.
-4.  🛠️ **[Guia de Operações](DOCS_OPERATIONS.md)**: Como correr o projeto, comandos de build e procedimentos de deploy.
+## Regra de leitura
 
----
+Nem toda a documentacao da raiz tem o mesmo peso.
 
-## 🏗️ Ecossistema
-O projeto é composto por 4 módulos principais:
-- ☁️ **[Backend_Cloud](Backend_Cloud/README.md)**: Firebase Functions & Firestore.
-- 🎨 **[Frontend_App](Frontend_App/dashboard/README.md)**: PWA Dashboard em React.
-- 🔌 **[Firmware Arduino](arduino_rfid_simple/README.md)**: Controlo físico de RFID e LEDs.
-- 🌉 **[Python Bridge](Hardware_Bridge_PC/README.md)**: A ponte de comunicação hardware-cloud.
+- Usa `docs/ROADMAP_EXECUCAO.md` para estado atual.
+- Usa `FINDINGS.md` para comportamento real e limites do sandbox.
+- Usa `docs/architecture/` e `docs/standards/` para contratos mais estaveis.
+- Trata `docs/archive/root/` e `docs/archive/` como historico ou contexto de apoio, nao como fonte primaria.
 
----
+## Execucao local
 
-## 📋 Como Começar (Rápido)
-1. Certifica-te que tens o **Node.js 20+** instalado.
-2. Clona o repositório.
-3. Segue o **[Guia de Operações](DOCS_OPERATIONS.md)** para levantar o ambiente local.
+- Frontend: `cd Frontend_App/dashboard && npm run dev`
+- Backend functions: `cd Backend_Cloud/functions && npm run serve`
+- Deploy functions: `cd Backend_Cloud/functions && firebase deploy --only functions`
 
----
-> **Impacto**: O sistema reduz emissões de CO2 através da monitorização de inatividade e otimiza a manutenção preditiva, poupando milhares de euros em reparações de emergência.
+## Nota
+
+O projeto acumulou varios snapshots historicos. A limpeza feita em 2026-05-18 passou a distinguir explicitamente documentacao canonica de arquivo, para reduzir contradicoes e drift.

@@ -501,6 +501,32 @@ async function updateEquipment(equipmentId, fieldsToUpdate) {
     return result;
 }
 
+async function patchEquipmentCustomFields(equipmentId, fieldsMap) {
+    // fieldsMap: { totalHours, hoursSinceMaintenance, lastMaintenanceAt, currentObra, currentOperator }
+    // Lê custom field IDs de Firestore: integrations/procore -> customFields.equipment
+    const snap = await integrationDoc().get();
+    const customFields = snap.data()?.customFields?.equipment || {};
+
+    if (Object.keys(customFields).length === 0) return { patched: false, reason: 'no_custom_fields_discovered' };
+
+    const customFieldPayload = {};
+    if (customFields.totalHours?.id && fieldsMap.totalHours != null)
+        customFieldPayload[`custom_field_${customFields.totalHours.id}`] = { value: fieldsMap.totalHours };
+    if (customFields.hoursSinceMaintenance?.id && fieldsMap.hoursSinceMaintenance != null)
+        customFieldPayload[`custom_field_${customFields.hoursSinceMaintenance.id}`] = { value: fieldsMap.hoursSinceMaintenance };
+    if (customFields.lastMaintenanceAt?.id && fieldsMap.lastMaintenanceAt != null)
+        customFieldPayload[`custom_field_${customFields.lastMaintenanceAt.id}`] = { value: fieldsMap.lastMaintenanceAt };
+    if (customFields.currentObra?.id && fieldsMap.currentObra != null)
+        customFieldPayload[`custom_field_${customFields.currentObra.id}`] = { value: fieldsMap.currentObra };
+    if (customFields.currentOperator?.id && fieldsMap.currentOperator != null)
+        customFieldPayload[`custom_field_${customFields.currentOperator.id}`] = { value: fieldsMap.currentOperator };
+
+    if (Object.keys(customFieldPayload).length === 0) return { patched: false, reason: 'no_matching_fields' };
+
+    await updateEquipment(equipmentId, customFieldPayload);
+    return { patched: true, fields: Object.keys(customFieldPayload) };
+}
+
 async function createDirectoryUser({ firstName, lastName, email }) {
     const companyId = process.env.PROCORE_COMPANY_ID;
     const result = await procoreFetch(
@@ -578,40 +604,113 @@ async function persistCollection(subcollection, items, idField = 'id', { mirror 
  * Cria uma entrada de Timecard no Procore via POST à API REST.
  *
  * @param {object} params
- * @param {string} params.project_id        ID da obra no Procore
- * @param {string} params.date              Data no formato YYYY-MM-DD
- * @param {number} params.hours             Duração em horas (ex: 7.5)
- * @param {string} params.description       Descrição da sessão (ex: "Sessão IoT — ESC-042")
+ * @param {string} params.project_id            ID da obra no Procore
+ * @param {string} params.date                  Data no formato YYYY-MM-DD
+ * @param {number} params.hours                 Duração em horas (ex: 7.5)
+ * @param {string} params.description           Descrição da sessão (ex: "IoT · ESC-042 · 2.50h")
  * @param {number} params.login_information_id  ID do operador (Procore user ID)
  * @param {object} [opts]
- * @param {string} [opts.notes]             Notas adicionais
- * @param {number} [opts.equipment_id]      ID do equipamento associado
+ * @param {string}  [opts.notes]                Notas adicionais (suporta multilinha)
+ * @param {number}  [opts.equipment_id]         ID do equipamento associado
+ * @param {boolean} [opts.billable]             Se a entrada é billable (default: não enviado)
+ * @param {number}  [opts.timeTypeId]           ID do tipo de tempo (timecard_time_type_id)
+ * @param {number}  [opts.costCodeId]           ID do cost code (cost_code_id)
  * @returns {Promise<object>} Resposta JSON do Procore
  */
 async function createTimecardEntry({ project_id, date, hours, description, login_information_id }, opts = {}) {
     const endpoint = `${PROCORE_API_VERSION}/projects/${project_id}/timecard_entries`;
 
-    const payload = {
-        date,
-        hours,
-        description,
-        login_information_id,
-    };
+    const payload = { date, hours, description };
+    if (login_information_id != null) payload.login_information_id = login_information_id;
 
-    if (opts.notes) {
-        payload.notes = opts.notes;
-    }
-    if (opts.equipment_id) {
-        payload.equipment_id = opts.equipment_id;
-    }
+    if (opts.notes)       payload.notes        = opts.notes;
+    if (opts.equipment_id) payload.equipment_id = opts.equipment_id;
+    if (opts.billable != null) payload.billable = opts.billable;
+    if (opts.timeTypeId != null) payload.timecard_time_type_id = opts.timeTypeId;
+    if (opts.costCodeId != null) payload.cost_code_id          = opts.costCodeId;
 
     const result = await procoreFetch(endpoint, {
         method: 'POST',
         body: payload,
     });
 
-    console.log(`[procoreBridge] timecard created id=${result.data?.id} | ${date} | ${hours}h`);
+    console.log(`[procoreBridge] timecard created id=${result.data?.id} | ${date} | ${hours}h | billable=${opts.billable ?? 'not-set'}`);
     return result.data;
+}
+
+/**
+ * Descobre os tipos de tempo (timecard_time_types) disponíveis na empresa Procore.
+ * Persiste o resultado em Firestore: integrations.procore.customFields.timeTypes
+ * Retorna o ID do tipo "Regular" (match case-insensitive).
+ *
+ * Endpoint: GET /rest/v1.0/companies/{company_id}/timecard_time_types
+ *
+ * @returns {Promise<{regularId: number|null, timeTypes: object}>}
+ */
+async function discoverTimeTypes() {
+    const companyId = process.env.PROCORE_COMPANY_ID;
+    if (!companyId) throw new Error('PROCORE_COMPANY_ID secret não configurado.');
+
+    const endpoint = `${PROCORE_API_VERSION}/companies/${companyId}/timecard_time_types`;
+    let items;
+    try {
+        items = await procoreFetchAll(endpoint);
+    } catch (err) {
+        console.warn(`[procoreBridge] discoverTimeTypes falhou (${err.message}) — endpoint pode não estar disponível nesta sandbox`);
+        return { regularId: null, timeTypes: {}, error: err.message };
+    }
+
+    // Mapeia para { regular: {id, name}, overtime: {id, name}, ... }
+    const timeTypes = {};
+    let regularId = null;
+    for (const tt of items) {
+        const keyNorm = (tt.name || '').toLowerCase().trim().replace(/\s+/g, '_');
+        timeTypes[keyNorm] = { id: tt.id, name: tt.name };
+        if ((tt.name || '').toLowerCase().includes('regular')) {
+            regularId = tt.id;
+        }
+    }
+
+    // Persiste em Firestore
+    try {
+        await integrationDoc().set({
+            customFields: { timeTypes },
+        }, { merge: true });
+        console.log(`[procoreBridge] discoverTimeTypes — ${items.length} tipos encontrados, regularId=${regularId}`);
+    } catch (fsErr) {
+        console.warn('[procoreBridge] discoverTimeTypes — falhou a persistir no Firestore:', fsErr.message);
+    }
+
+    return { regularId, timeTypes };
+}
+
+/**
+ * Apaga um Timecard Entry no Procore.
+ * Usado quando uma sessão é corrigida — o timecard errado deve ser removido antes de criar um novo.
+ * Trata 404 como sucesso (já foi apagado) e 405 como sandbox limitation (regista warning).
+ *
+ * @param {string|number} projectId   ID do projeto Procore
+ * @param {string|number} timecardId  ID do timecard a apagar
+ */
+async function deleteTimecardEntry(projectId, timecardId) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/timecard_entries/${timecardId}`;
+    try {
+        await procoreFetch(endpoint, { method: 'DELETE' });
+        console.log(`[procoreBridge] timecard deleted id=${timecardId} project=${projectId}`);
+        return true;
+    } catch (err) {
+        // 404 — já apagado (idempotente)
+        if (err.message?.includes('404')) {
+            console.log(`[procoreBridge] timecard ${timecardId} already gone (404)`);
+            return true;
+        }
+        // 405 — sandbox não suporta DELETE (limitação conhecida)
+        if (err.message?.includes('405')) {
+            console.warn(`[procoreBridge] timecard DELETE 405 — sandbox limitation, skipping`);
+            return false;
+        }
+        throw err;
+    }
 }
 
 // ============================================
@@ -735,10 +834,10 @@ async function createCostEntry({ project_id, date, description, amount }, opts =
 
 /**
  * Cria uma Observation (avaria ou WorkOrder) no Procore.
- * Endpoint: POST /rest/v1.0/projects/{project_id}/observations/items
+ * Sandbox: POST /rest/v1.0/projects/{id}/observations/items → 404 (endpoint ausente no sandbox)
+ * Fallback: flat endpoint /rest/v1.0/observations/items?project_id={id}
  */
-async function createObservation(projectId, { name, description, status = 'initiated', typeId = null, datetimeInitiated = null } = {}) {
-    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/observations/items`;
+async function createObservation(projectId, { name, description, status = 'initiated', priority = null, typeId = null, datetimeInitiated = null } = {}) {
     const payload = {
         observation_item: {
             name: name || 'Avaria CASAIS Fleet',
@@ -747,11 +846,25 @@ async function createObservation(projectId, { name, description, status = 'initi
             datetime_initiated: datetimeInitiated || new Date().toISOString(),
         },
     };
+    if (priority) payload.observation_item.priority = priority;
     if (typeId) payload.observation_item.type_id = typeId;
 
-    const result = await procoreFetch(endpoint, { method: 'POST', body: payload });
-    console.log(`[procoreBridge] observation created id=${result.data?.id} project=${projectId}`);
-    return result.data;
+    // Try project-nested endpoint first; fall back to flat endpoint if 404 (sandbox limitation)
+    try {
+        const result = await procoreFetch(`${PROCORE_API_VERSION}/projects/${projectId}/observations/items`, { method: 'POST', body: payload });
+        console.log(`[procoreBridge] observation created id=${result.data?.id} project=${projectId}`);
+        return result.data;
+    } catch (err) {
+        if (!err.message.includes('404')) throw err;
+        console.warn(`[procoreBridge] project-nested observations 404 (sandbox limitation) — trying flat endpoint`);
+        const result = await procoreFetch(`${PROCORE_API_VERSION}/observations/items`, {
+            method: 'POST',
+            query: { project_id: projectId },
+            body: payload,
+        });
+        console.log(`[procoreBridge] observation created (flat) id=${result.data?.id} project=${projectId}`);
+        return result.data;
+    }
 }
 
 /**
@@ -785,6 +898,32 @@ async function createEquipmentLog(projectId, { equipmentId, date, hours, descrip
     };
     const result = await procoreFetch(endpoint, { method: 'POST', body: payload });
     console.log(`[procoreBridge] equipment_log created id=${result.data?.id} eq=${equipmentId} ${date} ${hours}h`);
+    return result.data;
+}
+
+/**
+ * Cria um Manpower Log no Daily Log do Procore (presença de operador por dia).
+ * Endpoint: POST /rest/v1.0/projects/{project_id}/daily_logs/manpower_logs
+ *
+ * @param {number} projectId
+ * @param {object} params
+ * @param {string} params.date            YYYY-MM-DD
+ * @param {number} params.loginInfoId     Procore user (login_information) ID
+ * @param {number} params.hours           Horas trabalhadas
+ * @param {string} [params.description]   Descrição opcional
+ */
+async function createManpowerLog(projectId, { date, loginInfoId, hours, description = 'Operador IoT — CASAIS Fleet' } = {}) {
+    const endpoint = `${PROCORE_API_VERSION}/projects/${projectId}/daily_logs/manpower_logs`;
+    const payload = {
+        manpower_log: {
+            log_date:              date,
+            login_information_id:  loginInfoId,
+            hours:                 Math.round(hours * 100) / 100,
+            description,
+        },
+    };
+    const result = await procoreFetch(endpoint, { method: 'POST', body: payload });
+    console.log(`[procoreBridge] manpower_log created id=${result.data?.id} user=${loginInfoId} ${date} ${hours}h`);
     return result.data;
 }
 
@@ -1542,6 +1681,79 @@ async function handleDailyLog(req, res) {
 }
 
 /**
+ * POST /manpower-log → cria um Manpower Log no Daily Log do Procore.
+ *
+ * Lê sessões do dia actual e cria uma entrada por operador no Daily Log da obra.
+ * Usado para demo on-demand (sem esperar pelo scheduler das 23:50).
+ *
+ * Body opcional: { "project_id": 328122 } — se omitido, usa defaultProcoreProjectId.
+ */
+async function handleManpowerLog(req, res) {
+    try {
+        const integRef = db().doc('artifacts/casais-rfid/public/data/integrations/procore');
+        const integSnap = await integRef.get();
+        const projectId = req.body?.project_id || integSnap.data()?.defaultProcoreProjectId;
+        if (!projectId) return res.status(400).json({ error: 'project_id required (or set defaultProcoreProjectId)' });
+
+        const today = new Date();
+        const startOfDay = new Date(today); startOfDay.setHours(0, 0, 0, 0);
+        const dateStr = today.toISOString().split('T')[0];
+        const SESSIONS_PATH = 'artifacts/casais-rfid/public/data/sessions';
+        const OPERATORS_PATH = 'artifacts/casais-rfid/public/data/operators';
+        const MACHINES_PATH  = 'artifacts/casais-rfid/public/data/machines';
+
+        const snap = await db().collection(SESSIONS_PATH)
+            .where('status', 'in', ['CLOSED', 'AUTO_CLOSED'])
+            .where('endTime', '>=', admin.firestore.Timestamp.fromDate(startOfDay))
+            .get();
+
+        // Agrupa por operador (cardId)
+        const byOp = {};
+        for (const doc of snap.docs) {
+            const s = doc.data();
+            const opKey = s.cardId || s.operatorId;
+            if (!opKey) continue;
+            if (!byOp[opKey]) byOp[opKey] = { hours: 0, machines: new Set() };
+            byOp[opKey].hours += s.durationHours || 0;
+            if (s.machineId) byOp[opKey].machines.add(s.machineId);
+        }
+
+        const results = [];
+        for (const [opKey, agg] of Object.entries(byOp)) {
+            // Resolve procoreUserId
+            let procoreUserId = null;
+            const opSnap = await db().doc(`${OPERATORS_PATH}/${opKey}`).get();
+            if (opSnap.exists) {
+                procoreUserId = opSnap.data()?.procoreUserId;
+            } else {
+                const q = await db().collection(OPERATORS_PATH).where('cardId', '==', opKey).limit(1).get();
+                if (!q.empty) procoreUserId = q.docs[0].data()?.procoreUserId;
+            }
+            if (!procoreUserId) { results.push({ opKey, skipped: true, reason: 'no_procore_user' }); continue; }
+
+            // Nomes das máquinas para description
+            const machineNames = [];
+            for (const mid of agg.machines) {
+                const m = (await db().doc(`${MACHINES_PATH}/${mid}`).get()).data();
+                if (m?.name) machineNames.push(m.name);
+            }
+            const description = machineNames.length > 0
+                ? `IoT — ${machineNames.slice(0, 3).join(', ')}${machineNames.length > 3 ? '…' : ''}`
+                : 'IoT — CASAIS Fleet';
+
+            const hours = Math.round(agg.hours * 100) / 100;
+            const log = await createManpowerLog(projectId, { date: dateStr, loginInfoId: procoreUserId, hours, description });
+            results.push({ opKey, procoreUserId, hours, logId: log?.id, description });
+        }
+
+        return res.status(201).json({ date: dateStr, projectId, results });
+    } catch (err) {
+        console.error('[procoreBridge] /manpower-log exception:', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+/**
  * POST /writeback → cria um Timecard Entry no Procore (teste manual).
  *
  * Body esperado:
@@ -1595,6 +1807,96 @@ async function handleWriteback(req, res) {
         });
     } catch (err) {
         console.error('[procoreBridge] /writeback exception:', err);
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+/**
+ * GET /live-activity — Resumo ao vivo de timecards e Daily Log counts do dia.
+ *
+ * Query: ?project_id=328122 (opcional; fallback para defaultProcoreProjectId no Firestore)
+ * Auto-bootstrap: persiste defaultProcoreProjectId se ainda não estiver definido.
+ */
+async function handleLiveActivity(req, res) {
+    try {
+        const integRef = db().doc('artifacts/casais-rfid/public/data/integrations/procore');
+        const integSnap = await integRef.get();
+        const intData = integSnap.data() || {};
+        const projectId = req.query?.project_id || intData.defaultProcoreProjectId || '328122';
+
+        // Auto-bootstrap: persiste defaultProcoreProjectId se ainda não configurado
+        if (!intData.defaultProcoreProjectId) {
+            await integRef.set({ defaultProcoreProjectId: Number(projectId) || projectId }, { merge: true });
+            console.log(`[procoreBridge] auto-bootstrapped defaultProcoreProjectId = ${projectId}`);
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const result = {
+            date: today,
+            project_id: String(projectId),
+            timecards_count: 0,
+            total_hours: 0,
+            unique_workers: 0,
+            workers: [],
+        };
+
+        // 1. Timecards de hoje
+        try {
+            const { data } = await procoreFetch(
+                `${PROCORE_API_VERSION}/projects/${projectId}/timecard_entries`,
+                { query: { date: today, per_page: 100 } }
+            );
+            const timecards = Array.isArray(data) ? data : [];
+            const workerMap = {};
+            let totalHours = 0;
+            for (const tc of timecards) {
+                const name = tc.login_information?.name || `Worker ${tc.login_information_id}`;
+                const hours = parseFloat(tc.hours) || 0;
+                totalHours += hours;
+                if (!workerMap[name]) workerMap[name] = { name, hours: 0, entries: 0, machines: [] };
+                workerMap[name].hours += hours;
+                workerMap[name].entries++;
+                // Description: "IoT check-in · <machine>" ou "IoT · <machine> · extras..."
+                // Extrai só o primeiro segmento após o prefixo IoT
+                if (tc.description) {
+                    const stripped = tc.description.replace(/^IoT(?:\s+check-in)?\s+·\s+/, '');
+                    const machPart = stripped.split(' · ')[0].trim();
+                    // Valida: não deve conter horas (0.04h) nem ser igual à descrição original
+                    if (machPart && machPart !== tc.description && !/^\d+\.\d+h$/.test(machPart) && !workerMap[name].machines.includes(machPart)) {
+                        workerMap[name].machines.push(machPart);
+                    }
+                }
+            }
+            result.timecards_count = timecards.length;
+            result.total_hours = Math.round(totalHours * 100) / 100;
+            result.unique_workers = Object.keys(workerMap).length;
+            result.workers = Object.values(workerMap)
+                .sort((a, b) => b.hours - a.hours)
+                .map(w => ({
+                    name: w.name,
+                    hours: Math.round(w.hours * 100) / 100,
+                    entries: w.entries,
+                    machines: w.machines.slice(0, 3),
+                }));
+        } catch (e) {
+            console.warn('[procoreBridge] live-activity timecards:', e.message);
+            result.timecards_error = e.message.slice(0, 200);
+        }
+
+        // 2. Daily Log Counts (GA 2025)
+        try {
+            const { data } = await procoreFetch(
+                `${PROCORE_API_VERSION}/projects/${projectId}/daily_log_counts`,
+                { query: { date: today } }
+            );
+            result.log_counts = data;
+        } catch (e) {
+            console.warn('[procoreBridge] live-activity daily_log_counts:', e.message);
+        }
+
+        return res.status(200).json(result);
+    } catch (err) {
+        console.error('[procoreBridge] /live-activity exception:', err);
         return res.status(500).json({ error: err.message });
     }
 }
@@ -1672,6 +1974,12 @@ const procoreBridge = onRequest(
             if (req.method === 'POST' && action === 'daily-log') {
                 return await handleDailyLog(req, res);
             }
+            if (req.method === 'POST' && action === 'manpower-log') {
+                return await handleManpowerLog(req, res);
+            }
+            if (req.method === 'GET' && action === 'live-activity') {
+                return await handleLiveActivity(req, res);
+            }
             if (req.method === 'POST' && action === 'writeback') {
                 return await handleWriteback(req, res);
             }
@@ -1690,7 +1998,7 @@ const procoreBridge = onRequest(
             }
             return res.status(404).json({
                 error: 'Unknown procore action',
-                hint: 'Try /api/procore/{authorize|callback|status|disconnect|companies|projects|equipment|equipment-diagnose|equipment-create|equipment-bulk|directory|sync|daily-log|writeback|custom-fields-discover|custom-fields-status|pair-equipment|pair-operator}',
+                hint: 'Try /api/procore/{authorize|callback|status|disconnect|companies|projects|equipment|equipment-diagnose|equipment-create|equipment-bulk|directory|sync|daily-log|manpower-log|live-activity|writeback|custom-fields-discover|custom-fields-status|pair-equipment|pair-operator}',
                 received: { method: req.method, path: req.path, action },
             });
         } catch (err) {
@@ -1789,6 +2097,7 @@ module.exports = {
     // Bidirectional sync — custom fields & pairing
     discoverAndPersistCustomFields,
     patchEquipmentCustomField,
+    patchEquipmentCustomFields,
     patchDirectoryCustomField,
     // Bidirectional obra assignment
     associateEquipmentToProject,
@@ -1798,12 +2107,15 @@ module.exports = {
     updateEquipment,
     // Write-back (Phase 2 + 3)
     createTimecardEntry,
+    deleteTimecardEntry,
+    discoverTimeTypes,
     createDailyLog,
     createCostEntry,
     // Sprint 3 — Deep Integration
     createObservation,
     updateObservation,
     createEquipmentLog,
+    createManpowerLog,
     getCostCodes,
     getVendors,
     // Re-exportar os secrets para que index.js os possa associar a outras functions:

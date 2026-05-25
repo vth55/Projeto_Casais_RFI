@@ -316,6 +316,7 @@ const useStore = create((set, get) => ({
     if (!target) return { matched: false, procoreProject: null };
 
     const hit = procoreProjects.find(p => {
+      if (!p) return false;
       const pName = normalize(p.name || p.display_name || p.project_number);
       return pName && (pName === target || pName.includes(target) || target.includes(pName));
     });
@@ -1223,6 +1224,92 @@ const useStore = create((set, get) => ({
       console.error('Erro ao resolver anomalia:', error);
       return { success: false, error: error.message };
     }
+  },
+
+  // ========================================
+  // SELECTORS CONTEXTUAIS DE OBRA
+  // ========================================
+
+  // Normaliza obraId de uma máquina (suporta os 3 campos legados)
+  _getMachineObraId: (machine) =>
+    machine.obraId || machine.localizacao?.obraId || machine.location?.workId || null,
+
+  // Filtra sessões por obraId + intervalo de datas { start: Date, end: Date }
+  getSessionsByObraId: (obraId, dateRange) => {
+    const { sessions, machines } = get();
+    const getObraId = (m) => m.obraId || m.localizacao?.obraId || m.location?.workId;
+    const machineIds = new Set(machines.filter(m => getObraId(m) === obraId).map(m => m.id));
+    const filtered = sessions.filter(s => machineIds.has(s.machineId));
+    if (!dateRange) return filtered;
+    const { start, end } = dateRange;
+    return filtered.filter(s => {
+      if (!s.startTime) return false;
+      const d = s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
+      return d >= start && d <= end;
+    });
+  },
+
+  // KPIs calculados para uma obra num período
+  getObraKPIs: (obraId, dateRange) => {
+    const { machines, systemSettings } = get();
+    const getObraId = (m) => m.obraId || m.localizacao?.obraId || m.location?.workId;
+    const obraMachines = machines.filter(m => getObraId(m) === obraId);
+    const sessions = get().getSessionsByObraId(obraId, dateRange);
+    const closed = sessions.filter(s => s.status === 'CLOSED' && s.durationHours);
+
+    const totalHours = closed.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+    const activeSessions = sessions.filter(s => s.status === 'OPEN').length;
+    const uniqueOperators = new Set(closed.map(s => s.operatorId).filter(Boolean)).size;
+    const uniqueMachines = new Set(closed.map(s => s.machineId).filter(Boolean)).size;
+    const co2Factor = systemSettings?.co2FactorPerLitre || 2.68;
+
+    const totalCO2 = obraMachines.reduce((sum, m) => {
+      const h = closed.filter(s => s.machineId === m.id).reduce((a, s) => a + (s.durationHours || 0), 0);
+      return sum + (m.consumptionRate || 0) * h * co2Factor;
+    }, 0);
+
+    const totalFuel = obraMachines.reduce((sum, m) => {
+      const h = closed.filter(s => s.machineId === m.id).reduce((a, s) => a + (s.durationHours || 0), 0);
+      return sum + (m.consumptionRate || 0) * h;
+    }, 0);
+
+    const totalCost = closed.reduce((sum, s) => sum + (s.costs?.total || 0), 0);
+
+    return {
+      totalHours:      Math.round(totalHours * 10) / 10,
+      totalCost:       Math.round(totalCost),
+      totalCO2:        Math.round(totalCO2),
+      totalFuel:       Math.round(totalFuel),
+      activeSessions,
+      uniqueOperators,
+      uniqueMachines,
+      totalMachines:   obraMachines.length,
+    };
+  },
+
+  // Máquinas actualmente na obra
+  getMachinesByObraId: (obraId) => {
+    const { machines } = get();
+    const getObraId = (m) => m.obraId || m.localizacao?.obraId || m.location?.workId;
+    return machines.filter(m => getObraId(m) === obraId);
+  },
+
+  // Operadores com sessões numa obra num período
+  getWorkersByObraId: (obraId, dateRange) => {
+    const { operators } = get();
+    const sessions = get().getSessionsByObraId(obraId, dateRange);
+    const opIds = [...new Set(sessions.map(s => s.operatorId).filter(Boolean))];
+    return opIds.map(opId => {
+      const op = operators.find(o => o.cardId === opId || o.id === opId);
+      const opSessions = sessions.filter(s => s.operatorId === opId);
+      const totalHours = opSessions.filter(s => s.status === 'CLOSED').reduce((sum, s) => sum + (s.durationHours || 0), 0);
+      return {
+        id:         opId,
+        name:       op?.name || opId,
+        sessions:   opSessions.length,
+        totalHours: Math.round(totalHours * 10) / 10,
+      };
+    }).sort((a, b) => b.totalHours - a.totalHours);
   },
 }));
 

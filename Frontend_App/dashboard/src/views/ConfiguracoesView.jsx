@@ -4,7 +4,7 @@ import {
   Users, Plus, Edit2, Check, X, ChevronRight, Lock, Unlock,
   Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon,
   Truck, Building2, Wallet, Leaf, Link2, Cloud, CloudOff, Activity,
-  Fuel, Wrench, BarChart3, CreditCard, MapPin
+  Fuel, Wrench, BarChart3, CreditCard, MapPin, Clock, Zap, TrendingUp, CheckCircle2
 } from 'lucide-react';
 import { createAllMockData } from '../utils/mockData';
 import { collection, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -18,22 +18,235 @@ import { useProcoreStatus } from '../hooks/useProcoreStatus';
 import { authFetch } from '../utils/authFetch';
 
 // ============================================================
-// PROCORE INTEGRATION SECTION — Fase 2 (UI)
+// PROCORE INTEGRATION SECTION — Fase 3 (Live Activity)
 // ============================================================
-// Painel administrativo para a integração Procore Sandbox. Lê o estado de
-// conexão via `/api/procore/status`, permite disparar um sync manual via
-// `/api/procore/sync`, e mostra previews das subcoleções sincronizadas
-// (`procoreProjects`, `procoreDirectory`, `procoreEquipment`) que já chegam
-// pelos listeners em `useStore`.
+
+const LOG_KEY_LABELS = {
+  notes_logs: 'Notas',
+  manpower_logs: 'Mão de Obra',
+  equipment_logs: 'Equipamento',
+  weather_logs: 'Clima',
+  work_logs: 'Trabalho',
+  timecard_entries: 'Timecards',
+  quantity_logs: 'Quantidades',
+  waste_logs: 'Resíduos',
+  delivery_logs: 'Entregas',
+  safety_violation_logs: 'Segurança',
+  visitor_logs: 'Visitas',
+};
+
+const getWorkerInitials = (name) => {
+  const parts = (name || '').split(' ').filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const AVATAR_GRADIENTS = [
+  'from-[#005EB8] to-[#0077d4]',
+  'from-violet-500 to-violet-600',
+  'from-emerald-500 to-emerald-600',
+  'from-amber-500 to-amber-600',
+  'from-rose-500 to-rose-600',
+  'from-cyan-500 to-cyan-600',
+];
+const getAvatarGradient = (name) => {
+  const idx = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[idx];
+};
+
+const useProcoreLiveActivity = (connected, projectId) => {
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [lastUpdate, setLastUpdate] = React.useState(null);
+
+  const fetchLive = React.useCallback(async () => {
+    if (!connected) return;
+    setLoading(true);
+    try {
+      const qs = projectId ? `?project_id=${projectId}` : '';
+      const res = await authFetch(`/api/procore/live-activity${qs}`, { cache: 'no-store' });
+      if (res.ok) {
+        setData(await res.json());
+        setLastUpdate(new Date());
+      }
+    } catch {}
+    finally { setLoading(false); }
+  }, [connected, projectId]);
+
+  React.useEffect(() => {
+    fetchLive();
+    const id = setInterval(fetchLive, 60_000);
+    return () => clearInterval(id);
+  }, [fetchLive]);
+
+  return { data, loading, lastUpdate, refetch: fetchLive };
+};
+
+const ProcoreLivePanel = ({ data, loading, lastUpdate, onRefresh, projectName }) => {
+  const [minsAgo, setMinsAgo] = React.useState(0);
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      if (lastUpdate) setMinsAgo(Math.floor((Date.now() - lastUpdate.getTime()) / 60_000));
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [lastUpdate]);
+
+  const logEntries = data?.log_counts
+    ? Object.entries(data.log_counts).filter(([, v]) => typeof v === 'number')
+    : [];
+  const hasLogData = logEntries.length > 0;
+  const totalLogEntries = logEntries.reduce((s, [, v]) => s + v, 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Stats banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#005EB8] via-[#006fd6] to-[#1a8fe8] rounded-xl p-5 text-white shadow-sm">
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 50%)' }} />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 opacity-90" />
+              <span className="text-sm font-semibold">Atividade Hoje</span>
+              {projectName && (
+                <span className="text-xs opacity-60 font-normal hidden sm:inline">· {projectName}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs opacity-80">
+                <div className={`w-1.5 h-1.5 rounded-full ${loading ? 'bg-amber-300' : 'bg-emerald-400 animate-pulse'}`} />
+                <span>{minsAgo === 0 ? 'Direto' : `há ${minsAgo}m`}</span>
+              </div>
+              <button
+                onClick={onRefresh}
+                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                title="Atualizar"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-4xl font-bold tabular-nums leading-none">{data.timecards_count}</p>
+              <p className="text-xs mt-1.5 opacity-70">Timecards</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold tabular-nums leading-none">{data.total_hours}h</p>
+              <p className="text-xs mt-1.5 opacity-70">Horas totais</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold tabular-nums leading-none">{data.unique_workers}</p>
+              <p className="text-xs mt-1.5 opacity-70">Trabalhadores</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Worker list */}
+      <div>
+        <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5" /> Trabalhadores hoje
+        </h4>
+        {data.workers.length > 0 ? (
+          <div className="space-y-1.5">
+            {data.workers.map((worker) => (
+              <div
+                key={worker.name}
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarGradient(worker.name)} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm`}>
+                  {getWorkerInitials(worker.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">{worker.name}</p>
+                  {worker.machines.length > 0 && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 flex items-center gap-1">
+                      <Truck className="w-3 h-3 flex-shrink-0 opacity-60" />
+                      {worker.machines.join(' · ')}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0 ml-2">
+                  <p className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">{worker.hours}h</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{worker.entries} entr.</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+            <Clock className="w-7 h-7 mb-2 opacity-40" />
+            <p className="text-sm font-medium">Sem timecards hoje</p>
+            <p className="text-xs mt-0.5 opacity-70">Scans RFID aparecem aqui em tempo real</p>
+          </div>
+        )}
+      </div>
+
+      {/* Daily Log counts */}
+      {hasLogData && (
+        <div>
+          <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <BarChart3 className="w-3.5 h-3.5" /> Daily Log · {data.date}
+            <span className="ml-auto text-slate-300 dark:text-slate-600 normal-case font-normal">
+              {totalLogEntries} entradas
+            </span>
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {logEntries.map(([key, count]) => (
+              <div
+                key={key}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  count > 0
+                    ? 'bg-[#005EB8]/8 border-[#005EB8]/20 text-[#005EB8] dark:bg-blue-900/20 dark:border-blue-700/40 dark:text-blue-300'
+                    : 'bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${count > 0 ? 'bg-[#005EB8]' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                {LOG_KEY_LABELS[key] ?? key}: <span className="font-bold ml-0.5">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Telematics callout — Procore GA Jan 2026 */}
+      <div className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-200/60 dark:border-amber-700/30 bg-amber-50/50 dark:bg-amber-900/10">
+        <Zap className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+            Procore Telematics
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 dark:bg-amber-800/40 border border-amber-200 dark:border-amber-700">GA Jan 2026</span>
+          </p>
+          <p className="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1 leading-relaxed">
+            GPS em tempo real via <code className="text-[10px] bg-amber-100 dark:bg-amber-800/30 px-1 rounded">/rest/v1.0/telematics/</code> —
+            CAT, Samsara, John Deere, United Rentals. Horas de motor e localização da frota.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProcoreIntegrationSection = () => {
   const { procoreProjects, procoreDirectory, procoreEquipment } = useStore();
   const { status, loading: loadingStatus, error: statusError, refetch } = useProcoreStatus();
   const [syncing, setSyncing] = React.useState(false);
   const [syncError, setSyncError] = React.useState(null);
 
+  const connected = !!status?.connected;
+  const hasErrors = status?.last_sync_errors && Object.keys(status.last_sync_errors).length > 0;
+
+  const defaultProjectId = '328122';
+  const defaultProject = procoreProjects.find((p) => String(p.id) === defaultProjectId);
+
+  const { data: liveData, loading: liveLoading, lastUpdate, refetch: refetchLive } =
+    useProcoreLiveActivity(connected, defaultProjectId);
+
   React.useEffect(() => {
-    const interval = setInterval(refetch, 30_000);
-    return () => clearInterval(interval);
+    const id = setInterval(refetch, 30_000);
+    return () => clearInterval(id);
   }, [refetch]);
 
   const handleSync = async () => {
@@ -46,6 +259,7 @@ const ProcoreIntegrationSection = () => {
         throw new Error(`Sync falhou: ${text.slice(0, 200)}`);
       }
       await refetch();
+      await refetchLive();
     } catch (err) {
       setSyncError(err.message || 'Erro desconhecido no sync');
     } finally {
@@ -63,122 +277,88 @@ const ProcoreIntegrationSection = () => {
     }
   };
 
-  const formatDate = (iso) => {
+  const fmtDate = (iso) => {
     if (!iso) return '—';
-    try {
-      return new Date(iso).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' });
-    } catch {
-      return '—';
-    }
+    try { return new Date(iso).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' }); }
+    catch { return '—'; }
   };
 
-  const connected = !!status?.connected;
-  const hasErrors = status?.last_sync_errors && Object.keys(status.last_sync_errors).length > 0;
-
   return (
-    <div className="space-y-6">
-      {/* Estado da Conexão */}
+    <div className="space-y-5">
+      {/* ── 1. Ligação ── */}
       <Card>
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className={`p-3 rounded-xl ${connected ? 'bg-gradient-to-br from-[#005EB8] to-[#0077d4]' : 'bg-slate-200 dark:bg-slate-700'}`}>
-              {connected ? (
-                <Cloud className="w-6 h-6 text-white" />
-              ) : (
-                <CloudOff className="w-6 h-6 text-slate-500" />
-              )}
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={`p-2.5 rounded-xl flex-shrink-0 ${connected ? 'bg-gradient-to-br from-[#005EB8] to-[#0077d4]' : 'bg-slate-200 dark:bg-slate-700'}`}>
+              {connected
+                ? <Cloud className="w-5 h-5 text-white" />
+                : <CloudOff className="w-5 h-5 text-slate-500" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-slate-900 dark:text-white">Procore</h3>
-                {loadingStatus ? (
-                  <Badge variant="default" size="sm">A verificar...</Badge>
-                ) : connected ? (
-                  <Badge variant={hasErrors ? 'warning' : 'success'} size="sm">
-                    {hasErrors ? 'Conectado (com erros)' : 'Conectado'}
-                  </Badge>
-                ) : (
-                  <Badge variant="default" size="sm">Desconectado</Badge>
-                )}
+                {loadingStatus
+                  ? <Badge variant="default" size="sm">A verificar...</Badge>
+                  : connected
+                    ? <Badge variant={hasErrors ? 'warning' : 'success'} size="sm">{hasErrors ? 'Conectado (erros)' : 'Conectado'}</Badge>
+                    : <Badge variant="default" size="sm">Desconectado</Badge>}
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Sandbox: <code className="text-xs">sandbox.procore.com</code>
-                {status?.company_id && <> · Company ID: <code className="text-xs">{status.company_id}</code></>}
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <code>sandbox.procore.com</code>
+                {status?.company_id && <> · Company <code>{status.company_id}</code></>}
               </p>
-              {statusError && (
-                <p className="text-xs text-red-600 mt-1">Erro de estado: {statusError}</p>
-              )}
+              {statusError && <p className="text-xs text-red-500 mt-0.5">{statusError}</p>}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {connected ? (
               <>
-                <Button
-                  size="sm"
-                  icon={RefreshCw}
-                  onClick={handleSync}
-                  loading={syncing}
-                  disabled={syncing}
-                >
-                  {syncing ? 'A sincronizar...' : 'Sincronizar agora'}
+                <Button size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing} disabled={syncing}>
+                  {syncing ? 'A sincronizar...' : 'Sincronizar'}
                 </Button>
-                <Button size="sm" variant="ghost" icon={X} onClick={handleDisconnect}>
-                  Desconectar
-                </Button>
+                <Button size="sm" variant="ghost" icon={X} onClick={handleDisconnect}>Desconectar</Button>
               </>
             ) : (
               <a
                 href="/api/procore/authorize"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg bg-gradient-to-r from-[#005EB8] to-[#0077d4] hover:from-[#004a94] hover:to-[#0066b8] shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg bg-gradient-to-r from-[#005EB8] to-[#0077d4] hover:from-[#004a94] hover:to-[#0066b8] shadow-sm transition-all"
               >
-                <Link2 className="w-4 h-4" />
-                Conectar Procore
+                <Link2 className="w-4 h-4" /> Conectar Procore
               </a>
             )}
           </div>
         </div>
 
         {connected && (
-          <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Último sync</p>
-              <p className="font-semibold text-slate-900 dark:text-white mt-1">{formatDate(status?.last_sync_at)}</p>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Duração</p>
-              <p className="font-semibold text-slate-900 dark:text-white mt-1">
-                {status?.last_sync_duration_ms ? `${Math.round(status.last_sync_duration_ms)}ms` : '—'}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Token expira</p>
-              <p className="font-semibold text-slate-900 dark:text-white mt-1">
-                {status?.expires_in_seconds != null
-                  ? `${Math.max(0, Math.floor(status.expires_in_seconds / 60))} min`
-                  : '—'}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <p className="text-slate-500 dark:text-slate-400 uppercase tracking-wide">Conectado desde</p>
-              <p className="font-semibold text-slate-900 dark:text-white mt-1">{formatDate(status?.connected_at)}</p>
-            </div>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+            {[
+              { label: 'Último sync', value: fmtDate(status?.last_sync_at) },
+              { label: 'Duração', value: status?.last_sync_duration_ms ? `${Math.round(status.last_sync_duration_ms)}ms` : '—' },
+              { label: 'Token expira', value: status?.expires_in_seconds != null ? `${Math.max(0, Math.floor(status.expires_in_seconds / 60))} min` : '—' },
+              { label: 'Conectado em', value: fmtDate(status?.connected_at) },
+            ].map(({ label, value }) => (
+              <div key={label} className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                <p className="text-slate-400 dark:text-slate-500 uppercase tracking-wide text-[10px]">{label}</p>
+                <p className="font-semibold text-slate-800 dark:text-white mt-0.5 truncate">{value}</p>
+              </div>
+            ))}
           </div>
         )}
 
         {syncError && (
-          <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2">
+          <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2 dark:bg-red-900/20 dark:border-red-700 dark:text-red-300">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span>{syncError}</span>
           </div>
         )}
 
         {hasErrors && (
-          <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
             <p className="font-semibold flex items-center gap-2 mb-1">
               <AlertTriangle className="w-4 h-4" /> Erros no último sync
             </p>
-            <ul className="ml-6 list-disc text-xs">
+            <ul className="ml-5 list-disc text-xs space-y-0.5">
               {Object.entries(status.last_sync_errors).map(([k, v]) => (
                 <li key={k}><strong>{k}:</strong> {String(v).slice(0, 120)}</li>
               ))}
@@ -187,69 +367,76 @@ const ProcoreIntegrationSection = () => {
         )}
       </Card>
 
-      {/* Contadores de entidades sincronizadas */}
+      {/* ── 2. Live Activity ── */}
+      {connected && (
+        <Card>
+          {liveLoading && !liveData ? (
+            <div className="flex flex-col items-center justify-center h-32 gap-2 text-slate-400">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <p className="text-sm">A carregar atividade do Procore...</p>
+            </div>
+          ) : liveData ? (
+            <ProcoreLivePanel
+              data={liveData}
+              loading={liveLoading}
+              lastUpdate={lastUpdate}
+              onRefresh={refetchLive}
+              projectName={defaultProject?.name || defaultProject?.display_name}
+            />
+          ) : null}
+        </Card>
+      )}
+
+      {/* ── 3. Entidades sincronizadas ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Projetos Procore</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{procoreProjects.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Mirror read-only</p>
+        {[
+          { label: 'Projetos', count: procoreProjects.length, sub: 'Mirror read-only', icon: Building2, color: 'text-[#005EB8]', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'Equipamentos', count: procoreEquipment.length, sub: 'Catálogo Procore', icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Diretório', count: procoreDirectory.length, sub: 'Utilizadores', icon: Users, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+        ].map(({ label, count, sub, icon: Icon, color, bg }) => (
+          <Card key={label}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">{label}</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1 tabular-nums">{count}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{sub}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${bg}`}>
+                <Icon className={`w-6 h-6 ${color}`} />
+              </div>
             </div>
-            <div className="p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20">
-              <Building2 className="w-6 h-6 text-primary-600" />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Equipamentos</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{procoreEquipment.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Catálogo Procore</p>
-            </div>
-            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
-              <Truck className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Diretório</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{procoreDirectory.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Utilizadores</p>
-            </div>
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20">
-              <Users className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
+        ))}
       </div>
 
-      {/* Preview de projetos sincronizados */}
+      {/* ── 4. Lista de projetos ── */}
       {procoreProjects.length > 0 && (
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h4 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                <Activity className="w-4 h-4" /> Projetos Sincronizados
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Primeiros 5 projetos do mirror Procore</p>
-            </div>
+            <h4 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+              <Building2 className="w-4 h-4 text-[#005EB8]" /> Projetos Sincronizados
+            </h4>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{procoreProjects.length} total</span>
           </div>
-          <div className="space-y-2">
-            {procoreProjects.slice(0, 5).map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+          <div className="space-y-1.5">
+            {procoreProjects.slice(0, 6).map((p) => (
+              <div key={p.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm text-slate-900 dark:text-white truncate">
+                  <p className="font-medium text-sm text-slate-800 dark:text-white truncate">
                     {p.name || p.display_name || `Projeto ${p.id}`}
                   </p>
                   {p.project_number && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">#{p.project_number}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">#{p.project_number}</p>
                   )}
                 </div>
-                <Badge variant="default" size="sm">ID {p.id}</Badge>
+                <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                  {String(p.id) === defaultProjectId && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#005EB8]/10 text-[#005EB8] dark:bg-blue-900/30 dark:text-blue-300 border border-[#005EB8]/20 font-medium">
+                      Ativo
+                    </span>
+                  )}
+                  <Badge variant="default" size="sm">ID {p.id}</Badge>
+                </div>
               </div>
             ))}
           </div>

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
+import { navigateToObra } from '../hooks/useObraId';
 import { Card, StatCard, Button, Badge, Modal, Input, Select, Table, EmptyState, Skeleton } from '../components/ui';
 
 // Status das obras
@@ -51,7 +52,7 @@ const ObraCard = ({ obra, machines, operators, procoreProject, onViewDetails, on
       <div className="absolute top-3 right-3 flex items-center gap-1.5">
         {hasProcoreLink && (
           <span
-            title={`Sincronizado com Procore: ${procoreProject.name || procoreProject.display_name || procoreProject.project_number || procoreProject.id}`}
+            title={`Sincronizado com Procore: ${procoreProject?.name || procoreProject?.display_name || procoreProject?.project_number || procoreProject?.id || ''}`}
             className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gradient-to-r from-[#005EB8] to-[#0077d4] text-white uppercase tracking-wide shadow-sm"
           >
             <Link2 className="w-2.5 h-2.5" />
@@ -833,17 +834,18 @@ const ObrasView = () => {
   // Derivar filtro do activeView (sidebar) — fonte única de verdade
   const filterStatus = VIEW_TO_FILTER[activeView] || 'all';
 
-  // Garantir que obras existe
-  const obrasList = obras || [];
+  // Garantir que obras existe e filtrar elementos nulos (pode acontecer com sync Procore)
+  const obrasList = (obras || []).filter(o => o != null);
   // Separar obras reais do Estaleiro (virtual)
   const estaleiro = obrasList.find(o => o.id === 'estaleiro');
   const realObras = obrasList.filter(o => !o.isVirtual && o.id !== 'estaleiro');
 
   const filteredObras = useMemo(() => {
+    const q = searchTerm.toLowerCase();
     return realObras.filter(obra => {
-      const matchesSearch = obra.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           obra.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           obra.city?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = obra.name?.toLowerCase()?.includes(q) ||
+                           obra.address?.toLowerCase()?.includes(q) ||
+                           obra.city?.toLowerCase()?.includes(q);
       const matchesStatus = filterStatus === 'all' || obra.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
@@ -901,7 +903,7 @@ const ObrasView = () => {
   };
 
   const handleViewDetails = (obra) => {
-    setViewingObra(obra);
+    navigateToObra(obra.id, setActiveView);
   };
 
   // Se está a ver detalhes de uma obra, mostrar essa vista

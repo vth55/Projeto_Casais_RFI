@@ -202,6 +202,43 @@ async function findProcoreEquipment(identifier) {
     return null;
 }
 
+// ─── v1.0 equipment resolution (needed for timecard equipment_id) ────────────
+
+// Per-invocation cache: projectId → Array<{ id: number, name: string, ... }>
+const _v1EquipCache = new Map();
+
+async function fetchProjectEquipmentV1(projectId) {
+    if (_v1EquipCache.has(projectId)) return _v1EquipCache.get(projectId);
+    try {
+        const res = await procoreFetch(`/projects/${projectId}/equipment`);
+        const items = Array.isArray(res) ? res : (res?.data || []);
+        _v1EquipCache.set(projectId, items);
+        return items;
+    } catch (e) {
+        console.warn('[procoreSessionExporter] fetchProjectEquipmentV1 error:', e.message);
+        _v1EquipCache.set(projectId, []);
+        return [];
+    }
+}
+
+function bestV1Match(list, machineName) {
+    if (!machineName || !list.length) return null;
+    const target = normalizeForMatching(machineName);
+    const targetWords = target.split(' ').filter(Boolean);
+    let bestItem = null;
+    let bestScore = 0;
+    for (const e of list) {
+        const eName = normalizeForMatching(e.name || e.description || '');
+        if (!eName) continue;
+        if (eName === target) return e;
+        // Score = number of target words found in the Procore name
+        const score = targetWords.filter(w => eName.includes(w)).length;
+        if (score > bestScore) { bestScore = score; bestItem = e; }
+    }
+    // Accept only if at least half the target words matched (min 2)
+    return bestScore >= Math.max(2, Math.ceil(targetWords.length / 2)) ? bestItem : null;
+}
+
 // ─── Firestore loaders ───────────────────────────────────────────────────────
 
 /** @param {string} obraId @returns {Promise<object|null>} Obra document data. */
@@ -214,8 +251,15 @@ async function getObraById(obraId) {
 /** @param {string} operatorId @returns {Promise<object|null>} Operator document data. */
 async function getOperatorById(operatorId) {
     if (!operatorId) return null;
-    const snap = await admin.firestore().doc(`${OPERATORS_PATH}/${operatorId}`).get();
-    return snap.exists ? snap.data() : null;
+    // Try direct doc lookup first (when operatorId is the actual doc ID)
+    const direct = await admin.firestore().doc(`${OPERATORS_PATH}/${operatorId}`).get();
+    if (direct.exists) return direct.data();
+    // Fallback: query by cardId field (operatorId is a RFID card value like OP-JOAO-PEREIRA)
+    const q = await admin.firestore().collection(OPERATORS_PATH)
+        .where('cardId', '==', operatorId)
+        .limit(1)
+        .get();
+    return q.empty ? null : { ...q.docs[0].data(), _resolvedDocId: q.docs[0].id };
 }
 
 /** @param {string} machineId @returns {Promise<object|null>} Machine document data. */
@@ -240,21 +284,24 @@ async function getMachineById(machineId) {
  * @param {string} [params.notes] - Optional freeform notes.
  * @returns {Promise<object>} Procore API response (created timecard).
  */
-async function createTimecardEntry(projectId, { date, hours, description, loginInfoId, equipmentId, notes }) {
+async function createTimecardEntry(projectId, { date, hours, description, loginInfoId, equipmentId, notes, billable, timeTypeId, costCodeId }) {
     const payload = {
         date,
         hours,
         description,
         login_information_id: loginInfoId,
     };
-    if (notes)       payload.notes        = notes;
-    if (equipmentId) payload.equipment_id = equipmentId;
+    if (notes)              payload.notes                  = notes;
+    if (equipmentId)        payload.equipment_id            = equipmentId;
+    if (billable != null)   payload.billable               = billable;
+    if (timeTypeId != null) payload.timecard_time_type_id  = timeTypeId;
+    if (costCodeId != null) payload.cost_code_id            = costCodeId;
 
     const result = await procoreFetch(`/projects/${projectId}/timecard_entries`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
-    console.log(`[procoreSessionExporter] timecard created id=${result.id} | ${date} | ${hours.toFixed(2)}h`);
+    console.log(`[procoreSessionExporter] timecard created id=${result.id} | ${date} | ${hours.toFixed(2)}h | billable=${billable ?? 'not-set'}`);
     return result;
 }
 
@@ -302,11 +349,31 @@ async function resolveEntities(machineData, operatorData, obraData) {
     } else {
         equipment = await findProcoreEquipment(machineData?.name || machineData?.id);
         resolution.equipment = equipment ? 'fuzzy' : 'none';
-        // Self-heal: persist discovered ID back to machine doc
         if (equipment && machineData?._docId) {
             admin.firestore().doc(`${MACHINES_PATH}/${machineData._docId}`)
                 .set({ procoreEquipmentId: equipment.id, procoreEquipmentNumber: equipment.name }, { merge: true })
                 .catch(e => console.warn('[procoreSessionExporter] self-heal equipment ID failed:', e.message));
+        }
+    }
+
+    // ── Resolve v1.0 integer ID (timecards API requires integer, not ULID) ──
+    // If equipment was found but ID is a v2.1 ULID, or if no equipment found,
+    // fall back to the v1.0 project equipment list which returns integer IDs.
+    if (project) {
+        const machineName = equipment?.name || machineData?.name;
+        const hasV1Id = equipment && /^\d+$/.test(String(equipment.id));
+        if (!hasV1Id) {
+            const v1List = await fetchProjectEquipmentV1(project.id);
+            const v1Match = bestV1Match(v1List, machineName);
+            if (v1Match) {
+                equipment = { id: v1Match.id, name: v1Match.name || equipment?.name || machineName };
+                resolution.equipment = equipment ? 'v1_match' : resolution.equipment;
+                console.log(`[procoreSessionExporter] v1 equipment resolved: "${machineName}" → id=${v1Match.id}`);
+            } else if (equipment) {
+                // Had a match but can't get v1 ID — send timecard without equipment_id
+                console.warn(`[procoreSessionExporter] no v1 match for "${machineName}" (id=${equipment.id} is ULID) — equipment_id omitted from timecard`);
+                equipment.id = null;
+            }
         }
     }
 
@@ -325,16 +392,38 @@ async function _doExportStart(sessionData, machineData, operatorData, obraData) 
     const { project, user, equipment } = await resolveEntities(machineData, operatorData, obraData);
 
     if (!project) return { exported: false, reason: 'no_project_match', obraName: obraData?.workName || obraData?.name };
-    if (!user)    return { exported: false, reason: 'no_user_match',    operatorEmail: operatorData?.email };
+    if (!user && !equipment) return { exported: false, reason: 'no_user_no_equipment', operatorEmail: operatorData?.email };
 
-    const date = new Date().toISOString().split('T')[0];
+    const now          = new Date();
+    const date         = now.toISOString().split('T')[0];
+    const machineName  = machineData?.name   || 'Máquina';
+    const operatorName = operatorData?.name  || 'Desconhecido';
+    const obraName     = obraData?.name || obraData?.workName || 'Obra n/d';
+    const startStr     = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+    // Description — só a máquina (operador está na coluna Worker, horas na coluna Hours)
+    const machineShort  = machineName.length > 35 ? machineName.slice(0, 33) + '…' : machineName;
+    const description   = `IoT check-in · ${machineShort}`;
+
+    // Notes — bloco multilinha
+    const notes = [
+        `Sessão automática CASAIS Fleet Intelligence`,
+        `Máquina: ${machineName}`,
+        user
+            ? `Operador: ${operatorName} (${operatorData?.cardId || operatorData?._docId || 'RFID'})`
+            : `Sem operador (modo equipamento)`,
+        `Início: ${startStr}`,
+        `Obra: ${obraName}`,
+    ].join('\n');
+
     const timecard = await createTimecardEntry(project.id, {
         date,
         hours:       0,
-        description: `Entrada: ${machineData?.name || 'Máquina'} — ${operatorData?.name || 'Operador'}`,
-        loginInfoId: user.id,
+        description,
+        loginInfoId: user?.id ?? null,
         equipmentId: equipment?.id,
-        notes:       `Sessão iniciada às ${new Date().toLocaleTimeString('pt-PT')}`,
+        notes,
+        billable:    true,
     });
 
     return {
@@ -353,11 +442,11 @@ async function _doExportStart(sessionData, machineData, operatorData, obraData) 
  * Build and POST a session-end timecard entry to Procore with real hours.
  * @returns {Promise<object>} Export result with `exported: true/false`.
  */
-async function _doExportEnd(sessionData, machineData, operatorData, obraData) {
+async function _doExportEnd(sessionData, machineData, operatorData, obraData, sessionId) {
     const { project, user, equipment } = await resolveEntities(machineData, operatorData, obraData);
 
     if (!project) return { exported: false, reason: 'no_project_match', obraName: obraData?.workName || obraData?.name };
-    if (!user)    return { exported: false, reason: 'no_user_match',    operatorEmail: operatorData?.email };
+    if (!user && !equipment) return { exported: false, reason: 'no_user_no_equipment', operatorEmail: operatorData?.email };
 
     const endTime   = sessionData.endTime?.toDate   ? sessionData.endTime.toDate()   : new Date(sessionData.endTime);
     const startTime = sessionData.startTime?.toDate ? sessionData.startTime.toDate() : new Date(sessionData.startTime);
@@ -367,22 +456,45 @@ async function _doExportEnd(sessionData, machineData, operatorData, obraData) {
     const startStr = startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
     const endStr   = endTime.toLocaleTimeString('pt-PT',   { hour: '2-digit', minute: '2-digit' });
 
+    const machineName  = machineData?.name  || 'Máquina';
+    const operatorName = operatorData?.name || 'Desconhecido';
+    const obraName     = obraData?.name || obraData?.workName || 'Obra n/d';
+    const sessionIdShort = (sessionId || '').slice(0, 8);
+
+    // Description — só a máquina (operador está na coluna Worker, horas na coluna Hours)
+    const machineShort   = machineName.length > 35 ? machineName.slice(0, 33) + '…' : machineName;
+    const description    = `IoT · ${machineShort}`;
+
+    // Notes — bloco multilinha rico
+    const notes = [
+        `Sessão automática CASAIS Fleet Intelligence`,
+        `Máquina: ${machineName}`,
+        user
+            ? `Operador: ${operatorName} (${operatorData?.cardId || operatorData?._docId || 'RFID'})`
+            : `Sem operador (modo equipamento)`,
+        `Período: ${startStr} → ${endStr} (${hours.toFixed(2)}h)`,
+        `Obra: ${obraName}`,
+        `Session ID: ${sessionIdShort}`,
+    ].join('\n');
+
     const timecard = await createTimecardEntry(project.id, {
         date,
         hours,
-        description: `Sessão: ${machineData?.name || 'Máquina'} (${hours.toFixed(2)}h)`,
-        loginInfoId: user.id,
+        description,
+        loginInfoId: user?.id ?? null,
         equipmentId: equipment?.id,
-        notes:       `${startStr} → ${endStr}`,
+        notes,
+        billable:    true,
     });
 
     return {
         exported:     true,
         type:         'end',
+        equipmentOnly: !user,
         projectId:    project.id,
         projectName:  project.name,
-        userId:       user.id,
-        userName:     user.name,
+        userId:       user?.id ?? null,
+        userName:     user?.name ?? null,
         timecardId:   timecard.id,
         timecardDate: date,
         hours,
@@ -425,7 +537,7 @@ async function exportSessionToProcore(sessionId, eventType) {
     ]);
     // Inject doc IDs for self-healing write-back in resolveEntities
     const machineData = machineDataRaw ? { ...machineDataRaw, _docId: sessionData.machineId } : null;
-    const operatorData = operatorDataRaw ? { ...operatorDataRaw, _docId: sessionData.cardId } : null;
+    const operatorData = operatorDataRaw ? { ...operatorDataRaw, _docId: operatorDataRaw._resolvedDocId || sessionData.cardId } : null;
 
     // Resolve obra: prefer explicit session obraId, fall back to machine location
     const obraId = sessionData.obraId
@@ -445,7 +557,7 @@ async function exportSessionToProcore(sessionId, eventType) {
     try {
         result = eventType === 'start'
             ? await _doExportStart(sessionData, machineData, operatorData, obraData)
-            : await _doExportEnd(sessionData, machineData, operatorData, obraData);
+            : await _doExportEnd(sessionData, machineData, operatorData, obraData, sessionId);
     } catch (err) {
         console.error(`[procoreSessionExporter] ${eventType} export threw:`, err.message);
         result = { exported: false, reason: 'api_error', error: err.message };

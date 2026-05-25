@@ -1,43 +1,87 @@
-# 🛠️ Guia de Troubleshooting & Edge Cases
+# Troubleshooting
 
-Este guia documenta erros comuns, comportamentos surpresivos e as suas soluções. 
+Active runbook for operational issues worth checking first.
 
----
+## Hardware And Bridge
 
-## 🔌 Hardware (Arduino & Python Bridge)
+### Python bridge says port is busy or access is denied
 
-### 🔴 Erro: "Port Busy" ou "Access Denied" na Python Bridge
-- **Causa**: O Monitor Serial do Arduino IDE está aberto.
-- **Solução**: Fecha o Monitor Serial no IDE antes de iniciar o ficheiro `.bat` da ponte.
+Cause:
 
-### 🟡 Problema: Cartão RFID não detetado (LED não pisca)
-- **Causa**: Cabo SDA ou RST mal conectado (Jumper solto devido a vibração da máquina).
-- **Solução**: Verifica a pinagem no `arduino_rfid_simple/README.md`. Bate levemente no leitor para testar a conexão.
+- Arduino IDE serial monitor still open
 
----
+Check:
 
-## ☁️ Cloud & Backend (Firebase)
+- close serial monitor
+- retry the bridge process
 
-### 🔴 Erro: "Email not sent" no Log das Functions
-- **Causa**: Variáveis de ambiente SMTP (`EMAIL_PASS`) não configuradas ou token expirado.
-- **Solução**: Executa `firebase functions:secrets:set EMAIL_PASS=xxxxx`.
+## Frontend And Auth
 
-### 🟡 Problema: Sessão não fecha automaticamente
-- **Causa**: Threshold de fadiga ou auto-close alterado no Firestore e não propagado.
-- **Solução**: Verifica a coleção `settings/alertConfig` no Firestore.
+### Firebase Auth noise appears in console
 
----
+Current expectation:
 
-## 🏗️ Integração Procore
+- some auth-related console noise can be expected in local/dev contexts
 
-### 🔴 Erro: "401 Unauthorized" nos Logs de Exportação
-- **Causa**: O Access Token do Procore expirou e o Refresh falhou (conta de dev pendente).
-- **Solução**: Reiniciar o processo de autorização manual via rota `/procore/auth` (quando disponível).
+Do:
 
-### 🟡 Problema: Timecard não sincronizado
-- **Causa**: O ID do Cartão RFID não tem um mapeamento correspondente no Diretório do Procore (Mismatch de nomes/email).
-- **Solução**: Garante que o email do operador na PWA é IDENTICO ao email no Procore.
+- verify whether the issue is functional or only console noise before treating it as a bug
 
----
+## Procore
 
-> **Dica do Futuro**: Se encontrares um bug novo, documenta-o aqui imediatamente.
+### 401 or token-related Procore failures
+
+Check:
+
+- integration state in `integrations/procore`
+- OAuth connection flow in `procoreBridge.js`
+- whether token refresh is succeeding through `getValidAccessToken()`
+
+### Timecards do not show `equipment_id` in sandbox
+
+Current reality:
+
+- Procore sandbox v1.0 equipment endpoints can return `404`
+- this is a sandbox limitation, not necessarily a code bug
+
+Read:
+
+- `FINDINGS.md`
+- `docs/integrations/project_procore_integration.md`
+
+### Observations export fails in sandbox
+
+Current reality:
+
+- sandbox behavior is limited and may reject observation creation even when the code path is correct
+
+Check:
+
+- `FINDINGS.md` for current known limitation details
+
+## Documentation Drift
+
+### Docs disagree with code
+
+Rule:
+
+- trust code first
+- then update the active docs
+- do not patch historical snapshots to look current
+
+Read first:
+
+- `docs/ROADMAP_EXECUCAO.md`
+- `docs/architecture/DATA_MODEL_CURRENT.md`
+- `docs/integrations/project_procore_integration.md`
+- `FINDINGS.md`
+
+## Sessions And Evidence
+
+### Too much noise under `docs/sessions/`
+
+Rule:
+
+- session markdowns stay in `docs/sessions/`
+- preserved screenshots go under `docs/sessions/evidence/YYYY-MM-DD/`
+- temporary Playwright dumps belong in `docs/archive/sessions/`

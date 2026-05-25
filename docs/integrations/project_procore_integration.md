@@ -1,37 +1,72 @@
-# 🚀 ROADMAP: PROCORE INTEGRATION (CASAIS RFI)
+# Procore Integration - Current State
 
-> **Status Atual:** ✅ FASE 5 CONCLUÍDA (Polimento Técnico). Próximo: Fase 6 (Demonstração Casais).
-> **Visão:** IoT Layer for Procore — Automatização total de dados de campo.
+Atualizado em `2026-05-18`.
 
----
+## Estado executivo
 
-## 📅 PLANO DE EXECUÇÃO (7 FASES)
+A integracao Procore esta operacional no sandbox atual e ja cobre:
 
-| Fase | Objetivo | Status | IA Recomendada |
-| :--- | :--- | :--- | :--- |
-| **0** | **Setup Procore Developer Portal** (SandBox + Credenciais) | ✅ CONCLUÍDO | **Sonnet** |
-| **1** | **Cloud Function "Procore Bridge"** (OAuth2 + Auth Flow) | ✅ CONCLUÍDO | **Opus** |
-| **2** | **Sincronização & Interface (Mirror + Badges UI)** | ✅ CONCLUÍDO | **Opus** |
-| **3** | **Push IoT (Automatic Timecards ao fechar sessão)** | ✅ CONCLUÍDO | **Opus** |
-| **4** | **UX/UI Refactoring** (Procore Reconciliation Hub no Dashboard) | ✅ CONCLUÍDO | **Opus/Sonnet** |
-| **5** | **Polimento e Documentação Técnica** (Limpeza de código, JSDoc) | ✅ CONCLUÍDO | **Sonnet** |
-| **6** | **Demonstração Casais** (Final de linha) | 🕒 PRÓXIMO | **Humano** |
+- OAuth e refresh de token
+- sync de projects, directory e equipment
+- exportacao de sessoes para timecards
+- sync bidirecional basico entre PWA e Procore
+- retry e resiliência para falhas conhecidas
 
----
+O estado atual do trabalho ja nao e "Fase 4/Fase 5". Essa linguagem ficou historica. Hoje este ficheiro serve como snapshot tecnico do estado real.
 
-## 🧩 ESTRATÉGIA DE INTEGRAÇÃO (OPÇÃO B - ENRIQUECIMENTO)
-*Decisão tomada em 07/04/2026: Procore funciona como fonte de dados complementar.*
-- **Mirroring:** Sincronização horária de `projects`, `equipment` e `directory` para Firestore.
-- **Match:** Vinculação automática por email/nome normalizado (Zustand Helpers).
-- **UI:** Badges "Procore Sync" em Obras/Operadores. Registo local permanece Master (editável).
+## Codigo principal
 
----
+- `Backend_Cloud/functions/procore/procoreBridge.js`
+- `Backend_Cloud/functions/procore/procoreSessionExporter.js`
+- `Backend_Cloud/functions/procore/procoreDeepIntegration.js`
+- `Frontend_App/dashboard/src/views/ConfiguracoesView.jsx`
 
-## 🛠️ DECISÕES TÉCNICAS (SAFETY LOG)
-- **Path:** `artifacts/casais-rfid/public/data/integrations/procore`.
-- **Sync Engine:** Cloud Scheduler v2 (`procoreScheduledSync`) na região `us-central1`.
-- **Writeback:** Integração em tempo real em `index.js` (Export assíncrono).
+## IDs e ambiente validados
 
----
+- Procore sandbox company: `4283171`
+- Projeto sandbox principal: `328122`
+- Equipment API valida: `/rest/v2.1/companies/4283171/equipment_register`
 
-> **Nota para a Próxima Sessão:** Fases 2 e 3 entregues com sucesso. O foco agora é na **Fase 4**: Refinar a UI do dashboard para exibir reconciliação de dados Procore vs Locais de forma profissional.
+## O que esta funcional
+
+- Bridge OAuth e estado da conexao
+- refresh de token centralizado em `getValidAccessToken()`
+- sync de equipment register v2.1
+- criacao e atualizacao de equipment a partir da PWA
+- exportacao de sessoes como timecards
+- tratamento de retries e degradacao controlada em endpoints problemáticos
+
+## Limites confirmados do sandbox
+
+Isto nao deve ser tratado como bug do projeto:
+
+- `GET /rest/v1.0/projects/328122/equipment` retorna `404`
+- `GET /rest/v1.0/companies/4283171/equipment` retorna `404`
+- `POST` de Observations continua bloqueado no sandbox
+- `DELETE` de equipment pode devolver `405`
+- `PATCH` para arquivar equipment pode responder `200` sem efeito real
+- webhooks outbound do sandbox nao sao uma base fiavel para validacao final
+
+Para detalhes e evidencias recentes, ler `FINDINGS.md`.
+
+## Decisoes tecnicas atuais
+
+- O token refresh deixou de ser privado do exporter; `procoreSessionExporter.js` usa `getValidAccessToken()` de `procoreBridge.js`
+- O Firestore continua a ser a fonte de verdade operacional da app
+- O Procore funciona como sistema integrado e espelho parcial, nao como substituto total da modelacao local
+
+## Pendencias reais
+
+- validar melhor os cenarios ainda bloqueados por sandbox
+- continuar a distinguir claramente comportamento de sandbox vs producao
+- consolidar UI de observabilidade da integracao em `ConfiguracoesView`
+- reduzir drift entre docs antigas e estado atual do codigo
+
+## Historico
+
+Os seguintes ficheiros foram mantidos apenas como arquivo historico:
+
+- `docs/archive/integrations/PROCORE_PHASE1_PROGRESS.md`
+- `docs/archive/integrations/project_procore_status.md`
+
+Se houver conflito entre esses ficheiros e este, prevalece este ficheiro e o codigo atual.
