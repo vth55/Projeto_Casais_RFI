@@ -64,7 +64,31 @@ jobs:
           node -e "console.log(require('./package.json').scripts['build:android'])" 2>&1 || true
 
       - name: Sync Capacitor
-        run: npx cap sync android --verbose
+        id: capsync
+        run: |
+          set +e
+          mkdir -p /tmp/ci-logs
+          {
+            echo "=== pwd ==="
+            pwd
+            echo "=== dist/ exists? ==="
+            ls -la dist/ 2>&1 | head -20 || echo "NO DIST"
+            echo "=== capacitor.config.json ==="
+            cat capacitor.config.json || true
+            echo "=== Running cap sync... ==="
+            npx cap sync android --verbose 2>&1
+            echo "=== Exit code: $? ==="
+          } | tee /tmp/ci-logs/cap-sync.log
+          # Always upload, success or fail
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload sync logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap-sync-debug-log
+          path: /tmp/ci-logs/cap-sync.log
+          if-no-files-found: warn
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
