@@ -46,7 +46,9 @@ const ToolTagPage = lazy(() => import('./pages/ToolTagPage'));
 // Views com lazy loading (code splitting)
 const DashboardView = lazy(() => import('./views/DashboardView'));
 const ObrasView = lazy(() => import('./views/ObrasView'));
-const MaquinasView = lazy(() => import('./views/MaquinasView'));
+// Pivô (2026-05): "Equipamentos" agora trata ferramentas pequenas com NFC em vez de máquinas grandes.
+// MaquinasView.jsx mantém-se em disco como referência mas não é mais carregada.
+const MaquinasView = lazy(() => import('./views/FerramentasView'));
 const OperadoresView = lazy(() => import('./views/OperadoresView'));
 const SessoesView = lazy(() => import('./views/SessoesView'));
 const ManutencaoView = lazy(() => import('./views/ManutencaoView'));
