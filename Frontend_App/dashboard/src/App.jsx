@@ -147,8 +147,9 @@ export default function App() {
         const { Capacitor } = await import('@capacitor/core');
         if (!Capacitor.isNativePlatform()) return;
         const { App } = await import('@capacitor/app');
-        listener = await App.addListener('appUrlOpen', ({ url }) => {
-          // url ex: "https://casais-rfid.web.app/t/MARTELO_001"
+
+        const handleUrl = (url) => {
+          if (!url) return;
           try {
             const u = new URL(url);
             if (u.pathname.startsWith('/t/')) {
@@ -156,7 +157,16 @@ export default function App() {
               setIsToolTag(true);
             }
           } catch (_) { /* ignore */ }
-        });
+        };
+
+        // 1) Cold start: APK aberto via deep link → URL vem por getLaunchUrl
+        try {
+          const launch = await App.getLaunchUrl();
+          if (launch?.url) handleUrl(launch.url);
+        } catch (_) { /* ignore */ }
+
+        // 2) Warm: APK já estava aberto → URL vem por evento appUrlOpen
+        listener = await App.addListener('appUrlOpen', ({ url }) => handleUrl(url));
       } catch (_) { /* not on Capacitor — ignore */ }
     })();
     return () => { listener?.remove?.(); };
