@@ -16,9 +16,13 @@
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
-const { defineSecret } = require('firebase-functions/params');
 
-const SAP_API_KEY = defineSecret('SAP_API_KEY');
+// SAP API key opcional — se não configurado, módulo corre em modo mock.
+// Para activar modo live: firebase functions:secrets:set SAP_API_KEY
+// e adicionar `secrets: [SAP_API_KEY]` aos exports + descomentar defineSecret.
+function getSapApiKey() {
+  return process.env.SAP_API_KEY || null;
+}
 
 const APP_ID = 'casais-rfid';
 const TOOL_SESSIONS_PATH = `artifacts/${APP_ID}/public/data/tool_sessions`;
@@ -144,14 +148,13 @@ exports.onToolSessionCreatedToSap = onDocumentCreated(
   {
     document: `${TOOL_SESSIONS_PATH}/{sessionId}`,
     region: 'europe-west1',
-    secrets: [SAP_API_KEY],
   },
   async (event) => {
     const session = event.data?.data();
     if (!session) return;
     if (session.status !== 'OPEN') return;  // só checkouts
 
-    const apiKey = SAP_API_KEY.value() || null;
+    const apiKey = getSapApiKey();
     return processToolSession(event.params.sessionId, session, 'checkout', apiKey);
   }
 );
@@ -163,7 +166,6 @@ exports.onToolSessionClosedToSap = onDocumentUpdated(
   {
     document: `${TOOL_SESSIONS_PATH}/{sessionId}`,
     region: 'europe-west1',
-    secrets: [SAP_API_KEY],
   },
   async (event) => {
     const before = event.data?.before?.data();
@@ -173,7 +175,7 @@ exports.onToolSessionClosedToSap = onDocumentUpdated(
     // Só dispara se passou de OPEN → CLOSED
     if (before.status !== 'OPEN' || after.status !== 'CLOSED') return;
 
-    const apiKey = SAP_API_KEY.value() || null;
+    const apiKey = getSapApiKey();
     return processToolSession(event.params.sessionId, after, 'checkin', apiKey);
   }
 );
@@ -185,11 +187,11 @@ exports.onToolSessionClosedToSap = onDocumentUpdated(
 // GET  /api/sap/status → estado da integração
 // ──────────────────────────────────────────────────────────
 exports.sapBridge = onRequest(
-  { region: 'europe-west1', secrets: [SAP_API_KEY], cors: true },
+  { region: 'europe-west1', cors: true },
   async (req, res) => {
     const db = admin.firestore();
     const path = req.path || '';
-    const apiKey = SAP_API_KEY.value() || null;
+    const apiKey = getSapApiKey();
 
     // GET /status
     if (path.endsWith('/status') || path === '/' || path === '') {
