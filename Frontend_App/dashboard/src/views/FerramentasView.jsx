@@ -16,7 +16,7 @@ import {
 import { db, projectId } from '../config/firebase';
 import {
   Wrench, Plus, Search, Edit2, Trash2, Nfc, Tag, Copy, Check,
-  Building2, Package, AlertCircle, LogOut, LogIn,
+  Building2, Package, AlertCircle, LogOut, LogIn, Radio, Loader2,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 
@@ -217,9 +217,22 @@ function ToolModal({ tool, onClose, onSaved }) {
 }
 
 // ──────────────────────────────────────────────
+// Escreve URL na tag NFC (Web NFC API — só Chrome Android)
+// ──────────────────────────────────────────────
+async function writeUrlToNfcTag(url) {
+  if (!('NDEFReader' in window)) {
+    throw new Error('NFC não suportado (precisa Chrome Android)');
+  }
+  const reader = new window.NDEFReader();
+  await reader.write({
+    records: [{ recordType: 'url', data: url }],
+  });
+}
+
+// ──────────────────────────────────────────────
 // Card de ferramenta
 // ──────────────────────────────────────────────
-function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl }) {
+function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl, onProgramTag, programming }) {
   const isInUse = !!openSession;
 
   return (
@@ -259,14 +272,29 @@ function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl }) {
         <div className="flex items-center gap-2 text-xs">
           <Tag className="w-3.5 h-3.5 text-slate-400" />
           <span className="font-mono text-slate-600 dark:text-slate-300">{tool.nfcTagId}</span>
-          <button
-            onClick={onCopyUrl}
-            className="ml-auto text-primary-500 hover:text-primary-600 flex items-center gap-1"
-            title="Copiar URL da tag"
-          >
-            <Copy className="w-3 h-3" />
-            URL
-          </button>
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={onCopyUrl}
+              className="text-primary-500 hover:text-primary-600 flex items-center gap-1"
+              title="Copiar URL da tag"
+            >
+              <Copy className="w-3 h-3" />
+              URL
+            </button>
+            <button
+              onClick={onProgramTag}
+              disabled={programming}
+              className="text-primary-500 hover:text-primary-600 flex items-center gap-1 disabled:opacity-50"
+              title="Escrever este URL numa tag NFC física"
+            >
+              {programming ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Radio className="w-3 h-3" />
+              )}
+              {programming ? 'A escrever...' : 'Programar'}
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <Package className="w-3.5 h-3.5 text-slate-400" />
@@ -308,6 +336,8 @@ export default function FerramentasView() {
   const [filterType, setFilterType] = useState('all');
   const [editing, setEditing] = useState(null);  // null | {} | tool obj
   const [copied, setCopied] = useState(null);
+  const [programming, setProgramming] = useState(null);  // tool.id em execução
+  const [toast, setToast] = useState(null);  // { kind: 'success'|'error', msg }
 
   // Listener: ferramentas
   useEffect(() => {
@@ -360,6 +390,21 @@ export default function FerramentasView() {
     navigator.clipboard?.writeText(url);
     setCopied(tool.id);
     setTimeout(() => setCopied(null), 1500);
+  }
+
+  async function handleProgramTag(tool) {
+    const url = `${window.location.origin}/t/${tool.nfcTagId}`;
+    setProgramming(tool.id);
+    setToast({ kind: 'info', msg: `Encosta a tag de "${tool.name}" ao telemóvel agora...` });
+    try {
+      await writeUrlToNfcTag(url);
+      setToast({ kind: 'success', msg: `Tag de "${tool.name}" programada!` });
+    } catch (err) {
+      setToast({ kind: 'error', msg: err.message });
+    } finally {
+      setProgramming(null);
+      setTimeout(() => setToast(null), 4000);
+    }
   }
 
   if (loading) return (
@@ -434,6 +479,20 @@ export default function FerramentasView() {
         </div>
       )}
 
+      {/* Toast de programação NFC */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl text-sm font-medium shadow-lg flex items-center gap-2 z-50 max-w-sm ${
+          toast.kind === 'success' ? 'bg-emerald-500 text-white' :
+          toast.kind === 'error'   ? 'bg-red-500 text-white' :
+                                     'bg-slate-800 text-white'
+        }`}>
+          {toast.kind === 'success' ? <Check className="w-4 h-4 flex-shrink-0" /> :
+           toast.kind === 'error'   ? <AlertCircle className="w-4 h-4 flex-shrink-0" /> :
+                                      <Radio className="w-4 h-4 flex-shrink-0 animate-pulse" />}
+          {toast.msg}
+        </div>
+      )}
+
       {/* Lista */}
       {filtered.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
@@ -452,6 +511,8 @@ export default function FerramentasView() {
               onEdit={() => setEditing(tool)}
               onDelete={() => handleDelete(tool)}
               onCopyUrl={() => handleCopyUrl(tool)}
+              onProgramTag={() => handleProgramTag(tool)}
+              programming={programming === tool.id}
             />
           ))}
         </div>
