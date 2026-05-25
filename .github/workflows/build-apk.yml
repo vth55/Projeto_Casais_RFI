@@ -43,16 +43,28 @@ jobs:
         run: npm run build:android
 
       - name: Debug pre-sync state
+        if: always()
         run: |
-          echo "=== pwd ==="; pwd
-          echo "=== capacitor.config.json ==="; cat capacitor.config.json
-          echo "=== dist/ contents (first 15) ==="; ls -la dist/ | head -15
-          echo "=== dist/index.html exists? ==="; test -f dist/index.html && echo YES || echo NO
-          echo "=== android/ exists? ==="; test -d android && echo YES || echo NO
-          echo "=== capacitor version ==="; npx cap --version
+          set +e
+          echo "=== pwd ==="
+          pwd
+          echo "=== ls dashboard ==="
+          ls -la
+          echo "=== capacitor.config.json ==="
+          cat capacitor.config.json 2>/dev/null || echo "NOT FOUND"
+          echo "=== dist/ exists? ==="
+          if [ -d dist ]; then echo "YES"; ls -la dist/ | head -20; else echo "NO — dist/ missing"; fi
+          echo "=== Backend_Cloud/public exists? ==="
+          if [ -d ../../Backend_Cloud/public ]; then echo "YES"; ls ../../Backend_Cloud/public/ | head -10; else echo "NO"; fi
+          echo "=== android/ exists? ==="
+          test -d android && echo YES || echo NO
+          echo "=== capacitor version ==="
+          npx cap --version 2>&1 || true
+          echo "=== package.json build:android script ==="
+          node -e "console.log(require('./package.json').scripts['build:android'])" 2>&1 || true
 
       - name: Sync Capacitor
-        run: npx cap sync android --verbose 2>&1 || (echo "=== sync FAILED, dumping more info ==="; ls -la; exit 1)
+        run: npx cap sync android --verbose
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
