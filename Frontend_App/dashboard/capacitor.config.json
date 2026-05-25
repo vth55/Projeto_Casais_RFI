@@ -1,7 +1,7 @@
 {
   "appId": "pt.casais.fleet",
   "appName": "CASAIS Fleet",
-  "webDir": "../../Backend_Cloud/public",
+  "webDir": "dist",
   "server": {
     "androidScheme": "https"
   },

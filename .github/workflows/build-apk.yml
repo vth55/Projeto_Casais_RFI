@@ -39,8 +39,8 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build web app (Vite)
-        run: npm run build
+      - name: Build web app for Android (Vite + copy to dist/)
+        run: npm run build:android
 
       - name: Sync Capacitor
         run: npx cap sync android

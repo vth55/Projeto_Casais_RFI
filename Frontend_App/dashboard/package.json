@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:android": "vite build && node scripts/copy-to-dist.js",
     "deploy": "npm run build && cd ../../Backend_Cloud && firebase deploy --only hosting",
     "test": "vitest run",
     "test:watch": "vitest",
