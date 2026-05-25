@@ -1524,3 +1524,16 @@ exports.onMachineCreatedToProcore   = onMachineCreatedToProcore;
 exports.onMachineUpdatedToProcore   = onMachineUpdatedToProcore;
 exports.onOperatorCreatedToProcore  = onOperatorCreatedToProcore;
 exports.onMachineTotalHoursUpdated  = onMachineTotalHoursUpdated;
+
+// ──────────────────────────────────────────────
+// SAP Bridge — tool_sessions (NFC) → SAP PM
+// ──────────────────────────────────────────────
+const {
+    sapBridge,
+    onToolSessionCreatedToSap,
+    onToolSessionClosedToSap,
+} = require('./sap/sapBridge');
+
+exports.sapBridge                   = sapBridge;
+exports.onToolSessionCreatedToSap   = onToolSessionCreatedToSap;
+exports.onToolSessionClosedToSap    = onToolSessionClosedToSap;

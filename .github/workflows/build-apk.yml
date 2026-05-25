@@ -42,8 +42,17 @@ jobs:
       - name: Build web app for Android (Vite + copy to dist/)
         run: npm run build:android
 
+      - name: Debug pre-sync state
+        run: |
+          echo "=== pwd ==="; pwd
+          echo "=== capacitor.config.json ==="; cat capacitor.config.json
+          echo "=== dist/ contents (first 15) ==="; ls -la dist/ | head -15
+          echo "=== dist/index.html exists? ==="; test -f dist/index.html && echo YES || echo NO
+          echo "=== android/ exists? ==="; test -d android && echo YES || echo NO
+          echo "=== capacitor version ==="; npx cap --version
+
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: npx cap sync android --verbose 2>&1 || (echo "=== sync FAILED, dumping more info ==="; ls -la; exit 1)
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
