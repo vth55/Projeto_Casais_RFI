@@ -8,6 +8,9 @@ on:
       - 'Frontend_App/dashboard/**'
       - '.github/workflows/build-apk.yml'
 
+permissions:
+  contents: write  # necessário para criar/actualizar releases
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -80,3 +83,22 @@ jobs:
             exit 1
           fi
           echo "APK built successfully ($(du -h Frontend_App/dashboard/android/app/build/outputs/apk/debug/app-debug.apk | cut -f1))"
+
+      # Publica APK como "Latest APK" release com URL estável.
+      # URL fixo para descarregar no telemóvel:
+      # https://github.com/vth55/Projeto_Casais_RFI/releases/download/latest-apk/app-debug.apk
+      - name: Publish APK to GitHub Release (latest-apk)
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-apk
+          name: "CASAIS Fleet — Latest APK"
+          body: |
+            APK debug actualizado automaticamente em cada build.
+
+            **Descarrega no telemóvel:** [app-debug.apk](https://github.com/${{ github.repository }}/releases/download/latest-apk/app-debug.apk)
+
+            Build: #${{ github.run_number }} · commit `${{ github.sha }}`
+          files: Frontend_App/dashboard/android/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: false
+          make_latest: true
