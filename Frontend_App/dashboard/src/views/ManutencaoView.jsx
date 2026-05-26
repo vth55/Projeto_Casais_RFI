@@ -1,11 +1,11 @@
 /**
  * ManutencaoView — Gestão de tool_maintenance (pivot 2026-05).
  *
- * Substitui completamente a view legacy de manutenção de máquinas pesadas
+ * Substitui completamente a view legacy de manutenção de equipamentos legacy
  * (maintenanceInterval / partialHours / calendário de horas de motor).
  *
  * Consome: tools, toolMaintenance, updateToolMaintenance, resolveToolMaintenance
- * Semântica: inspeção / dano / reparação / calibração / substituição / perda
+ * Semântica: inspeção / avaria / reparação / calibração / substituição / perda
  */
 import React, { useState, useMemo } from 'react';
 import {
@@ -27,7 +27,7 @@ const TYPE_META = {
     dot: 'bg-blue-500',
   },
   [TOOL_MAINTENANCE_TYPES.DAMAGE]: {
-    label: 'Dano',
+    label: 'Avaria',
     icon: AlertTriangle,
     color: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
     dot: 'bg-red-500',
@@ -413,8 +413,8 @@ export default function ManutencaoView() {
           <Wrench className="w-6 h-6 text-primary-600 dark:text-primary-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Manutenção de Ferramentas</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Inspeções, danos, reparações, perdas</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Manutenção de Equipamentos</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Inspeções, avarias, reparações, perdas</p>
         </div>
       </div>
 
@@ -434,7 +434,7 @@ export default function ManutencaoView() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Pesquisar ferramenta…"
+            placeholder="Pesquisar equipamento…"
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -485,7 +485,7 @@ export default function ManutencaoView() {
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                  {['Ferramenta', 'Tipo', 'Estado', 'Reportado por', 'Data', 'Notas', 'Custo', ''].map((h, i) => (
+                  {['Equipamento', 'Tipo', 'Estado', 'Reportado por', 'Data', 'Notas', 'Custo', ''].map((h, i) => (
                     <th key={i} className="px-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide text-left">{h}</th>
                   ))}
                 </tr>

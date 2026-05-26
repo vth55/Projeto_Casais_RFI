@@ -127,7 +127,7 @@ const ValidationPage = ({ token }) => {
 
     const loadToolSession = async () => {
       if (!alert.sessionId) {
-        setError('Alerta sem sessao de ferramenta associada.');
+        setError('Alerta sem sessao de equipamento associada.');
         setLoading(false);
         return;
       }
@@ -135,15 +135,15 @@ const ValidationPage = ({ token }) => {
       try {
         const snap = await getDoc(doc(db, `${BASE}/tool_sessions`, alert.sessionId));
         if (!snap.exists()) {
-          setError('Sessao de ferramenta nao encontrada.');
+          setError('Sessao de equipamento nao encontrada.');
           setLoading(false);
           return;
         }
         setToolSession({ id: snap.id, ...snap.data() });
         setLoading(false);
       } catch (err) {
-        console.error('Erro ao carregar sessao de ferramenta:', err);
-        setError('Erro ao carregar sessao de ferramenta. Por favor tente novamente.');
+        console.error('Erro ao carregar sessao de equipamento:', err);
+        setError('Erro ao carregar sessao de equipamento. Por favor tente novamente.');
         setLoading(false);
       }
     };
@@ -262,7 +262,7 @@ const ValidationPage = ({ token }) => {
 
   const handleToolAction = async (action) => {
     if (!alert || !toolSession) return;
-    if (action === 'lost' && !window.confirm('Confirmar que esta ferramenta foi perdida?')) return;
+    if (action === 'lost' && !window.confirm('Confirmar que esta equipamento foi perdida?')) return;
 
     setSubmitting(true);
     setError(null);
@@ -302,7 +302,7 @@ const ValidationPage = ({ token }) => {
       } else if (action === 'lost') {
         const toolId = toolSession.toolId || alert.toolId;
         if (!toolId) {
-          setError('Nao foi possivel identificar a ferramenta para marcar como perdida.');
+          setError('Nao foi possivel identificar a equipamento para marcar como perdida.');
           setSubmitting(false);
           return;
         }
@@ -328,8 +328,8 @@ const ValidationPage = ({ token }) => {
 
       setSubmitted(true);
     } catch (err) {
-      console.error('Erro ao validar alerta de ferramenta:', err);
-      setError(err.message || 'Erro ao validar ferramenta. Por favor tente novamente.');
+      console.error('Erro ao validar alerta de equipamento:', err);
+      setError(err.message || 'Erro ao validar equipamento. Por favor tente novamente.');
     }
 
     setSubmitting(false);
@@ -390,12 +390,12 @@ const ValidationPage = ({ token }) => {
   // Success state
   if (submitted) {
     const successTitle = isToolAlert
-      ? 'Ferramenta Validada'
+      ? 'Equipamento Validada'
       : hasChanges
       ? 'Sessão Corrigida'
       : 'Sessão Validada';
     const successMessage = isToolAlert
-      ? 'A situação da ferramenta foi registada com sucesso. Obrigado!'
+      ? 'A situação da equipamento foi registada com sucesso. Obrigado!'
       : hasChanges
       ? 'Os horários foram corrigidos com sucesso. Obrigado!'
       : 'Os horários foram confirmados. Obrigado!';
@@ -420,8 +420,8 @@ const ValidationPage = ({ token }) => {
 
   if (isToolAlert) {
     const title = alertType === 'TOOL_OVERDUE'
-      ? 'Ferramenta com devolução atrasada'
-      : 'Ferramenta presumivelmente perdida';
+      ? 'Equipamento com devolução atrasada'
+      : 'Equipamento presumivelmente perdida';
 
     return (
       <div className="min-h-screen bg-slate-100 py-8 px-4">
@@ -435,12 +435,12 @@ const ValidationPage = ({ token }) => {
               <Wrench className="w-8 h-8 text-amber-600" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-            <p className="text-slate-600 mt-1">Confirme o estado atual desta ferramenta.</p>
+            <p className="text-slate-600 mt-1">Confirme o estado atual desta equipamento.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-              <h2 className="font-semibold text-slate-900">Informações da Ferramenta</h2>
+              <h2 className="font-semibold text-slate-900">Informações da Equipamento</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-3">
@@ -448,7 +448,7 @@ const ValidationPage = ({ token }) => {
                   <Wrench className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Ferramenta</p>
+                  <p className="text-xs text-slate-500">Equipamento</p>
                   <p className="font-medium text-slate-900">{toolSession?.toolName || alert.toolName || '-'}</p>
                 </div>
               </div>
@@ -570,7 +570,7 @@ const ValidationPage = ({ token }) => {
                 <Wrench className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Ferramenta</p>
+                <p className="text-xs text-slate-500">Equipamento</p>
                 <p className="font-medium text-slate-900">{alert.toolName || alert.machineName}</p>
               </div>
             </div>

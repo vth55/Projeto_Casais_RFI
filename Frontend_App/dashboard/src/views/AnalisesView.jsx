@@ -103,7 +103,7 @@ const AnalisesView = () => {
     if (typeof getTopToolsByUsage !== 'function') return [];
     if (!tools.length && !toolSessions.length) return [];
     return getTopToolsByUsage(dateRange, 10).map((item) => ({
-      name: String(item.toolName || item.toolId || 'Ferramenta'),
+      name: String(item.toolName || item.toolId || 'Equipamento'),
       checkouts: item.count || 0,
     }));
   }, [getTopToolsByUsage, dateRange, toolSessions, tools]);
@@ -148,10 +148,10 @@ const AnalisesView = () => {
         </p>
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Como roda a frota de ferramentas
+            Como roda a frota de equipamentos
           </h2>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Checkouts, ferramentas dormentes e atrasos no período selecionado: {periodLabel}.
+            Checkouts, equipamentos dormentes e atrasos no período selecionado: {periodLabel}.
           </p>
         </div>
       </div>
@@ -165,7 +165,7 @@ const AnalisesView = () => {
         />
         <StatCard
           icon={Archive}
-          title="Ferramentas dormentes"
+          title="Equipamentos dormentes"
           value={dormantTools.length}
           color="slate"
         />
@@ -224,9 +224,9 @@ const AnalisesView = () => {
         <Card>
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-              Top 10 ferramentas por número de checkouts
+              Top 10 equipamentos por número de checkouts
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Ferramentas com maior rotação no período.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Equipamentos com maior rotação no período.</p>
           </div>
           {topToolsByUsage.length ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -252,7 +252,7 @@ const AnalisesView = () => {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart label="Ainda não há ferramentas com checkouts neste período." />
+            <EmptyChart label="Ainda não há equipamentos com checkouts neste período." />
           )}
         </Card>
 
@@ -283,7 +283,7 @@ const AnalisesView = () => {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart label="Sem ferramentas overdue neste momento." />
+            <EmptyChart label="Sem equipamentos overdue neste momento." />
           )}
         </Card>
 
@@ -293,7 +293,7 @@ const AnalisesView = () => {
             <div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Dormentes</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Ferramentas sem checkout há mais de {DORMANT_DAYS} dias.
+                Equipamentos sem checkout há mais de {DORMANT_DAYS} dias.
               </p>
             </div>
           </div>
@@ -318,7 +318,7 @@ const AnalisesView = () => {
           ) : (
             <div className="h-[280px] flex items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/10">
               <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                Todas as ferramentas tiveram checkout nos últimos {DORMANT_DAYS} dias.
+                Todas as equipamentos tiveram checkout nos últimos {DORMANT_DAYS} dias.
               </p>
             </div>
           )}

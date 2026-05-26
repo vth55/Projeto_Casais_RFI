@@ -142,7 +142,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
       {/* KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <KpiCard
-          label="Ferramentas na obra"
+          label="Equipamentos na obra"
           value={kpis.totalTools}
           icon={Wrench}
           color="primary"
@@ -192,7 +192,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
             <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>
-                <strong>{alertTools.length}</strong> ferramenta{alertTools.length > 1 ? 's' : ''} próxima{alertTools.length > 1 ? 's' : ''} de inspeção/manutenção
+                <strong>{alertTools.length}</strong> equipamento{alertTools.length > 1 ? 's' : ''} próxima{alertTools.length > 1 ? 's' : ''} de inspeção/manutenção
               </span>
             </div>
           )}
@@ -205,7 +205,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
           {kpis.overdueCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span><strong>{kpis.overdueCount}</strong> ferramenta(s) com devolução atrasada</span>
+              <span><strong>{kpis.overdueCount}</strong> equipamento(s) com devolução atrasada</span>
             </div>
           )}
         </div>
@@ -244,7 +244,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
 
         {/* TOP FERRAMENTAS */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Top ferramentas (checkouts)</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Top equipamentos (checkouts)</h3>
           {toolData.length === 0 ? (
             <div className="flex items-center justify-center h-36 text-sm text-slate-400">Sem dados</div>
           ) : (

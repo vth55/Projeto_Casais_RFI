@@ -11,28 +11,28 @@ const reportTypes = [
   {
     id: 'inventory',
     name: 'Inventário por obra',
-    description: 'Ferramentas atribuídas a cada obra, com estado e último checkout conhecido.',
+    description: 'Equipamentos atribuídas a cada obra, com estado e último checkout conhecido.',
     icon: PackageSearch,
-    filename: 'inventario_ferramentas_por_obra',
+    filename: 'inventario_equipamentos_por_obra',
   },
   {
     id: 'sessions',
     name: 'Checkouts/Devoluções (período)',
-    description: 'Todas as sessões de ferramentas dentro do período global selecionado.',
+    description: 'Todas as sessões de equipamentos dentro do período global selecionado.',
     icon: Calendar,
-    filename: 'checkouts_devolucoes_ferramentas',
+    filename: 'checkouts_devolucoes_equipamentos',
   },
   {
     id: 'overdue',
     name: 'Overdue & Perdidas',
-    description: 'Sessões atrasadas, presumidas perdidas e ferramentas marcadas como perdidas.',
+    description: 'Sessões atrasadas, presumidas perdidas e equipamentos marcadas como perdidas.',
     icon: AlertTriangle,
-    filename: 'ferramentas_overdue_perdidas',
+    filename: 'equipamentos_overdue_perdidas',
   },
   {
     id: 'operators',
     name: 'Por operador',
-    description: 'Atividade por operador: checkouts, ferramentas distintas e sessões abertas.',
+    description: 'Atividade por operador: checkouts, equipamentos distintas e sessões abertas.',
     icon: UserCheck,
   },
 ];
@@ -94,7 +94,7 @@ const findOperator = (operators, session) =>
   ) || null;
 
 const getToolName = (tool, session) =>
-  tool?.name || session?.toolName || session?.toolId || 'Ferramenta sem nome';
+  tool?.name || session?.toolName || session?.toolId || 'Equipamento sem nome';
 
 const getToolType = (tool, session) =>
   tool?.type || tool?.category || session?.toolType || session?.toolCategory || '';
@@ -186,7 +186,7 @@ const RelatoriosView = () => {
   );
 
   const exportInventoryByObra = () => {
-    const headers = ['Obra', 'Ferramenta', 'Tipo/Categoria', 'Status', 'Último Checkout'];
+    const headers = ['Obra', 'Equipamento', 'Tipo/Categoria', 'Status', 'Último Checkout'];
     const rows = tools
       .map(tool => [
         getObraName(obrasById, tool, null),
@@ -197,11 +197,11 @@ const RelatoriosView = () => {
       ])
       .sort((a, b) => `${a[0]}${a[1]}`.localeCompare(`${b[0]}${b[1]}`));
 
-    downloadCsv('inventario_ferramentas_por_obra', headers, rows);
+    downloadCsv('inventario_equipamentos_por_obra', headers, rows);
   };
 
   const exportSessions = () => {
-    const headers = ['Ferramenta', 'Operador', 'Obra', 'Início', 'Fim', 'Duração(h)', 'Status', 'Anomalias'];
+    const headers = ['Equipamento', 'Operador', 'Obra', 'Início', 'Fim', 'Duração(h)', 'Status', 'Anomalias'];
     const rows = sessionsInRange.map(session => {
       const tool = findTool(toolsById, session);
       const operator = findOperator(operators, session);
@@ -219,11 +219,11 @@ const RelatoriosView = () => {
       ];
     });
 
-    downloadCsv('checkouts_devolucoes_ferramentas', headers, rows);
+    downloadCsv('checkouts_devolucoes_equipamentos', headers, rows);
   };
 
   const exportOverdueAndLost = () => {
-    const headers = ['Ferramenta', 'Operador', 'Obra', 'Início', 'Status', 'Dias em aberto', 'Origem', 'Anomalias'];
+    const headers = ['Equipamento', 'Operador', 'Obra', 'Início', 'Status', 'Dias em aberto', 'Origem', 'Anomalias'];
     const sessionRows = toolSessions
       .filter(session => {
         const status = normalize(session.status);
@@ -262,15 +262,15 @@ const RelatoriosView = () => {
         '',
         getToolStatus(tool),
         '',
-        'Ferramenta',
+        'Equipamento',
         'Marcada como perdida',
       ]);
 
-    downloadCsv('ferramentas_overdue_perdidas', headers, [...sessionRows, ...lostToolRows]);
+    downloadCsv('equipamentos_overdue_perdidas', headers, [...sessionRows, ...lostToolRows]);
   };
 
   const exportByOperator = () => {
-    const headers = ['Operador', 'Checkouts', 'Ferramentas únicas', 'Sessões abertas'];
+    const headers = ['Operador', 'Checkouts', 'Equipamentos únicas', 'Sessões abertas'];
     const grouped = new Map();
 
     sessionsInRange.forEach(session => {
@@ -298,7 +298,7 @@ const RelatoriosView = () => {
       ])
       .sort((a, b) => Number(b[1]) - Number(a[1]));
 
-    downloadCsv('ferramentas_por_operador', headers, rows);
+    downloadCsv('equipamentos_por_operador', headers, rows);
   };
 
   const handleExport = (type) => {
@@ -314,7 +314,7 @@ const RelatoriosView = () => {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Exportação Operacional</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Exportações CSV de ferramentas, checkouts, devoluções e atividade por operador.
+            Exportações CSV de equipamentos, checkouts, devoluções e atividade por operador.
           </p>
         </div>
         <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-700/50 px-3 py-2 rounded-lg">

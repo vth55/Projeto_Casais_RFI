@@ -270,7 +270,7 @@ const AlertDetailModal = ({ alert, onClose }) => {
             <div className="p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
                 <Package className="w-4 h-4" />
-                Ferramenta
+                Equipamento
               </div>
               <p className="font-semibold text-slate-900 dark:text-white">{alert.toolName || alert.machineName}</p>
             </div>

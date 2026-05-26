@@ -82,7 +82,7 @@ const ObraCard = ({ obra, procoreProject, getToolsByObraId, getToolSessionsByObr
             <Package className="w-4 h-4 text-emerald-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Ferramentas atribuídas</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Equipamentos atribuídas</p>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">{assignedToolsCount}</p>
           </div>
         </div>
@@ -307,7 +307,7 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, o
     return locationCards.filter(card => card.obraId === obra.id);
   }, [locationCards, obra.id]);
 
-  // Ferramentas atribuídas a esta obra
+  // Equipamentos atribuídas a esta obra
   const toolsInObra = useMemo(() => {
     return tools.filter(t => t.currentObraId === obra.id);
   }, [tools, obra.id]);
@@ -410,7 +410,7 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, o
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <StatCard icon={Package} title="Ferramentas" value={stats.totalTools} color="primary" />
+        <StatCard icon={Package} title="Equipamentos" value={stats.totalTools} color="primary" />
         <StatCard icon={Activity} title="Em Uso Agora" value={stats.activeTools} color="emerald" />
         <StatCard icon={Users} title="Operadores" value={stats.totalOperators} color="blue" />
         <StatCard icon={Clock} title="Checkouts Ativos" value={stats.activeSessions} color="amber" />
@@ -418,18 +418,18 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, o
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Lista de Ferramentas */}
+        {/* Lista de Equipamentos */}
         <Card>
           <Card.Header>
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary-500" />
-              <Card.Title>Ferramentas na Obra</Card.Title>
+              <Card.Title>Equipamentos na Obra</Card.Title>
             </div>
           </Card.Header>
           {toolsInObra.length === 0 ? (
             <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm">Nenhuma ferramenta nesta obra</p>
+              <p className="text-sm">Nenhuma equipamento nesta obra</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -490,7 +490,7 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, o
                       </div>
                       <div>
                         <p className="text-sm font-medium text-slate-900 dark:text-white">{operator.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(totalHours)}h com ferramentas</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(totalHours)}h com equipamentos</p>
                       </div>
                     </div>
                     <Badge variant={isActive ? 'success' : 'default'} size="sm">
@@ -631,7 +631,7 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, o
           <p className="text-xs font-medium text-slate-700 dark:text-slate-200 mb-1">Como usar:</p>
           <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
             <li>• Escreva o ID no cartão RFID físico (ex: LOC_PORTO_01)</li>
-            <li>• Quando a tag for lida, a ferramenta fica associada a esta obra</li>
+            <li>• Quando a tag for lida, a equipamento fica associada a esta obra</li>
             <li>• Ideal para entrada/saída de equipamentos no estaleiro</li>
           </ul>
         </div>
@@ -677,7 +677,7 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, toolsCount, activeS
           </div>
         </div>
 
-        {/* Bloqueadores — se existir ferramentas ou checkouts ativos */}
+        {/* Bloqueadores — se existir equipamentos ou checkouts ativos */}
         {hasBlockers ? (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Não é possível eliminar esta obra porque:</p>
@@ -685,7 +685,7 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, toolsCount, activeS
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <Package className="w-5 h-5 text-amber-600" />
                 <span className="text-sm text-amber-800">
-                  <strong>{toolsCount}</strong> ferramenta{toolsCount > 1 ? 's' : ''} ainda atribuída{toolsCount > 1 ? 's' : ''} a esta obra
+                  <strong>{toolsCount}</strong> equipamento{toolsCount > 1 ? 's' : ''} ainda atribuída{toolsCount > 1 ? 's' : ''} a esta obra
                 </span>
               </div>
             )}
@@ -697,13 +697,13 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, toolsCount, activeS
                 </span>
               </div>
             )}
-            <p className="text-xs text-slate-500 dark:text-slate-400">Mova as ferramentas e encerre os checkouts antes de eliminar.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Mova as equipamentos e encerre os checkouts antes de eliminar.</p>
           </div>
         ) : step === 1 ? (
           /* Passo 1 — Confirmação inicial */
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Esta obra não tem ferramentas nem checkouts ativos. Tem a certeza que pretende eliminar?
+              Esta obra não tem equipamentos nem checkouts ativos. Tem a certeza que pretende eliminar?
             </p>
             <div className="flex gap-3 justify-end">
               <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
@@ -1131,7 +1131,7 @@ const ObrasView = () => {
                 className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 text-sm text-amber-700 hover:bg-amber-50 hover:border-amber-400 transition-colors"
               >
                 <span className="text-base">🏭</span>
-                <span>{estCount} ferramenta{estCount !== 1 ? 's' : ''} no Armazém →</span>
+                <span>{estCount} equipamento{estCount !== 1 ? 's' : ''} no Armazém →</span>
               </button>
             );
           })()}

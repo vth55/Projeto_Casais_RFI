@@ -114,7 +114,7 @@ const DashboardOperador = () => {
           </div>
           <div className="text-center">
             <p className="font-bold text-red-700 dark:text-red-300">Reportar Avaria</p>
-            <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">Problema na ferramenta</p>
+            <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">Problema na equipamento</p>
           </div>
         </button>
       </div>

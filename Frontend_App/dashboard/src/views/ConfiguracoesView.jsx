@@ -983,7 +983,7 @@ const OperationalSettingsSection = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Valor de substituição por defeito (€)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Usado quando ferramenta não tem valor individual</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Usado quando equipamento não tem valor individual</p>
             </div>
           </div>
           <input
@@ -1032,7 +1032,7 @@ const OperationalSettingsSection = () => {
           <div className="flex items-center gap-2">
             <Fuel className="w-4 h-4 text-slate-400" />
             <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-              Parâmetros Legacy — Máquinas Pesadas
+              Parâmetros Legacy — Legacy Equipamentos Pesadas
             </span>
             <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
               Procore / SAP
@@ -1044,7 +1044,7 @@ const OperationalSettingsSection = () => {
         {legacyOpen && (
           <div className="px-4 pb-4 pt-3 space-y-3 bg-slate-50 dark:bg-slate-800/30">
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Estes valores são usados apenas pelo Procore exporter e pelo modelo de máquinas pesadas (legacy).
+              Estes valores são usados apenas pelo Procore exporter e pelo modelo de equipamentos legacy (legacy).
               Não afectam o fluxo NFC de equipamentos.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1155,7 +1155,7 @@ const RfidCardModal = ({ card, obras, onSave, onClose, saving }) => {
             onChange={e => setTipo(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
-            <option value="estaleiro">Estaleiro (parque de máquinas)</option>
+            <option value="estaleiro">Estaleiro (parque de equipamentos)</option>
             <option value="obra">Obra</option>
           </select>
         </div>
@@ -1276,7 +1276,7 @@ const RfidLocationCardsSection = () => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold text-slate-900 dark:text-white">Cartões RFID de Localização</h3>
-          <p className="text-sm text-slate-500 mt-0.5">Cartões físicos associados a localizações (estaleiro ou obras). Ao passar na leitora junto com uma máquina, actualizam a sua localização automaticamente.</p>
+          <p className="text-sm text-slate-500 mt-0.5">Cartões físicos associados a localizações (estaleiro ou obras). Ao passar na leitora junto com uma equipamento, actualizam a sua localização automaticamente.</p>
         </div>
         <Button icon={Plus} onClick={() => { setEditCard(null); setShowModal(true); }}>Novo Cartão</Button>
       </div>
@@ -1364,7 +1364,7 @@ const LegacyDbSection = ({ onClear, loading }) => {
       >
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Legacy — Máquinas Pesadas</span>
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Legacy — Legacy Equipamentos Pesadas</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Procore</span>
         </div>
         <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`} />
@@ -1372,7 +1372,7 @@ const LegacyDbSection = ({ onClear, loading }) => {
       {open && (
         <div className="px-4 pb-4 pt-3 bg-slate-50 dark:bg-slate-800/30 space-y-2">
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-            Dados do modelo de máquinas pesadas (machines, sessions). Usados apenas pelo Procore exporter.
+            Dados do modelo de equipamentos legacy (machines, sessions). Usados apenas pelo Procore exporter.
             NÃO eliminar se existirem sessões pendentes de exportação.
           </p>
           <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -1467,7 +1467,7 @@ const ConfiguracoesView = () => {
 
   // LEGACY — limpar colecções machines/sessions (mantido para Procore exporter)
   const handleClearLegacyData = async () => {
-    if (!confirm('[LEGACY] Eliminar dados de máquinas pesadas (machines, sessions)? Esta ação não pode ser revertida.')) return;
+    if (!confirm('[LEGACY] Eliminar dados de equipamentos legacy (machines, sessions)? Esta ação não pode ser revertida.')) return;
     setLoading(true);
     try {
       const basePath = `artifacts/${projectId}/public/data`;
@@ -1476,7 +1476,7 @@ const ConfiguracoesView = () => {
         const snapshot = await getDocs(collection(db, `${basePath}/${col}`));
         await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, `${basePath}/${col}`, d.id))));
       }
-      setMessage({ type: 'success', text: '[Legacy] Dados de máquinas pesadas eliminados' });
+      setMessage({ type: 'success', text: '[Legacy] Dados de equipamentos legacy eliminados' });
     } catch {
       setMessage({ type: 'error', text: 'Erro ao eliminar dados legacy' });
     }
@@ -1889,7 +1889,7 @@ const ConfiguracoesView = () => {
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Alertas de Manutenção</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar quando máquina atinge 80% do limite de horas</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar quando equipamento atinge 80% do limite de horas</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>

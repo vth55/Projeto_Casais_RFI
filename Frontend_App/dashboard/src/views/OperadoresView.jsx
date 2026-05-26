@@ -9,15 +9,15 @@ import { PERMISSIONS, getLevelLabel } from '../config/permissions';
  * Definição de cargos de TRABALHO (job roles - o que a pessoa FAZ no terreno)
  * Estes são diferentes dos perfis de SISTEMA (system roles - o que a pessoa pode ACEDER no PWA)
  *
- * NOTA: operadores de obra usam RFID/NFC para levantar e devolver ferramentas.
+ * NOTA: operadores de obra usam RFID/NFC para levantar e devolver equipamentos.
  * O PWA é para gestores, supervisores e pessoal de escritório.
  */
 const EMPLOYEE_ROLES = [
-  { id: 'operador', label: 'Operador de Ferramentas', color: 'primary', description: 'Levanta e devolve ferramentas via RFID/NFC', suggestedSystemRole: null },
+  { id: 'operador', label: 'Operador de Equipamentos', color: 'primary', description: 'Levanta e devolve equipamentos via RFID/NFC', suggestedSystemRole: null },
   { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra', suggestedSystemRole: 'encarregado_obra' },
   { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras', suggestedSystemRole: 'gestor_frota' },
-  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Inspeção e reparação de ferramentas', suggestedSystemRole: 'tecnico_manutencao' },
-  { id: 'gestor_frota', label: 'Gestor de Inventário', color: 'blue', description: 'Gestão geral das ferramentas', suggestedSystemRole: 'gestor_frota' },
+  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Inspeção e reparação de equipamentos', suggestedSystemRole: 'tecnico_manutencao' },
+  { id: 'gestor_frota', label: 'Gestor de Inventário', color: 'blue', description: 'Gestão geral das equipamentos', suggestedSystemRole: 'gestor_frota' },
   { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas', suggestedSystemRole: 'operador' },
 ];
 
@@ -29,7 +29,7 @@ const getSessionDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-// Competências para manuseamento de ferramentas
+// Competências para manuseamento de equipamentos
 const LICENSE_TYPES = [
   { id: 'perfuracao', label: 'Perfuração', icon: '🛠️', description: 'Berbequins, SDS e martelos' },
   { id: 'corte', label: 'Corte', icon: '🪚', description: 'Serras, rebarbadoras e cortadoras' },
@@ -391,17 +391,17 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
         </div>
       )}
 
-      {/* Competências de ferramentas */}
+      {/* Competências de equipamentos */}
       {(formData.role === 'operador' || formData.role === 'tecnico_manutencao') && (
         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
             <div className="flex items-center gap-1.5">
               <Award className="w-4 h-4" />
-              Competências de Ferramentas
+              Competências de Equipamentos
             </div>
           </label>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Selecione os tipos de ferramentas que este operador está autorizado a utilizar
+            Selecione os tipos de equipamentos que este operador está autorizado a utilizar
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {LICENSE_TYPES.map(license => {
@@ -455,7 +455,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
           placeholder="Ex: joao.silva@casais.pt"
         />
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Campo de contacto. O levantamento de ferramentas é feito via cartão RFID/NFC, não email.
+          Campo de contacto. O levantamento de equipamentos é feito via cartão RFID/NFC, não email.
         </p>
       </div>
 
@@ -483,7 +483,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
             <Badge variant="primary">{suggestions.length}</Badge>
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Baseado nos checkouts de ferramentas, estes operadores podem ser atribuídos a novas obras.
+            Baseado nos checkouts de equipamentos, estes operadores podem ser atribuídos a novas obras.
           </p>
           <div className="mt-4 space-y-2">
             {suggestions.map(suggestion => (
@@ -589,7 +589,7 @@ const OperadoresView = () => {
     });
   }, [operators, toolSessions, obras, allSystemRoles, procoreDirectory, matchOperatorToProcore]);
 
-  // Calcular sugestões de auto-assign baseado nos checkouts de ferramentas
+  // Calcular sugestões de auto-assign baseado nos checkouts de equipamentos
   const autoAssignSuggestions = useMemo(() => {
     const suggestions = [];
 

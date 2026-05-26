@@ -720,7 +720,7 @@ const MobileProcoreCard = () => {
 const MobileActiveSessionCard = ({ session, machine, operator }) => (
   <button
     onClick={() => useStore.getState().setActiveView('sessoes-ativas')}
-    aria-label={`Ver detalhes da sessão da máquina ${machine?.name || session.machineId}`}
+    aria-label={`Ver detalhes da sessão da equipamento ${machine?.name || session.machineId}`}
     className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform w-full text-left"
     style={{ WebkitTapHighlightColor: 'transparent' }}
   >
@@ -890,7 +890,7 @@ const WorkFocusPanel = ({ machines, avarias }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Top máquinas iminentes */}
+        {/* Top equipamentos iminentes */}
         {predictions.map(({ machine, prediction }) => (
           <button
             key={machine.id}
@@ -1009,7 +1009,7 @@ const DashboardView = () => {
     return Object.values(buckets);
   }, [toolSessions, dateRange]);
 
-  // Top ferramentas por número de checkouts — substitui "Top 5 máquinas por horas"
+  // Top equipamentos por número de checkouts — substitui "Top 5 equipamentos por horas"
   const utilizationData = useMemo(() => {
     return getTopToolsByUsage(dateRange, 5).map(t => ({
       name: t.toolName,
@@ -1019,7 +1019,7 @@ const DashboardView = () => {
     }));
   }, [getTopToolsByUsage, dateRange, toolSessions]);
 
-  // Overdue — ferramentas com sessão OPEN > threshold (config em systemSettings)
+  // Overdue — equipamentos com sessão OPEN > threshold (config em systemSettings)
   const overdueList = useMemo(() => getOverdueTools(), [getOverdueTools, toolSessions, systemSettings]);
 
   // Alertas manutenção (legacy — heavy machines, mantém para compat enquanto o user quiser manter o módulo)
@@ -1162,7 +1162,7 @@ const DashboardView = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
           icon={Wrench}
-          title="Total Ferramentas"
+          title="Total Equipamentos"
           value={toolKpis.totalTools}
           color="primary"
         />
@@ -1197,7 +1197,7 @@ const DashboardView = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Movimentos por dia</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Checkouts e devoluções de ferramentas</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Checkouts e devoluções de equipamentos</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -1262,7 +1262,7 @@ const DashboardView = () => {
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Devoluções Atrasadas</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Ferramentas com sessão aberta &gt; {systemSettings?.toolOverdueDays || 7} dias
+                Equipamentos com sessão aberta &gt; {systemSettings?.toolOverdueDays || 7} dias
               </p>
             </div>
             <Badge variant={overdueList.length > 0 ? 'danger' : 'success'} className="flex items-center gap-1">
@@ -1275,7 +1275,7 @@ const DashboardView = () => {
               <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Wrench className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <p className="text-slate-500 dark:text-slate-400">Sem ferramentas atrasadas</p>
+              <p className="text-slate-500 dark:text-slate-400">Sem equipamentos atrasadas</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-80 overflow-y-auto">
@@ -1300,18 +1300,18 @@ const DashboardView = () => {
               })}
               {overdueList.length > 6 && (
                 <p className="text-xs text-center text-slate-500 dark:text-slate-400 pt-2">
-                  + {overdueList.length - 6} ferramentas com devolução atrasada
+                  + {overdueList.length - 6} equipamentos com devolução atrasada
                 </p>
               )}
             </div>
           )}
         </Card>
 
-        {/* Top Ferramentas — substitui Utilização por Equipamento */}
+        {/* Top Equipamentos — substitui Utilização por Equipamento */}
         <Card className="hover-enterprise">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Top Ferramentas</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Top Equipamentos</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Mais utilizadas no período · por número de checkouts
               </p>
@@ -1319,7 +1319,7 @@ const DashboardView = () => {
           </div>
           {utilizationData.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-              Sem ferramentas para mostrar
+              Sem equipamentos para mostrar
             </div>
           ) : (
             <div className="space-y-4">

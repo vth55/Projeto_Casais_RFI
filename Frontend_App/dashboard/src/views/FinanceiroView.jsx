@@ -104,7 +104,7 @@ const FinanceiroView = () => {
         riskByKey.set(key, {
           id: key,
           toolId: session.toolId,
-          toolName: session.toolName || tool?.name || 'Ferramenta sem nome',
+          toolName: session.toolName || tool?.name || 'Equipamento sem nome',
           obraName: session.obraName || tool?.currentObraName || 'Sem obra',
           operatorName: session.operatorName || 'Sem operador',
           daysOpen,
@@ -124,7 +124,7 @@ const FinanceiroView = () => {
           riskByKey.set(`tool:${tool.id}`, {
             id: `tool:${tool.id}`,
             toolId: tool.id,
-            toolName: tool.name || 'Ferramenta sem nome',
+            toolName: tool.name || 'Equipamento sem nome',
             obraName: tool.currentObraName || 'Sem obra',
             operatorName: 'Sem operador',
             daysOpen: null,
@@ -179,7 +179,7 @@ const FinanceiroView = () => {
           <p className="text-sm font-semibold uppercase tracking-wide text-primary-600">Valor Imobilizado &amp; Perdas</p>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Quanto vale o que está fora do armazém</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Visão financeira das ferramentas em obra, em atraso e declaradas perdidas.
+            Visão financeira das equipamentos em obra, em atraso e declaradas perdidas.
           </p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExport}>
@@ -224,7 +224,7 @@ const FinanceiroView = () => {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Valor imobilizado por obra</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Ferramentas com sessão aberta</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Equipamentos com sessão aberta</p>
             </div>
             <Badge variant="default" size="sm">{valueByObra.length} obras</Badge>
           </div>
@@ -267,7 +267,7 @@ const FinanceiroView = () => {
             <div>
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Em risco</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Sessões com mais de {overdueDays} dias ou ferramentas perdidas, ordenadas por valor.
+                Sessões com mais de {overdueDays} dias ou equipamentos perdidas, ordenadas por valor.
               </p>
             </div>
             <Badge variant={riskRows.length > 0 ? 'warning' : 'success'} size="sm">
@@ -278,7 +278,7 @@ const FinanceiroView = () => {
           <Table minWidth={760}>
             <Table.Head>
               <Table.Row>
-                <Table.Header>Ferramenta</Table.Header>
+                <Table.Header>Equipamento</Table.Header>
                 <Table.Header>Obra</Table.Header>
                 <Table.Header>Operador</Table.Header>
                 <Table.Header align="right">Dias aberta</Table.Header>
@@ -288,7 +288,7 @@ const FinanceiroView = () => {
             </Table.Head>
             <Table.Body>
               {riskRows.length === 0 ? (
-                <Table.Empty icon={Wrench} message="Sem ferramentas em risco." />
+                <Table.Empty icon={Wrench} message="Sem equipamentos em risco." />
               ) : (
                 riskRows.map((row) => (
                   <Table.Row key={row.id}>

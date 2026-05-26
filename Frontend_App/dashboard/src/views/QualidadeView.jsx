@@ -18,7 +18,7 @@ function detectQualityIssues(s) { const issues = []; if (!s.operatorId) issues.p
 
 const ISSUE_CONFIG = {
   TOOL_PRESUMED_LOST: {
-    label: 'Ferramenta presumivelmente perdida',
+    label: 'Equipamento presumivelmente perdida',
     shortLabel: 'Presumida perdida',
     variant: 'danger',
     severity: 4,
@@ -72,7 +72,7 @@ const displayName = (value, fallback) => {
 };
 
 const getToolName = (tool, session) =>
-  displayName(tool?.name, null) || session?.toolName || session?.toolId || 'Ferramenta sem nome';
+  displayName(tool?.name, null) || session?.toolName || session?.toolId || 'Equipamento sem nome';
 
 const getOperatorName = (operator, session) =>
   operator?.name || session?.operatorName || session?.operatorId || 'Operador desconhecido';
@@ -252,7 +252,7 @@ const QualidadeView = () => {
             Anomalias e integridade dos checkouts
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Auditoria de ferramentas em checkout com atraso, perda presumida, GPS em falta ou operador desconhecido.
+            Auditoria de equipamentos em checkout com atraso, perda presumida, GPS em falta ou operador desconhecido.
           </p>
         </div>
       </div>
@@ -290,7 +290,7 @@ const QualidadeView = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Pesquisar por ferramenta, operador, obra ou anomalia..."
+              placeholder="Pesquisar por equipamento, operador, obra ou anomalia..."
               value={searchTerm}
               onChange={event => setSearchTerm(event.target.value)}
               className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -303,13 +303,13 @@ const QualidadeView = () => {
             <EmptyState
               icon={Wrench}
               title="Sem anomalias de checkouts"
-              description="Não há ferramentas com problemas de atraso, perda presumida, GPS em falta ou operador desconhecido."
+              description="Não há equipamentos com problemas de atraso, perda presumida, GPS em falta ou operador desconhecido."
             />
           ) : (
             <Table minWidth={860}>
               <Table.Head>
                 <Table.Row>
-                  <Table.Header>Ferramenta</Table.Header>
+                  <Table.Header>Equipamento</Table.Header>
                   <Table.Header>Operador</Table.Header>
                   <Table.Header>Obra</Table.Header>
                   <Table.Header align="right">Dias aberta</Table.Header>
@@ -369,7 +369,7 @@ const QualidadeView = () => {
         isOpen={!!selectedRow}
         onClose={() => setSelectedRow(null)}
         title="Detalhes do checkout"
-        description="Revisão segura dos dados operacionais da ferramenta"
+        description="Revisão segura dos dados operacionais da equipamento"
         size="lg"
       >
         <QualityDetailsModal

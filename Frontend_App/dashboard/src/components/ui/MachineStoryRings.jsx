@@ -31,7 +31,7 @@ const STATUS_DOT = {
 };
 
 /**
- * MachineStoryRings — scroll horizontal de ferramentas em obra/armazém.
+ * MachineStoryRings — scroll horizontal de equipamentos em obra/armazém.
  * Mantém o nome do componente por compatibilidade de imports.
  */
 const MachineStoryRings = memo(() => {
@@ -57,7 +57,7 @@ const MachineStoryRings = memo(() => {
   return (
     <div className="md:hidden">
       <div className="flex items-center justify-between px-4 mb-3">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ferramentas</span>
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Equipamentos</span>
         <button
           onClick={() => setActiveView('maquinas')}
           className="text-xs text-primary-600 font-semibold"

@@ -10,7 +10,7 @@ const MaintenanceAlert = ({ machine, threshold = 150 }) => {
   let borderColor = 'border-emerald-500';
   let textColor = 'text-emerald-800';
   let iconColor = 'text-emerald-600';
-  let message = 'Máquina em boas condições';
+  let message = 'Equipamento em boas condições';
 
   if (totalHours >= threshold) {
     status = 'critical';

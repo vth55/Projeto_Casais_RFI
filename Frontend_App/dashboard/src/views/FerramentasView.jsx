@@ -1,8 +1,8 @@
 /**
- * FerramentasView — gestão de equipamentos pequenos com tags NFC
+ * EquipamentosView — gestão de equipamentos pequenos com tags NFC
  *
  * Substitui a antiga "MaquinasView" no menu Equipamentos.
- * Diferenças vs máquinas grandes:
+ * Diferenças vs equipamentos grandes:
  *   - Sem CAN bus, sem leitor RFID fixo
  *   - Identificação por tag NFC (programada com URL /t/:tagId)
  *   - Modelo simplificado: nome, tipo, armazém, tag, obra actual
@@ -36,7 +36,7 @@ const TOOL_TYPES = [
 ];
 
 // ──────────────────────────────────────────────
-// Modal: criar / editar ferramenta
+// Modal: criar / editar equipamento
 // ──────────────────────────────────────────────
 function ToolModal({ tool, onClose, onSaved }) {
   const isEdit = !!tool?.id;
@@ -230,7 +230,7 @@ async function writeUrlToNfcTag(url) {
 }
 
 // ──────────────────────────────────────────────
-// Card de ferramenta
+// Card de equipamento
 // ──────────────────────────────────────────────
 function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl, onProgramTag, programming }) {
   const isInUse = !!openSession;
@@ -328,7 +328,7 @@ function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl, onProgramTag
 // ──────────────────────────────────────────────
 // View principal
 // ──────────────────────────────────────────────
-export default function FerramentasView() {
+export default function EquipamentosView() {
   const [tools, setTools] = useState([]);
   const [openSessions, setOpenSessions] = useState({});
   const [loading, setLoading] = useState(true);
@@ -339,7 +339,7 @@ export default function FerramentasView() {
   const [programming, setProgramming] = useState(null);  // tool.id em execução
   const [toast, setToast] = useState(null);  // { kind: 'success'|'error', msg }
 
-  // Listener: ferramentas
+  // Listener: equipamentos
   useEffect(() => {
     const q = query(collection(db, TOOLS_PATH));
     const unsub = onSnapshot(q, (snap) => {
@@ -421,7 +421,7 @@ export default function FerramentasView() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">Equipamentos</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Ferramentas pequenas com tag NFC — saídas e devoluções automáticas
+            Equipamentos pequenas com tag NFC — saídas e devoluções automáticas
           </p>
         </div>
         <button

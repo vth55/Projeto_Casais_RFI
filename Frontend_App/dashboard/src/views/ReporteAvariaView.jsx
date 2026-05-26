@@ -1,7 +1,7 @@
 /**
- * ReporteAvariaView — Reporte de problema em ferramenta (pivot 2026-05).
+ * ReporteAvariaView — Reporte de problema em equipamento (pivot 2026-05).
  *
- * Substitui o fluxo legacy de avarias de máquina. Cria documento em
+ * Substitui o fluxo legacy de avarias de equipamento. Cria documento em
  * `tool_maintenance` via addToolMaintenance do useStore. Schema em src/types.js.
  *
  * Standalone fullscreen: acedido via QR Code ou link directo.
@@ -17,8 +17,8 @@ const CASAIS_BLUE = '#005EB8';
 
 // Tipos de problema mapeados directamente aos enums de tool_maintenance.
 const TIPOS = [
-  { id: TOOL_MAINTENANCE_TYPES.DAMAGE,      label: 'Dano',                 desc: 'Avaria, fissura, peça partida, mau funcionamento' },
-  { id: TOOL_MAINTENANCE_TYPES.LOSS,        label: 'Perdida',              desc: 'Ferramenta extraviada ou não encontrada' },
+  { id: TOOL_MAINTENANCE_TYPES.DAMAGE,      label: 'Avaria',                 desc: 'Avaria, fissura, peça partida, mau funcionamento' },
+  { id: TOOL_MAINTENANCE_TYPES.LOSS,        label: 'Perdida',              desc: 'Equipamento extraviada ou não encontrada' },
   { id: TOOL_MAINTENANCE_TYPES.INSPECTION,  label: 'Precisa inspeção',     desc: 'Pedido de verificação técnica' },
   { id: TOOL_MAINTENANCE_TYPES.REPAIR,      label: 'Precisa reparação',    desc: 'Reparação necessária para voltar ao serviço' },
 ];
@@ -33,7 +33,7 @@ const AppHeader = () => (
           <AlertOctagon className="w-5 h-5 text-white" />
         </div>
         <div className="text-center">
-          <h1 className="text-xl font-bold text-white tracking-tight">Reporte de Ferramenta</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">Reporte de Equipamento</h1>
           <p className="text-xs text-blue-200 font-medium mt-0.5">Casais Fleet Intelligence</p>
         </div>
       </div>
@@ -60,7 +60,7 @@ const ToolPicker = ({ tools, value, onChange }) => {
   if (selected) {
     return (
       <div className="px-5">
-        <label className="block text-sm font-semibold text-slate-700 mb-2">Ferramenta</label>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Equipamento</label>
         <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary-500 bg-primary-50">
           <div className="min-w-0">
             <p className="font-bold text-slate-900 truncate">{selected.name}</p>
@@ -76,7 +76,7 @@ const ToolPicker = ({ tools, value, onChange }) => {
 
   return (
     <div className="px-5">
-      <label className="block text-sm font-semibold text-slate-700 mb-2">Ferramenta</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">Equipamento</label>
       <div className="relative mb-2">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
@@ -88,7 +88,7 @@ const ToolPicker = ({ tools, value, onChange }) => {
       </div>
       <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y">
         {filtered.length === 0 ? (
-          <p className="p-4 text-sm text-slate-400 text-center">Sem ferramentas com este filtro</p>
+          <p className="p-4 text-sm text-slate-400 text-center">Sem equipamentos com este filtro</p>
         ) : filtered.map(t => (
           <button
             key={t.id}
@@ -191,7 +191,7 @@ export default function ReporteAvariaView() {
 
   const [toolId, setToolId] = useState(initialToolId);
   const [type, setType] = useState(TOOL_MAINTENANCE_TYPES.DAMAGE);
-  const [usable, setUsable] = useState(false);  // "A ferramenta está utilizável?"
+  const [usable, setUsable] = useState(false);  // "A equipamento está utilizável?"
   const [notes, setNotes] = useState('');
   const [cost, setCost] = useState('');
   const [photos, setPhotos] = useState([]);
@@ -210,7 +210,7 @@ export default function ReporteAvariaView() {
   const selectedTool = tools.find(t => t.id === toolId);
 
   async function submit() {
-    if (!toolId || !type) { setError('Seleciona a ferramenta e o tipo de problema'); return; }
+    if (!toolId || !type) { setError('Seleciona a equipamento e o tipo de problema'); return; }
     setSubmitting(true);
     setError(null);
     try {
@@ -271,7 +271,7 @@ export default function ReporteAvariaView() {
               className="w-5 h-5 rounded text-primary-500"
             />
             <div>
-              <p className="text-sm font-semibold text-slate-900">A ferramenta está utilizável?</p>
+              <p className="text-sm font-semibold text-slate-900">A equipamento está utilizável?</p>
               <p className="text-xs text-slate-500">Marca se ainda pode ser usada com cuidado até intervenção</p>
             </div>
           </label>

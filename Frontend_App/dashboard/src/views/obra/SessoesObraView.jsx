@@ -26,8 +26,8 @@ const ANOMALY_LABEL = {
   FATIGUE:     `Duração ≥ ${SESSION_ANOMALY_THRESHOLD_H}h`,
   AUTO_CLOSE:  'Fecho automático',
   CORRECTED:   'Corrigida manualmente',
-  TOOL_OVERDUE: 'Ferramenta em atraso',
-  TOOL_PRESUMED_LOST: 'Ferramenta presumivelmente perdida',
+  TOOL_OVERDUE: 'Equipamento em atraso',
+  TOOL_PRESUMED_LOST: 'Equipamento presumivelmente perdida',
 };
 const ANOMALY_COLOR = {
   NO_OPERATOR: 'text-amber-600 dark:text-amber-400',
@@ -104,7 +104,7 @@ const FilterBar = ({
       onChange={e => setFilterTool(e.target.value)}
       className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
     >
-      <option value="all">Todas as ferramentas</option>
+      <option value="all">Todas as equipamentos</option>
       {tools.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
     </select>
 
@@ -490,7 +490,7 @@ const SessoesObraView = ({ obraId, dateRange }) => {
 
   const handleExport = () => {
     const exportable = filtered.filter(s => s.status === 'CLOSED');
-    const headers = ['Ferramenta', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Anomalias'];
+    const headers = ['Equipamento', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Anomalias'];
     const rows = exportable.map(s => [
       s.tool.name,
       s.operator?.name || '—',
@@ -514,7 +514,7 @@ const SessoesObraView = ({ obraId, dateRange }) => {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <Activity className="w-12 h-12 mb-4 opacity-30" />
-        <p className="font-medium text-slate-500">Sem ferramentas nesta obra</p>
+        <p className="font-medium text-slate-500">Sem equipamentos nesta obra</p>
       </div>
     );
   }
@@ -543,7 +543,7 @@ const SessoesObraView = ({ obraId, dateRange }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    {['Ferramenta', 'Operador', 'Início', 'Fim', 'Duração', 'Estado', 'Custo', ''].map((h, i) => (
+                    {['Equipamento', 'Operador', 'Início', 'Fim', 'Duração', 'Estado', 'Custo', ''].map((h, i) => (
                       <th
                         key={i}
                         className={`px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide ${i >= 6 ? 'text-right' : 'text-left'}`}

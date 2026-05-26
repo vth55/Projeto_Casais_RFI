@@ -1,11 +1,11 @@
 /**
- * ManutencaoObraView — Manutenção de ferramentas filtrada por obra (pivot 2026-05).
+ * ManutencaoObraView — Manutenção de equipamentos filtrada por obra (pivot 2026-05).
  *
  * Versão compacta de ManutencaoView para o contexto de uma obra específica.
  * Recebe `obraId` via prop e filtra tool_maintenance por esse obraId.
  *
  * Consome: tools, getToolMaintenanceByObraId, updateToolMaintenance, resolveToolMaintenance
- * Semântica: inspeção / dano / reparação / calibração / substituição / perda
+ * Semântica: inspeção / avaria / reparação / calibração / substituição / perda
  */
 import React, { useState, useMemo } from 'react';
 import {
@@ -27,7 +27,7 @@ const TYPE_META = {
     dot: 'bg-blue-500',
   },
   [TOOL_MAINTENANCE_TYPES.DAMAGE]: {
-    label: 'Dano',
+    label: 'Avaria',
     icon: AlertTriangle,
     color: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
     dot: 'bg-red-500',
@@ -413,7 +413,7 @@ const ManutencaoObraView = ({ obraId }) => {
         <KpiCard label="Abertos"       value={stats.open}       icon={AlertCircle}  color={stats.open > 0 ? 'red' : 'slate'} />
         <KpiCard label="Em progresso"  value={stats.inProgress} icon={Clock}        color={stats.inProgress > 0 ? 'amber' : 'slate'} />
         <KpiCard label="Resolvidos"    value={stats.done}       icon={CheckCircle}  color="emerald" />
-        <KpiCard label="Danos críticos" value={stats.critical}  icon={ShieldAlert}  color={stats.critical > 0 ? 'red' : 'slate'} />
+        <KpiCard label="Avarias críticos" value={stats.critical}  icon={ShieldAlert}  color={stats.critical > 0 ? 'red' : 'slate'} />
       </div>
 
       {/* Filters */}
@@ -463,7 +463,7 @@ const ManutencaoObraView = ({ obraId }) => {
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                  {['Ferramenta', 'Tipo', 'Estado', 'Reportado por', 'Data', 'Notas', 'Custo', ''].map((h, i) => (
+                  {['Equipamento', 'Tipo', 'Estado', 'Reportado por', 'Data', 'Notas', 'Custo', ''].map((h, i) => (
                     <th key={i} className="px-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide text-left">{h}</th>
                   ))}
                 </tr>

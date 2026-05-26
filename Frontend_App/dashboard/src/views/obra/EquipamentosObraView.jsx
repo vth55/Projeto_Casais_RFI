@@ -458,8 +458,8 @@ const EquipamentosObraView = ({ obraId, dateRange, obraMachines: _obraMachines }
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <Wrench className="w-12 h-12 mb-4 opacity-30" />
-        <p className="font-medium text-slate-500">Sem ferramentas nesta obra</p>
-        <p className="text-sm mt-1">Atribui ferramentas à obra para ver dados aqui</p>
+        <p className="font-medium text-slate-500">Sem equipamentos nesta obra</p>
+        <p className="text-sm mt-1">Atribui equipamentos à obra para ver dados aqui</p>
       </div>
     );
   }
@@ -474,7 +474,7 @@ const EquipamentosObraView = ({ obraId, dateRange, obraMachines: _obraMachines }
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Pesquisar ferramenta…"
+            placeholder="Pesquisar equipamento…"
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -498,7 +498,7 @@ const EquipamentosObraView = ({ obraId, dateRange, obraMachines: _obraMachines }
       <div className="px-4 md:px-5 pb-6">
         {filtered.length === 0 ? (
           <div className="text-center py-10 text-sm text-slate-400">
-            Sem ferramentas com os filtros atuais
+            Sem equipamentos com os filtros atuais
           </div>
         ) : (
           <>
@@ -506,7 +506,7 @@ const EquipamentosObraView = ({ obraId, dateRange, obraMachines: _obraMachines }
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    {['Ferramenta', 'Estado', 'Uso', 'Último checkout', 'Última devolução', 'Operador', ''].map((header, index) => (
+                    {['Equipamento', 'Estado', 'Uso', 'Último checkout', 'Última devolução', 'Operador', ''].map((header, index) => (
                       <th
                         key={header}
                         className={`px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide ${

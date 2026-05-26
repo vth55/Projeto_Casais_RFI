@@ -48,7 +48,7 @@ const LiveSessionsBar = memo(() => {
           </div>
         ) : (
           <span className="text-sm font-semibold">
-            {activeSessions.length} ferramentas em uso
+            {activeSessions.length} equipamentos em uso
           </span>
         )}
       </div>

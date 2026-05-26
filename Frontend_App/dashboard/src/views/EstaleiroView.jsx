@@ -1,8 +1,8 @@
 /**
- * EstaleiroView — Armazém / Inventário de Ferramentas (pivot 2026-05).
+ * EstaleiroView — Armazém / Inventário de Equipamentos (pivot 2026-05).
  *
- * Substitui o conceito legacy de "parque de máquinas" pelo novo modelo:
- * inventário de ferramentas pequenas NFC, com disponibilidade, histórico de
+ * Substitui o conceito legacy de "parque de equipamentos" pelo novo modelo:
+ * inventário de equipamentos pequenas NFC, com disponibilidade, histórico de
  * movimentos e valor imobilizado.
  *
  * Consome: tools, toolSessions, toolMovements do useStore.
@@ -158,7 +158,7 @@ export default function EstaleiroView() {
     }));
   }, [tools, toolSessions]);
 
-  // Última movimentação por ferramenta
+  // Última movimentação por equipamento
   const lastMovementByTool = useMemo(() => {
     const map = new Map();
     toolMovements.forEach(m => {
@@ -217,7 +217,7 @@ export default function EstaleiroView() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Armazém</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Inventário de ferramentas</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Inventário de equipamentos</p>
           </div>
         </div>
 
@@ -278,7 +278,7 @@ export default function EstaleiroView() {
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
           <Warehouse className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Sem ferramentas com estes filtros</p>
+          <p className="text-sm">Sem equipamentos com estes filtros</p>
         </div>
       ) : (
         <>
@@ -287,7 +287,7 @@ export default function EstaleiroView() {
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                  {['Ferramenta', 'Tag NFC', 'Status', 'Última movimentação', 'Valor', ''].map((h, i) => (
+                  {['Equipamento', 'Tag NFC', 'Status', 'Última movimentação', 'Valor', ''].map((h, i) => (
                     <th key={i} className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide text-left">{h}</th>
                   ))}
                 </tr>

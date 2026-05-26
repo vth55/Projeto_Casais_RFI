@@ -54,7 +54,7 @@ const findOperator = (operators, session) =>
   );
 
 const getToolName = (tool, session) =>
-  tool?.name || session?.toolName || session?.toolId || 'Ferramenta';
+  tool?.name || session?.toolName || session?.toolId || 'Equipamento';
 
 const getOperatorName = (operator, session) =>
   operator?.name || session?.operatorName || session?.operatorId || 'Operador';
@@ -195,9 +195,9 @@ const ValidationModal = ({ session, tool, operator, onValidate, onClose }) => {
         <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="font-medium text-amber-800 dark:text-amber-300">Anomalia de ferramenta</p>
+            <p className="font-medium text-amber-800 dark:text-amber-300">Anomalia de equipamento</p>
             <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
-              {anomalies.map(getAnomalyLabel).join(', ')}. Confirme se a ferramenta continua em uso,
+              {anomalies.map(getAnomalyLabel).join(', ')}. Confirme se a equipamento continua em uso,
               se já foi devolvida ou se precisa de correção administrativa.
             </p>
           </div>
@@ -461,7 +461,7 @@ const SessoesView = () => {
       return;
     }
 
-    const headers = ['Ferramenta', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Obra', 'Anomalias'];
+    const headers = ['Equipamento', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Obra', 'Anomalias'];
     const rows = sessionsToExport.map(session => {
       const tool = findTool(tools, session);
       const operator = findOperator(operators, session);
@@ -485,7 +485,7 @@ const SessoesView = () => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `sessoes_ferramentas_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `sessoes_equipamentos_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
@@ -521,7 +521,7 @@ const SessoesView = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sessões</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Histórico de utilização de ferramentas</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Histórico de utilização de equipamentos</p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExportCSV}>Exportar CSV</Button>
       </div>
@@ -553,7 +553,7 @@ const SessoesView = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Pesquisar por ferramenta, operador ou obra..."
+              placeholder="Pesquisar por equipamento, operador ou obra..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -564,7 +564,7 @@ const SessoesView = () => {
         <div className="p-4 sm:p-6">
           {activeTab === 'active' && (
             displayedSessions.length === 0
-              ? <EmptyState icon={Play} title="Sem sessões ativas" description="Não existem ferramentas em utilização neste momento." />
+              ? <EmptyState icon={Play} title="Sem sessões ativas" description="Não existem equipamentos em utilização neste momento." />
               : <div className="space-y-4">
                   {displayedSessions.map(session => (
                     <ActiveSessionCard
@@ -584,7 +584,7 @@ const SessoesView = () => {
                 <Table>
                   <Table.Head>
                     <Table.Row>
-                      <Table.Header>Ferramenta</Table.Header>
+                      <Table.Header>Equipamento</Table.Header>
                       <Table.Header>Operador</Table.Header>
                       <Table.Header>Obra</Table.Header>
                       <Table.Header>Data</Table.Header>
@@ -636,7 +636,7 @@ const SessoesView = () => {
               <EmptyState
                 icon={CheckCircle}
                 title="Sem validações pendentes"
-                description="Não existem ferramentas OPEN com devolução atrasada."
+                description="Não existem equipamentos OPEN com devolução atrasada."
               />
             ) : (
               <div className="space-y-3">
