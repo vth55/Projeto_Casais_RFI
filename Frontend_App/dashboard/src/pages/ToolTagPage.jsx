@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { db, projectId } from '../config/firebase';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, doc,
@@ -31,10 +31,27 @@ export default function ToolTagPage() {
   // Extract tagId from URL: /t/:tagId
   const tagId = window.location.pathname.split('/t/')[1]?.split('?')[0]?.toUpperCase();
 
+  // Garante que loadTool() só corre uma vez — Firebase Auth pode disparar null→user
+  // em cold start, o que re-executaria o effect e chamaria loadTool() uma segunda
+  // vez já com a sessão de checkout criada, causando ciclo checkout→checkin.
+  const loadedRef = useRef(false);
+
+  // Ref para a função confirm — fix para stale closure no setInterval do countdown.
+  // O interval captura confirm do render em que o effect correu; sem este ref,
+  // usaria values velhos de state/openSession quando o timer disparasse.
+  const confirmRef = useRef(null);
+
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated || !(currentUser?.id || currentUser?.uid)) { setState(S.NEEDS_LOGIN); return; }
+    if (!isAuthenticated || !(currentUser?.id || currentUser?.uid)) {
+      // Só mostrar NEEDS_LOGIN se ainda não carregámos — evita flicker se o
+      // Firebase Auth disparar null brevemente depois de já termos o tool carregado.
+      if (!loadedRef.current) setState(S.NEEDS_LOGIN);
+      return;
+    }
     if (!tagId) { setState(S.TOOL_NOT_FOUND); return; }
+    if (loadedRef.current) return;
+    loadedRef.current = true;
     loadTool();
   }, [authLoading, isAuthenticated, (currentUser?.id || currentUser?.uid), tagId]);
 
@@ -82,7 +99,7 @@ export default function ToolTagPage() {
     setCountdown(4);
     const interval = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) { clearInterval(interval); confirm(); return 0; }
+        if (prev <= 1) { clearInterval(interval); confirmRef.current?.(); return 0; }
         return prev - 1;
       });
     }, 1000);
@@ -137,6 +154,10 @@ export default function ToolTagPage() {
       setResult(err.message);
     }
   }
+
+  // Manter confirmRef sincronizado com o render atual — o setInterval
+  // chama confirmRef.current para ter sempre state/openSession/tool atuais.
+  confirmRef.current = confirm;
 
   // ──── Render ────
 
