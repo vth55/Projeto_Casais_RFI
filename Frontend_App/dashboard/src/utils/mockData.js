@@ -1,3 +1,13 @@
+/**
+ * mockData.js — CASAIS Fleet Intelligence
+ *
+ * Dataset PRIMÁRIO: createAllMockData → tools + tool_sessions + operadores + obras + alertas
+ *
+ * Não existe createMockMachines / createMockSessions neste ficheiro.
+ * Dados legacy de machines/sessions são criados apenas pelo Procore exporter
+ * (test-export-session.js e test-cenario-e.js em Backend_Cloud/functions/scripts/).
+ */
+
 import { collection, addDoc, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { db, projectId } from '../config/firebase';
 

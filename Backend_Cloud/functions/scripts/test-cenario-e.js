@@ -1,3 +1,5 @@
+// LEGACY — heavy machines model pré-pivot 2026-05
+// Teste de integração do Procore (WorkOrder → sessão). Opera sobre `sessions` e `machines`.
 /**
  * Cenário E — WorkOrder concluída → sessão de horas resetada
  *

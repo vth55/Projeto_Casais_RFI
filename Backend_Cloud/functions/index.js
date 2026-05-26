@@ -1308,6 +1308,8 @@ exports.procoreExportRetry = onSchedule(
 // ====================================================
 // PROCORE — Re-export Timecard após correção de anomalia
 // ====================================================
+// LEGACY — opera sobre `sessions` (heavy machines model pré-pivot 2026-05).
+// Mantido porque o Procore exporter depende desta colecção.
 // Quando uma sessão é corrigida pelo operador (validationStatus muda para RESOLVED
 // e correctedByOperator=true), os horários do Procore ficam desatualizados.
 // Este trigger re-exporta o Timecard com os valores corrigidos.
@@ -1372,6 +1374,9 @@ exports.onSessionCorrected = onDocumentUpdated(
 );
 
 /**
+ * LEGACY — opera sobre `machines` (heavy machines model pré-pivot 2026-05).
+ * Mantido porque o Procore sync depende desta colecção.
+ *
  * Trigger: quando obraId de uma machine muda na PWA, sincroniza com Procore (best-effort).
  * Anti-loop: ignora alterações com lastSyncSource === 'procore'.
  */

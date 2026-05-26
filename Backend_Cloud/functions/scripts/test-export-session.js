@@ -1,3 +1,6 @@
+// LEGACY — heavy machines model pré-pivot 2026-05
+// Opera sobre `sessions` (heavy machines) para testar o Procore exporter.
+// Mantido como fixture de teste do Procore exporter — NÃO remover.
 /**
  * test-export-session.js — Cria uma sessão de teste e verifica o export para o Procore.
  * Confirma: description format, billable, operador linkado, equipment_id handling.

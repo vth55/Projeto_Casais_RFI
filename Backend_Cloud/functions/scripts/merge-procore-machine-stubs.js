@@ -1,3 +1,6 @@
+// LEGACY — heavy machines model pré-pivot 2026-05
+// Opera sobre a colecção `machines` para consolidar stubs Procore.
+// Mantido para o Procore exporter — NÃO remover.
 /**
  * Migração: merge procore_* stubs → mach-* docs
  *

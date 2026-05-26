@@ -1,3 +1,5 @@
+// LEGACY — heavy machines model pré-pivot 2026-05
+// Opera sobre `machines` para diagnóstico do Cenário E (Procore integration tests).
 /**
  * check-cenario-e-state.js — Verifica estado actual para diagnóstico Cenário E
  */

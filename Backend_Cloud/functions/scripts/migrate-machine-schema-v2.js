@@ -1,3 +1,7 @@
+// LEGACY — heavy machines model pré-pivot 2026-05
+// Este script opera sobre a colecção `machines` (modelo heavy machines).
+// NÃO usar para ferramentas NFC — essas estão em `tools`.
+// Mantido para compatibilidade com o Procore exporter e audit trail.
 /**
  * Migração Sprint 1 — Schema de Máquinas v2
  *
