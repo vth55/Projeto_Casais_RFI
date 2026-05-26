@@ -139,6 +139,15 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const syncToolTagRoute = () => {
+      setIsToolTag(/\/t\/[^/]+/.test(window.location.pathname));
+    };
+
+    window.addEventListener('popstate', syncToolTagRoute);
+    return () => window.removeEventListener('popstate', syncToolTagRoute);
+  }, []);
+
   // Inicializar tema ao carregar
   useEffect(() => {
     initTheme();
@@ -295,7 +304,7 @@ export default function App() {
   if (isToolTag) {
     return (
       <ErrorBoundary>
-        <ToolTagPage />
+        <ToolTagPage onExit={() => setIsToolTag(false)} />
       </ErrorBoundary>
     );
   }

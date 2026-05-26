@@ -21,7 +21,7 @@ const S = {
   ERROR: 'error',
 };
 
-export default function ToolTagPage() {
+export default function ToolTagPage({ onExit }) {
   const [state, setState] = useState(S.LOADING);
   const [tool, setTool] = useState(null);
   const [openSession, setOpenSession] = useState(null);
@@ -41,6 +41,15 @@ export default function ToolTagPage() {
   // O interval captura confirm do render em que o effect correu; sem este ref,
   // usaria values velhos de state/openSession quando o timer disparasse.
   const confirmRef = useRef(null);
+
+  const removeToolRouteFromHistory = () => {
+    window.history.replaceState({}, '', '/');
+  };
+
+  const exitToApp = () => {
+    removeToolRouteFromHistory();
+    onExit?.();
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -153,6 +162,7 @@ export default function ToolTagPage() {
         });
         setResult({ action: 'checkin', toolName: tool.name, durationHours });
       }
+      removeToolRouteFromHistory();
       setState(S.SUCCESS);
     } catch (err) {
       setState(S.ERROR);
@@ -178,12 +188,13 @@ export default function ToolTagPage() {
         <User className="w-7 h-7 text-primary-400" />
       </div>
       <p className="text-white font-bold text-lg text-center">Inicia sessão para registar o equipamento</p>
-      <a
-        href="/"
+      <button
+        type="button"
+        onClick={exitToApp}
         className="px-6 py-3 bg-primary-500 text-white rounded-2xl font-bold text-sm"
       >
         Ir para login
-      </a>
+      </button>
     </div>
   );
 
@@ -192,7 +203,7 @@ export default function ToolTagPage() {
       <AlertCircle className="w-12 h-12 text-amber-400" />
       <p className="text-white font-bold text-lg text-center">Tag não reconhecida</p>
       <p className="text-slate-400 text-sm text-center font-mono">{tagId}</p>
-      <a href="/" className="text-primary-400 text-sm underline">Voltar à app</a>
+      <button type="button" onClick={exitToApp} className="text-primary-400 text-sm underline">Voltar à app</button>
     </div>
   );
 
@@ -209,7 +220,7 @@ export default function ToolTagPage() {
           }
         </p>
       </div>
-      <a href="/" className="mt-4 text-white/50 text-sm underline">Voltar à app</a>
+      <button type="button" onClick={exitToApp} className="mt-4 text-white/50 text-sm underline">Voltar à app</button>
     </div>
   );
 
@@ -218,7 +229,7 @@ export default function ToolTagPage() {
       <AlertCircle className="w-12 h-12 text-white" />
       <p className="text-white font-bold text-lg text-center">Erro ao processar</p>
       <p className="text-white/60 text-sm text-center">{result}</p>
-      <a href="/" className="text-white/50 text-sm underline">Voltar à app</a>
+      <button type="button" onClick={exitToApp} className="text-white/50 text-sm underline">Voltar à app</button>
     </div>
   );
 
@@ -312,7 +323,7 @@ export default function ToolTagPage() {
             </span>
           </button>
           <button
-            onClick={() => window.history.back()}
+            onClick={exitToApp}
             className="w-full py-3 rounded-2xl text-slate-400 text-sm font-medium
               border border-slate-700 hover:bg-slate-800 transition-colors"
           >
