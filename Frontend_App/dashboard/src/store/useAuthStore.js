@@ -80,22 +80,44 @@ const useAuthStore = create(
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
-            // Utilizador já autenticado — carregar perfil do Firestore
-            const profile = await fetchUserProfile(firebaseUser.uid);
-            const role = get().getRole(profile.systemRole || 'operador');
-            set({
-              currentUser: {
-                id: firebaseUser.uid,
-                email: firebaseUser.email,
-                name: profile.name || firebaseUser.displayName || firebaseUser.email,
-                systemRole: profile.systemRole || 'operador',
-                assignedObraId: profile.assignedObraId || null,
-                cardId: profile.cardId || null,
-                permissions: role?.permissions || [],
-              },
-              isAuthenticated: true,
-              authLoading: false,
-            });
+            const cached = get().currentUser;
+            if (cached?.id === firebaseUser.uid) {
+              // Perfil já em cache (zustand persist) — desbloquear imediatamente
+              set({ isAuthenticated: true, authLoading: false });
+              // Refrescar perfil em background (sem bloquear a UI)
+              fetchUserProfile(firebaseUser.uid).then(profile => {
+                const cur = get().currentUser;
+                if (!cur) return;
+                const role = get().getRole(profile.systemRole || 'operador');
+                set({
+                  currentUser: {
+                    ...cur,
+                    name: profile.name || cur.name,
+                    systemRole: profile.systemRole || cur.systemRole,
+                    assignedObraId: profile.assignedObraId ?? cur.assignedObraId,
+                    cardId: profile.cardId ?? cur.cardId,
+                    permissions: role?.permissions || cur.permissions,
+                  },
+                });
+              }).catch(() => {});
+            } else {
+              // Novo login ou utilizador diferente — buscar perfil (bloqueante)
+              const profile = await fetchUserProfile(firebaseUser.uid);
+              const role = get().getRole(profile.systemRole || 'operador');
+              set({
+                currentUser: {
+                  id: firebaseUser.uid,
+                  email: firebaseUser.email,
+                  name: profile.name || firebaseUser.displayName || firebaseUser.email,
+                  systemRole: profile.systemRole || 'operador',
+                  assignedObraId: profile.assignedObraId || null,
+                  cardId: profile.cardId || null,
+                  permissions: role?.permissions || [],
+                },
+                isAuthenticated: true,
+                authLoading: false,
+              });
+            }
           } else {
             // Sem sessão activa
             set({ currentUser: null, isAuthenticated: false, authLoading: false });

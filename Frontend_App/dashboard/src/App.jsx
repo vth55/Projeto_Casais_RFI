@@ -43,8 +43,8 @@ const MobileHubView = lazy(() => import('./views/MobileHubView'));
 // Machine QR View - standalone page via QR Code (/m/:machineId)
 const MachineQrView = lazy(() => import('./views/MachineQrView'));
 
-// Tool Tag Page - abre quando telemóvel lê tag NFC (/t/:tagId)
-const ToolTagPage = lazy(() => import('./pages/ToolTagPage'));
+// Tool Tag Page - import estático (cold start NFC: não pode ter lazy loading overhead)
+import ToolTagPage from './pages/ToolTagPage';
 
 // Views com lazy loading (code splitting)
 const DashboardView = lazy(() => import('./views/DashboardView'));
@@ -292,9 +292,7 @@ export default function App() {
   if (isToolTag) {
     return (
       <ErrorBoundary>
-        <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>}>
-          <ToolTagPage />
-        </Suspense>
+        <ToolTagPage />
       </ErrorBoundary>
     );
   }
