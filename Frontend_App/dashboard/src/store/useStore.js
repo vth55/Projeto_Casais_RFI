@@ -43,6 +43,9 @@ const useStore = create((set, get) => ({
   machines: [],         // legacy — heavy machines (a remover gradualmente)
   tools: [],            // novo — small tools NFC (modelo activo pós-pivot 2026-05)
   toolSessions: [],     // novo — checkout/checkin NFC das ferramentas
+  toolAlerts: [],       // novo — anomalias detectadas (TOOL_OVERDUE, NO_LOCATION, etc.) ver types.js
+  toolMaintenance: [],  // novo — inspeção/dano/reparação/calibração/perda (ver types.js)
+  toolMovements: [],    // novo — auditoria de transferências obra↔armazém
   operators: [],
   obras: [],
   maintenanceRecords: [],
@@ -128,6 +131,36 @@ const useStore = create((set, get) => ({
     });
     unsubscribers.push(
       createToolSessionsListener((data) => set({ toolSessions: data || [] }))
+    );
+
+    // tool_alerts — anomalias TOOL_OVERDUE/NO_LOCATION/etc. (schema em src/types.js)
+    const createToolAlertsListener = createCollectionListener(db, `${basePath}/tool_alerts`, {
+      orderByField: 'createdAt',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.debug('[tool_alerts] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createToolAlertsListener((data) => set({ toolAlerts: data || [] }))
+    );
+
+    // tool_maintenance — inspeção/dano/reparação/calibração/perda (schema em src/types.js)
+    const createToolMaintenanceListener = createCollectionListener(db, `${basePath}/tool_maintenance`, {
+      orderByField: 'reportedAt',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.debug('[tool_maintenance] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createToolMaintenanceListener((data) => set({ toolMaintenance: data || [] }))
+    );
+
+    // tool_movements — histórico de transferências obra↔armazém
+    const createToolMovementsListener = createCollectionListener(db, `${basePath}/tool_movements`, {
+      orderByField: 'movedAt',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.debug('[tool_movements] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createToolMovementsListener((data) => set({ toolMovements: data || [] }))
     );
 
     // Operators listener
@@ -1338,6 +1371,58 @@ const useStore = create((set, get) => ({
         totalHours: Math.round(totalHours * 10) / 10,
       };
     }).sort((a, b) => b.totalHours - a.totalHours);
+  },
+
+  // ========================================
+  // TOOL MAINTENANCE — CRUD nativo (substitui maintenanceRecords + avarias para tools)
+  // Ver schema em src/types.js (ToolMaintenance)
+  // ========================================
+
+  addToolMaintenance: async (record) => {
+    const data = {
+      ...record,
+      reportedAt: record.reportedAt || Timestamp.now(),
+      status: record.status || 'OPEN',
+      photos: record.photos || [],
+    };
+    const ref = await addDoc(collection(db, `${basePath}/tool_maintenance`), data);
+    return ref.id;
+  },
+
+  updateToolMaintenance: async (recordId, updates) => {
+    const ref = doc(db, `${basePath}/tool_maintenance`, recordId);
+    await updateDoc(ref, updates);
+  },
+
+  resolveToolMaintenance: async (recordId, { resolvedBy, notes, cost }) => {
+    const ref = doc(db, `${basePath}/tool_maintenance`, recordId);
+    await updateDoc(ref, {
+      status: 'DONE',
+      resolvedBy,
+      resolvedAt: Timestamp.now(),
+      ...(notes ? { notes } : {}),
+      ...(cost != null ? { cost } : {}),
+    });
+  },
+
+  // Maintenance/avarias activas para uma ferramenta (independente do status do tool_session)
+  getToolMaintenanceByToolId: (toolId) => {
+    const { toolMaintenance } = get();
+    if (!toolId) return [];
+    return toolMaintenance.filter(r => r.toolId === toolId);
+  },
+
+  // Maintenance activas numa obra — agrupado por ferramenta
+  getToolMaintenanceByObraId: (obraId) => {
+    const { toolMaintenance } = get();
+    if (!obraId) return [];
+    return toolMaintenance.filter(r => r.obraId === obraId);
+  },
+
+  // Contagem rápida de issues abertas (para badges)
+  getOpenToolIssues: () => {
+    const { toolMaintenance } = get();
+    return toolMaintenance.filter(r => r.status !== 'DONE').length;
   },
 
   // ========================================
