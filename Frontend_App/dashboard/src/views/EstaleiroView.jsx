@@ -1,428 +1,358 @@
-import React, { useState, useMemo } from 'react';
+/**
+ * EstaleiroView — Armazém / Inventário de Ferramentas (pivot 2026-05).
+ *
+ * Substitui o conceito legacy de "parque de máquinas" pelo novo modelo:
+ * inventário de ferramentas pequenas NFC, com disponibilidade, histórico de
+ * movimentos e valor imobilizado.
+ *
+ * Consome: tools, toolSessions, toolMovements do useStore.
+ * NÃO consome machines / sessions / updateMachine / moveMachinesToObra.
+ */
+import React, { useMemo, useState } from 'react';
 import {
-  Warehouse, PackageCheck, Wrench, AlertTriangle, Search,
-  MoreVertical, ArrowRightLeft, CheckSquare, Square, X,
-  ChevronDown, ChevronUp, Truck, Clock, Fuel,
+  Warehouse, Wrench, Search, X, ChevronRight,
+  Activity, AlertTriangle, CheckCircle, Tag, Clock, Euro,
 } from 'lucide-react';
 import useStore from '../store/useStore';
-import { parseFirestoreTimestamp } from '../utils/dateUtils';
-import { Card, Button, Modal, Select, EmptyState } from '../components/ui';
-import { getCategoryName } from '../utils/safeRender';
-import { formatHours } from '../utils/formatters';
+import { TOOL_STATUS } from '../types';
 
-// ── helpers ──────────────────────────────────────────────────────────
-const STATUS_CONFIG = {
-  IDLE:        { label: 'Disponível',  dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  ACTIVE:      { label: 'Em Serviço',  dot: 'bg-blue-500',    chip: 'bg-blue-50 text-blue-700 border-blue-200' },
-  MAINTENANCE: { label: 'Manutenção',  dot: 'bg-slate-400',   chip: 'bg-slate-100 text-slate-700 border-slate-200' },
-  AVARIA:      { label: 'Avaria',      dot: 'bg-red-500',     chip: 'bg-red-50 text-red-700 border-red-200' },
+const STATUS_META = {
+  [TOOL_STATUS.AVAILABLE]: { label: 'Disponível', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700' },
+  [TOOL_STATUS.IN_USE]:    { label: 'Em uso',     dot: 'bg-primary-500', badge: 'bg-primary-50 text-primary-700' },
+  [TOOL_STATUS.IN_REPAIR]: { label: 'Reparação',  dot: 'bg-amber-500',   badge: 'bg-amber-50 text-amber-700' },
+  [TOOL_STATUS.LOST]:      { label: 'Perdida',    dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700' },
+  [TOOL_STATUS.RETIRED]:   { label: 'Retirada',   dot: 'bg-slate-400',   badge: 'bg-slate-100 text-slate-600' },
 };
 
-const StatusChip = ({ status }) => {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.IDLE;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.chip}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {cfg.label}
-    </span>
-  );
-};
+const FILTERS = [
+  { value: 'all',                 label: 'Todas' },
+  { value: TOOL_STATUS.AVAILABLE, label: 'Disponíveis' },
+  { value: TOOL_STATUS.IN_USE,    label: 'Em uso' },
+  { value: TOOL_STATUS.IN_REPAIR, label: 'Reparação' },
+  { value: TOOL_STATUS.LOST,      label: 'Perdidas' },
+];
 
-function timeInYard(machine) {
-  const ts = machine.movedToYardAt || machine.updatedAt || machine.createdAt;
+function formatRelative(ts) {
   if (!ts) return '—';
-  const date = parseFirestoreTimestamp(ts);
-  if (!date || isNaN(date.getTime())) return '—';
-  const diffMs = Date.now() - date.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  if (diffDays >= 1) return `${diffDays} dia${diffDays > 1 ? 's' : ''}`;
-  if (diffHours >= 1) return `${diffHours}h`;
-  return '< 1h';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days >= 1) return `há ${days}d`;
+  const hours = Math.floor(diff / 3600000);
+  if (hours >= 1) return `há ${hours}h`;
+  const min = Math.floor(diff / 60000);
+  if (min >= 1) return `há ${min}min`;
+  return 'agora';
 }
 
-// ── EstaleiroView ─────────────────────────────────────────────────────
-export default function EstaleiroView() {
-  const { machines, obras, updateMachine, moveMachinesToObra, setActiveView } = useStore();
-
-  const estMachines = useMemo(
-    () => machines.filter(m => m.obraId === 'estaleiro' || (!m.obraId && !m.location)),
-    [machines]
+const StatTile = ({ icon: Icon, label, value, tone = 'primary' }) => {
+  const toneMap = {
+    primary: 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300',
+    emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+    amber:   'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+    red:     'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
+  };
+  return (
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${toneMap[tone]}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{value}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+      </div>
+    </div>
   );
+};
 
-  const realObras = useMemo(
-    () => (obras || []).filter(o => !o.isVirtual && o.id !== 'estaleiro'),
-    [obras]
-  );
-
-  const stats = useMemo(() => ({
-    total:       estMachines.length,
-    disponiveis: estMachines.filter(m => !['MAINTENANCE', 'AVARIA', 'ACTIVE'].includes(m.status)).length,
-    manutencao:  estMachines.filter(m => m.status === 'MAINTENANCE').length,
-    avaria:      estMachines.filter(m => m.status === 'AVARIA').length,
-  }), [estMachines]);
-
-  const [search, setSearch]             = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortField, setSortField]       = useState('timeDesc');
-  const [selectedIds, setSelectedIds]   = useState([]);
-  const [openMenu, setOpenMenu]         = useState(null);
-  const [showMover, setShowMover]       = useState(false);
-  const [moverObraId, setMoverObraId]   = useState('');
-  const [saving, setSaving]             = useState(false);
-
-  const filtered = useMemo(() => {
-    let list = estMachines;
-    if (search) list = list.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()) || m.id?.toLowerCase().includes(search.toLowerCase()));
-    if (statusFilter !== 'all') list = list.filter(m => m.status === statusFilter);
-    if (sortField === 'name') list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    else if (sortField === 'hours') list = [...list].sort((a, b) => (b.totalHours || 0) - (a.totalHours || 0));
-    return list;
-  }, [estMachines, search, statusFilter, sortField]);
-
-  const allSelected = filtered.length > 0 && filtered.every(m => selectedIds.includes(m.id));
-  const toggleAll   = () => setAllSelected(allSelected ? [] : filtered.map(m => m.id));
-  function setAllSelected(ids) { setSelectedIds(ids); }
-  const toggleOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-
-  const handleMoverConfirm = async () => {
-    if (!moverObraId || selectedIds.length === 0) return;
-    setSaving(true);
-    await moveMachinesToObra(selectedIds, moverObraId);
-    setSaving(false);
-    setShowMover(false);
-    setSelectedIds([]);
-    setMoverObraId('');
-  };
-
-  const handleStatusChange = async (machineId, newStatus) => {
-    await updateMachine(machineId, { status: newStatus });
-    setOpenMenu(null);
-  };
-
-  const handleBulkStatus = async (newStatus) => {
-    await Promise.all(selectedIds.map(id => updateMachine(id, { status: newStatus })));
-    setSelectedIds([]);
-  };
-
-  const STATUS_PILLS = [
-    { key: 'all',         label: 'Todas' },
-    { key: 'IDLE',        label: 'Disponíveis' },
-    { key: 'MAINTENANCE', label: 'Manutenção' },
-    { key: 'AVARIA',      label: 'Avaria' },
-  ];
+const ToolDrawer = ({ tool, movements, sessions, onClose }) => {
+  if (!tool) return null;
+  const meta = STATUS_META[tool.status] || STATUS_META[TOOL_STATUS.AVAILABLE];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-screen-xl mx-auto">
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/40" />
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
+              <span className="text-xs font-medium text-slate-500">{meta.label}</span>
+            </div>
+            <h2 className="font-bold text-slate-900 dark:text-white truncate">{tool.name}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{tool.type || '—'}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg ml-2">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
 
-      {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+              <p className="text-xs text-slate-400 mb-0.5">Tag NFC</p>
+              <p className="font-mono text-xs text-slate-700 dark:text-slate-200 truncate">{tool.nfcTagId || '—'}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+              <p className="text-xs text-slate-400 mb-0.5">Valor substituição</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{tool.replacementCost ? `${tool.replacementCost}€` : '—'}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 col-span-2">
+              <p className="text-xs text-slate-400 mb-0.5">Localização</p>
+              <p className="text-sm text-slate-700 dark:text-slate-200">{tool.currentObraName || tool.storageLocation || 'Armazém'}</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Últimas movimentações</h3>
+            {movements.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">Sem movimentos registados</p>
+            ) : (
+              <div className="space-y-1">
+                {movements.slice(0, 5).map(m => (
+                  <div key={m.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                    <span className="text-slate-600 dark:text-slate-300 truncate">
+                      {m.fromObraId === 'WAREHOUSE' ? 'Armazém' : m.fromObraId} → {m.toObraId === 'WAREHOUSE' ? 'Armazém' : m.toObraId}
+                    </span>
+                    <span className="text-slate-400 shrink-0 ml-2">{formatRelative(m.movedAt)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Últimas sessões</h3>
+            {sessions.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">Sem sessões recentes</p>
+            ) : (
+              <div className="space-y-1">
+                {sessions.slice(0, 5).map(s => (
+                  <div key={s.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                    <span className="text-slate-600 dark:text-slate-300 truncate">{s.operatorName} · {s.status}</span>
+                    <span className="text-slate-400 shrink-0 ml-2">{formatRelative(s.startTime)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function EstaleiroView() {
+  const { tools = [], toolSessions = [], toolMovements = [] } = useStore();
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [scope, setScope] = useState('warehouse'); // 'warehouse' | 'all'
+  const [selected, setSelected] = useState(null);
+
+  // Inferir status — usa tool.status se existir; senão deriva de currentObraId/sessão OPEN.
+  const enrichedTools = useMemo(() => {
+    const openByTool = new Set(toolSessions.filter(s => s.status === 'OPEN').map(s => s.toolId));
+    return tools.map(t => ({
+      ...t,
+      status: t.status || (openByTool.has(t.id) || t.currentObraId ? TOOL_STATUS.IN_USE : TOOL_STATUS.AVAILABLE),
+    }));
+  }, [tools, toolSessions]);
+
+  // Última movimentação por ferramenta
+  const lastMovementByTool = useMemo(() => {
+    const map = new Map();
+    toolMovements.forEach(m => {
+      const tCurr = m.movedAt?.toDate ? m.movedAt.toDate().getTime() : new Date(m.movedAt || 0).getTime();
+      const prev = map.get(m.toolId);
+      const tPrev = prev?.movedAt?.toDate ? prev.movedAt.toDate().getTime() : 0;
+      if (!prev || tCurr > tPrev) map.set(m.toolId, m);
+    });
+    return map;
+  }, [toolMovements]);
+
+  const stats = useMemo(() => ({
+    inWarehouse: enrichedTools.filter(t => !t.currentObraId).length,
+    available:   enrichedTools.filter(t => t.status === TOOL_STATUS.AVAILABLE).length,
+    inUse:       enrichedTools.filter(t => t.status === TOOL_STATUS.IN_USE).length,
+    inRepair:    enrichedTools.filter(t => t.status === TOOL_STATUS.IN_REPAIR).length,
+    lost:        enrichedTools.filter(t => t.status === TOOL_STATUS.LOST).length,
+  }), [enrichedTools]);
+
+  const filtered = useMemo(() => {
+    let list = scope === 'warehouse'
+      ? enrichedTools.filter(t => !t.currentObraId)
+      : enrichedTools;
+    if (filter !== 'all') list = list.filter(t => t.status === filter);
+    const s = search.trim().toLowerCase();
+    if (s) {
+      list = list.filter(t =>
+        (t.name || '').toLowerCase().includes(s) ||
+        (t.type || '').toLowerCase().includes(s) ||
+        (t.nfcTagId || '').toLowerCase().includes(s)
+      );
+    }
+    return list;
+  }, [enrichedTools, filter, search, scope]);
+
+  const selectedMovements = useMemo(
+    () => selected ? toolMovements.filter(m => m.toolId === selected.id).sort((a, b) => {
+      const ta = a.movedAt?.toDate ? a.movedAt.toDate().getTime() : 0;
+      const tb = b.movedAt?.toDate ? b.movedAt.toDate().getTime() : 0;
+      return tb - ta;
+    }) : [],
+    [selected, toolMovements]
+  );
+  const selectedSessions = useMemo(
+    () => selected ? toolSessions.filter(s => s.toolId === selected.id).slice(0, 10) : [],
+    [selected, toolSessions]
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center">
-            <Warehouse className="w-6 h-6 text-amber-600" />
+          <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+            <Warehouse className="w-6 h-6 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Estaleiro</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Parque central · equipamentos não alocados a obra activa</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Armazém</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Inventário de ferramentas</p>
           </div>
         </div>
-        {selectedIds.length > 0 && (
-          <Button variant="primary" onClick={() => setShowMover(true)} icon={ArrowRightLeft}>
-            Mover {selectedIds.length} para obra…
-          </Button>
-        )}
+
+        <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-medium">
+          <button
+            onClick={() => setScope('warehouse')}
+            className={`px-3 py-1.5 rounded-lg transition-colors ${scope === 'warehouse' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
+          >
+            Só no armazém
+          </button>
+          <button
+            onClick={() => setScope('all')}
+            className={`px-3 py-1.5 rounded-lg transition-colors ${scope === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
+          >
+            Todas
+          </button>
+        </div>
       </div>
 
-      {/* ── Stat cards ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={<Warehouse className="w-5 h-5 text-amber-600" />}
-          bg="bg-amber-50"
-          label="No Estaleiro"
-          value={stats.total}
-          sub="equipamentos"
-        />
-        <StatCard
-          icon={<PackageCheck className="w-5 h-5 text-emerald-600" />}
-          bg="bg-emerald-50"
-          label="Disponíveis"
-          value={stats.disponiveis}
-          sub="prontos a deploy"
-        />
-        <StatCard
-          icon={<Wrench className="w-5 h-5 text-slate-500" />}
-          bg="bg-slate-100"
-          label="Manutenção"
-          value={stats.manutencao}
-          sub="em intervenção"
-        />
-        <StatCard
-          icon={<AlertTriangle className="w-5 h-5 text-red-500" />}
-          bg="bg-red-50"
-          label="Avaria"
-          value={stats.avaria}
-          sub="bloqueadas"
-        />
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatTile icon={Warehouse}     label="No armazém"   value={stats.inWarehouse} tone="primary" />
+        <StatTile icon={CheckCircle}   label="Disponíveis"  value={stats.available}   tone="emerald" />
+        <StatTile icon={Activity}      label="Em uso"       value={stats.inUse}       tone="primary" />
+        <StatTile icon={Wrench}        label="Reparação"    value={stats.inRepair}    tone="amber" />
+        <StatTile icon={AlertTriangle} label="Perdidas"     value={stats.lost}        tone="red" />
       </div>
 
-      {/* ── Filter bar ───────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      {/* Filter bar */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            type="text"
-            placeholder="Pesquisar equipamento…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
+            placeholder="Pesquisar nome, tipo ou tag NFC…"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
-
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-          {STATUS_PILLS.map(pill => (
+        <div className="flex gap-1.5 flex-wrap">
+          {FILTERS.map(opt => (
             <button
-              key={pill.key}
-              onClick={() => setStatusFilter(pill.key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                statusFilter === pill.key
-                  ? 'bg-white dark:bg-slate-700 text-amber-700 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
+              key={opt.value}
+              onClick={() => setFilter(opt.value)}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
+                filter === opt.value
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 hover:border-primary-400'
               }`}
             >
-              {pill.label}
+              {opt.label}
             </button>
           ))}
         </div>
-
-        <select
-          value={sortField}
-          onChange={e => setSortField(e.target.value)}
-          className="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
-        >
-          <option value="timeDesc">Tempo no estaleiro ↓</option>
-          <option value="name">Nome A→Z</option>
-          <option value="hours">Horas totais ↓</option>
-        </select>
       </div>
 
-      {/* ── Bulk action bar ──────────────────────────────────────── */}
-      {selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
-          <span className="text-sm font-medium text-amber-800">{selectedIds.length} selecionados</span>
-          <div className="flex-1" />
-          <Button size="sm" variant="primary" onClick={() => setShowMover(true)} icon={ArrowRightLeft}>
-            Mover para obra
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleBulkStatus('MAINTENANCE')} icon={Wrench}>
-            Manutenção
-          </Button>
-          <button
-            onClick={() => setSelectedIds([])}
-            className="p-1 text-amber-600 hover:text-amber-900 rounded"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* ── Tabela ───────────────────────────────────────────────── */}
+      {/* List */}
       {filtered.length === 0 ? (
-        <EmptyState
-          icon={Warehouse}
-          title={estMachines.length === 0 ? 'Estaleiro vazio' : 'Sem resultados'}
-          description={estMachines.length === 0
-            ? 'Todos os equipamentos estão alocados a obras activas.'
-            : 'Ajuste os filtros de pesquisa.'}
-        />
+        <div className="text-center py-16 text-slate-400">
+          <Warehouse className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Sem ferramentas com estes filtros</p>
+        </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                <th className="w-10 px-4 py-3">
-                  <button onClick={toggleAll} className="text-slate-400 hover:text-slate-600">
-                    {allSelected ? <CheckSquare className="w-4 h-4 text-amber-600" /> : <Square className="w-4 h-4" />}
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">Equipamento</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700 dark:text-slate-300 hidden md:table-cell">Categoria</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">Estado</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700 dark:text-slate-300 hidden lg:table-cell">No estaleiro</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700 dark:text-slate-300 hidden lg:table-cell">Horas totais</th>
-                <th className="w-10 px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(machine => {
-                const selected = selectedIds.includes(machine.id);
-                return (
-                  <tr
-                    key={machine.id}
-                    className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors ${
-                      selected ? 'bg-amber-50/60 dark:bg-amber-900/10' : 'hover:bg-amber-50/30 dark:hover:bg-slate-700/30'
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <button onClick={() => toggleOne(machine.id)} className="text-slate-400 hover:text-slate-600">
-                        {selected ? <CheckSquare className="w-4 h-4 text-amber-600" /> : <Square className="w-4 h-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                          <Truck className="w-4 h-4 text-slate-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white">{machine.name || 'Sem nome'}</p>
-                          <p className="text-xs text-slate-400">{machine.id}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 hidden md:table-cell">
-                      {getCategoryName(machine.category) || '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusChip status={machine.status} />
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 hidden lg:table-cell">
-                      {timeInYard(machine)}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {formatHours(machine.totalHours)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 relative">
-                      <button
-                        onClick={() => setOpenMenu(openMenu === machine.id ? null : machine.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                      {openMenu === machine.id && (
-                        <div className="absolute right-4 top-10 z-20 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[180px]">
-                          <MenuButton
-                            icon={ArrowRightLeft}
-                            label="Mover para obra…"
-                            onClick={() => { setSelectedIds([machine.id]); setOpenMenu(null); setShowMover(true); }}
-                          />
-                          {machine.status !== 'MAINTENANCE' && (
-                            <MenuButton icon={Wrench} label="Marcar manutenção" onClick={() => handleStatusChange(machine.id, 'MAINTENANCE')} />
-                          )}
-                          {machine.status !== 'AVARIA' && (
-                            <MenuButton icon={AlertTriangle} label="Registar avaria" onClick={() => handleStatusChange(machine.id, 'AVARIA')} />
-                          )}
-                          {(machine.status === 'MAINTENANCE' || machine.status === 'AVARIA') && (
-                            <MenuButton icon={PackageCheck} label="Devolver ao serviço" onClick={() => handleStatusChange(machine.id, 'IDLE')} />
-                          )}
-                          <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
-                            <MenuButton icon={Clock} label="Ver sessões" onClick={() => { setOpenMenu(null); setActiveView('sessoes-historico'); }} />
+        <>
+          {/* Desktop table */}
+          <div className="hidden lg:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-50 dark:bg-slate-700/50">
+                <tr>
+                  {['Ferramenta', 'Tag NFC', 'Status', 'Última movimentação', 'Valor', ''].map((h, i) => (
+                    <th key={i} className="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(t => {
+                  const meta = STATUS_META[t.status] || STATUS_META[TOOL_STATUS.AVAILABLE];
+                  const lastMoved = lastMovementByTool.get(t.id)?.movedAt;
+                  return (
+                    <tr key={t.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => setSelected(t)}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${meta.dot}`} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{t.name}</p>
+                            <p className="text-xs text-slate-400 truncate">{t.type || '—'}</p>
                           </div>
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div className="px-4 py-2.5 text-xs text-slate-400 border-t border-slate-100 dark:border-slate-700">
-            {filtered.length} equipamento{filtered.length !== 1 ? 's' : ''} no estaleiro
-            {filtered.length !== estMachines.length && ` (${estMachines.length} total)`}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-500 truncate max-w-[120px]">{t.nfcTagId || '—'}</td>
+                      <td className="px-4 py-3 text-xs">
+                        <span className={`px-2 py-0.5 rounded-full font-medium ${meta.badge}`}>{meta.label}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{formatRelative(lastMoved)}</td>
+                      <td className="px-4 py-3 text-xs tabular-nums text-slate-700 dark:text-slate-200">{t.replacementCost ? `${t.replacementCost}€` : '—'}</td>
+                      <td className="px-4 py-3 text-right"><ChevronRight className="w-4 h-4 text-slate-300 ml-auto" /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
 
-      {/* ── Modal Mover para Obra ─────────────────────────────────── */}
-      {showMover && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowMover(false)} />
-          <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Mover para Obra</h2>
-              <button onClick={() => setShowMover(false)} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-sm text-slate-500">
-              {selectedIds.length} equipamento{selectedIds.length !== 1 ? 's' : ''} será{selectedIds.length !== 1 ? 'ão' : ''} movido{selectedIds.length !== 1 ? 's' : ''} para a obra seleccionada.
-            </p>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Obra de destino</label>
-              {realObras.length === 0 ? (
-                <p className="text-sm text-slate-400 italic">Sem obras activas disponíveis.</p>
-              ) : (
-                <select
-                  value={moverObraId}
-                  onChange={e => setMoverObraId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Seleccionar obra…</option>
-                  {realObras.map(o => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowMover(false)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={!moverObraId || saving}
-                onClick={handleMoverConfirm}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-[#005EB8] hover:bg-[#004fa0] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <><div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> A mover…</>
-                ) : (
-                  <><ArrowRightLeft className="w-4 h-4" /> Confirmar</>
-                )}
-              </button>
-            </div>
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-3">
+            {filtered.map(t => {
+              const meta = STATUS_META[t.status] || STATUS_META[TOOL_STATUS.AVAILABLE];
+              const lastMoved = lastMovementByTool.get(t.id)?.movedAt;
+              return (
+                <div key={t.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => setSelected(t)}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-white truncate">{t.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{t.type || '—'}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.badge} shrink-0`}>{meta.label}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <span className="flex items-center gap-1"><Tag className="w-3 h-3" />{t.nfcTagId?.slice(0, 8) || '—'}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatRelative(lastMoved)}</span>
+                    {t.replacementCost ? <span className="flex items-center gap-1 ml-auto"><Euro className="w-3 h-3" />{t.replacementCost}</span> : null}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </>
       )}
 
-      {/* fechar menu ao clicar fora */}
-      {openMenu && (
-        <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
-      )}
+      <ToolDrawer
+        tool={selected}
+        movements={selectedMovements}
+        sessions={selectedSessions}
+        onClose={() => setSelected(null)}
+      />
     </div>
-  );
-}
-
-// ── sub-componentes locais ────────────────────────────────────────────
-function StatCard({ icon, bg, label, value, sub }) {
-  return (
-    <div className={`${bg} rounded-xl p-4 border border-slate-100 dark:border-slate-700`}>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-white/70 dark:bg-slate-800/50 flex items-center justify-center">
-          {icon}
-        </div>
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      </div>
-      <p className="text-3xl font-bold text-slate-900 dark:text-white">{value}</p>
-      <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
-    </div>
-  );
-}
-
-function MenuButton({ icon: Icon, label, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-    >
-      <Icon className="w-4 h-4 text-slate-400" />
-      {label}
-    </button>
   );
 }

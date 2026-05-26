@@ -1,483 +1,329 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Camera, Send, CheckCircle2, X, AlertOctagon, ImagePlus } from 'lucide-react';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import useAvariasStore from '../store/useAvariasStore';
+/**
+ * ReporteAvariaView — Reporte de problema em ferramenta (pivot 2026-05).
+ *
+ * Substitui o fluxo legacy de avarias de máquina. Cria documento em
+ * `tool_maintenance` via addToolMaintenance do useStore. Schema em src/types.js.
+ *
+ * Standalone fullscreen: acedido via QR Code ou link directo.
+ * URL: /reporte-avaria?tool=<toolId>  (também aceita ?machine=<id> como fallback legacy)
+ */
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Camera, Send, CheckCircle2, X, AlertOctagon, Wrench, MapPin, ImagePlus, Search } from 'lucide-react';
+import useStore from '../store/useStore';
+import useAuthStore from '../store/useAuthStore';
+import { TOOL_MAINTENANCE_TYPES } from '../types';
 
-const FIRESTORE_BASE = 'artifacts/casais-rfid/public/data';
-
-// ─── Constantes ───────────────────────────────────────────────
 const CASAIS_BLUE = '#005EB8';
 
-// Tipos de problema — sem emojis, profissional
-const TIPOS_PROBLEMA = [
-  { id: 'mecanico',    label: 'Mecânico',            desc: 'Motor, transmissão, travões' },
-  { id: 'hidraulico',  label: 'Hidráulico',          desc: 'Cilindros, mangueiras, bombas' },
-  { id: 'eletrico',    label: 'Elétrico',            desc: 'Cablagem, luzes, sensores' },
-  { id: 'pneus',       label: 'Pneus / Rastos',      desc: 'Furos, desgaste, rastos partidos' },
-  { id: 'fugas',       label: 'Fuga de Fluidos',     desc: 'Óleo, combustível, refrigerante' },
-  { id: 'estrutura',   label: 'Estrutura / Chassis',  desc: 'Fissuras, corrosão, deformações' },
-  { id: 'seguranca',   label: 'Segurança',           desc: 'Alarmes, extintor, cinto, cabine' },
-  { id: 'outro',       label: 'Outro',               desc: 'Problema não listado acima' },
+// Tipos de problema mapeados directamente aos enums de tool_maintenance.
+const TIPOS = [
+  { id: TOOL_MAINTENANCE_TYPES.DAMAGE,      label: 'Dano',                 desc: 'Avaria, fissura, peça partida, mau funcionamento' },
+  { id: TOOL_MAINTENANCE_TYPES.LOSS,        label: 'Perdida',              desc: 'Ferramenta extraviada ou não encontrada' },
+  { id: TOOL_MAINTENANCE_TYPES.INSPECTION,  label: 'Precisa inspeção',     desc: 'Pedido de verificação técnica' },
+  { id: TOOL_MAINTENANCE_TYPES.REPAIR,      label: 'Precisa reparação',    desc: 'Reparação necessária para voltar ao serviço' },
 ];
 
-
-// ─── Header Branding ──────────────────────────────────────────
 const AppHeader = () => (
-  <div
-    className="relative overflow-hidden"
-    style={{ background: `linear-gradient(135deg, ${CASAIS_BLUE} 0%, #003d7a 100%)` }}
-  >
+  <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${CASAIS_BLUE} 0%, #003d7a 100%)` }}>
     <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-10 bg-white" />
     <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full opacity-5 bg-white" />
-
     <div className="relative px-5 pt-12 pb-6">
       <div className="flex items-center justify-center gap-3">
         <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
           <AlertOctagon className="w-5 h-5 text-white" />
         </div>
         <div className="text-center">
-          <h1 className="text-xl font-bold text-white tracking-tight">Reporte de Avaria</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">Reporte de Ferramenta</h1>
           <p className="text-xs text-blue-200 font-medium mt-0.5">Casais Fleet Intelligence</p>
         </div>
       </div>
     </div>
-
     <svg viewBox="0 0 1440 48" fill="none" className="block w-full -mb-px">
       <path d="M0 48h1440V20c-240 20-480 28-720 20S240 8 0 20v28z" fill="#f8fafc" />
     </svg>
   </div>
 );
 
-// ─── Captura de Foto (câmara real) ────────────────────────────
-const PhotoCapture = ({ photos, onCapture, onRemove }) => {
-  const fileInputRef = useRef(null);
+const ToolPicker = ({ tools, value, onChange }) => {
+  const [q, setQ] = useState('');
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return tools.slice(0, 20);
+    return tools.filter(t =>
+      (t.name || '').toLowerCase().includes(s) ||
+      (t.type || '').toLowerCase().includes(s) ||
+      (t.nfcTagId || '').toLowerCase().includes(s)
+    ).slice(0, 30);
+  }, [tools, q]);
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach((file) => {
-      if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        onCapture({ file, url, id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 5)}` });
-      }
-    });
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  const selected = tools.find(t => t.id === value);
+  if (selected) {
+    return (
+      <div className="px-5">
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Ferramenta</label>
+        <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary-500 bg-primary-50">
+          <div className="min-w-0">
+            <p className="font-bold text-slate-900 truncate">{selected.name}</p>
+            <p className="text-xs text-slate-500 truncate">{selected.type || '—'}{selected.currentObraName ? ` · ${selected.currentObraName}` : ''}</p>
+          </div>
+          <button onClick={() => onChange(null)} className="ml-3 p-2 rounded-lg hover:bg-white/60">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-5">
-      <label className="block text-sm font-semibold text-slate-700 mb-2">
-        Foto da Avaria
-      </label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">Ferramenta</label>
+      <div className="relative mb-2">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Pesquisar por nome, tipo ou tag NFC…"
+          className="w-full pl-9 pr-3 py-3 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+      </div>
+      <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y">
+        {filtered.length === 0 ? (
+          <p className="p-4 text-sm text-slate-400 text-center">Sem ferramentas com este filtro</p>
+        ) : filtered.map(t => (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className="w-full text-left p-3 hover:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900 truncate">{t.name}</p>
+                <p className="text-xs text-slate-500 truncate">
+                  {t.type || '—'}
+                  {t.currentObraName && <span className="inline-flex items-center gap-1 ml-2"><MapPin className="w-3 h-3" />{t.currentObraName}</span>}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
+const TypePicker = ({ value, onChange }) => (
+  <div className="px-5">
+    <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo de problema</label>
+    <div className="grid grid-cols-2 gap-2">
+      {TIPOS.map(opt => (
+        <button
+          key={opt.id}
+          onClick={() => onChange(opt.id)}
+          className={`text-left p-3 rounded-xl border-2 transition-colors ${
+            value === opt.id
+              ? 'border-primary-500 bg-primary-50'
+              : 'border-slate-200 bg-white hover:border-primary-300'
+          }`}
+        >
+          <p className="text-sm font-bold text-slate-900">{opt.label}</p>
+          <p className="text-xs text-slate-500 mt-0.5 leading-snug">{opt.desc}</p>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
+const PhotoCapture = ({ photos, onCapture, onRemove }) => {
+  const fileInputRef = useRef(null);
+  return (
+    <div className="px-5">
+      <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos (opcional)</label>
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={handleFileChange}
+        multiple
+        onChange={(e) => {
+          Array.from(e.target.files || []).forEach((file) => {
+            if (!file.type.startsWith('image/')) return;
+            const url = URL.createObjectURL(file);
+            onCapture({ file, url, id: `photo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` });
+          });
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }}
         className="hidden"
       />
-
-      <div className="grid grid-cols-3 gap-2.5">
-        {photos.map((photo) => (
-          <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm">
-            <img src={photo.url} alt="" className="w-full h-full object-cover" />
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map(p => (
+          <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200">
+            <img src={p.url} alt="" className="w-full h-full object-cover" />
             <button
-              onClick={() => onRemove(photo.id)}
-              className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+              onClick={() => onRemove(p.id)}
+              className="absolute top-1 right-1 w-6 h-6 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center"
             >
-              <X className="w-3.5 h-3.5 text-white" />
+              <X className="w-3 h-3 text-white" />
             </button>
           </div>
         ))}
-
-        {photos.length < 3 && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="aspect-square rounded-xl border-2 border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center gap-1.5 active:scale-[0.96] active:border-blue-400 transition-all"
-          >
-            {photos.length === 0 ? (
-              <>
-                <div className="w-12 h-12 rounded-xl bg-white shadow-md flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-slate-400" />
-                </div>
-                <span className="text-xs font-semibold text-slate-500">Tirar Foto</span>
-              </>
-            ) : (
-              <>
-                <ImagePlus className="w-6 h-6 text-slate-400" />
-                <span className="text-[10px] font-medium text-slate-400">Adicionar</span>
-              </>
-            )}
-          </button>
-        )}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-primary-400 hover:text-primary-500 transition-colors"
+        >
+          <ImagePlus className="w-6 h-6" />
+          <span className="text-xs font-medium">Adicionar</span>
+        </button>
       </div>
-
-      {photos.length === 0 && (
-        <p className="text-[11px] text-slate-400 mt-2 text-center">Opcional — até 3 fotografias</p>
-      )}
     </div>
   );
 };
 
-// ─── Seleção de Máquina ───────────────────────────────────────
-const MachineSelect = ({ value, onChange, machines, loadingMachines }) => (
-  <div className="px-5">
-    <label className="block text-sm font-semibold text-slate-700 mb-2">
-      Equipamento
-    </label>
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={loadingMachines}
-        className="w-full appearance-none bg-white border border-slate-200 rounded-xl px-4 py-3.5 pr-10 text-sm font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all disabled:opacity-60"
-      >
-        <option value="">{loadingMachines ? 'A carregar...' : 'Selecionar equipamento...'}</option>
-        {machines.map((m) => (
-          <option key={m.id} value={m.id}>{m.label}</option>
-        ))}
-      </select>
-      <svg className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-      </svg>
-    </div>
-  </div>
-);
+export default function ReporteAvariaView() {
+  const { tools = [], addToolMaintenance } = useStore();
+  const { currentUser } = useAuthStore();
 
-// ─── Identificação do Operador ────────────────────────────────
-const OperadorFields = ({ nome, onNomeChange, telefone, onTelefoneChange }) => (
-  <div className="px-5 space-y-3">
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-2">
-        O seu nome
-      </label>
-      <input
-        type="text"
-        value={nome}
-        onChange={(e) => onNomeChange(e.target.value)}
-        placeholder="Ex: João Silva"
-        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-2">
-        Contacto telefónico
-      </label>
-      <input
-        type="tel"
-        inputMode="tel"
-        value={telefone}
-        onChange={(e) => onTelefoneChange(e.target.value)}
-        placeholder="Ex: 912 345 678"
-        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
-      />
-      <p className="text-[10px] text-slate-400 mt-1.5 px-1">Para a equipa de manutenção o poder contactar se necessário.</p>
-    </div>
-  </div>
-);
-
-// ─── Máquina Parou? (toggle binário) ──────────────────────────
-const MaquinaParouToggle = ({ value, onChange }) => (
-  <div className="px-5">
-    <label className="block text-sm font-semibold text-slate-700 mb-2">
-      A máquina está parada?
-    </label>
-    <div className="grid grid-cols-2 gap-3">
-      <button
-        onClick={() => onChange(false)}
-        className={`
-          flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all duration-200
-          ${value === false
-            ? 'border-emerald-400 bg-emerald-50 shadow-md shadow-emerald-500/10'
-            : 'border-slate-200 bg-white active:scale-[0.97]'
-          }
-        `}
-      >
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${value === false ? 'bg-emerald-500' : 'bg-slate-200'} transition-colors`}>
-          <CheckCircle2 className={`w-5 h-5 ${value === false ? 'text-white' : 'text-slate-400'}`} />
-        </div>
-        <div className="text-center">
-          <span className={`text-sm font-bold block ${value === false ? 'text-emerald-700' : 'text-slate-600'}`}>Não</span>
-          <span className={`text-[10px] ${value === false ? 'text-emerald-600' : 'text-slate-400'}`}>Ainda opera</span>
-        </div>
-      </button>
-
-      <button
-        onClick={() => onChange(true)}
-        className={`
-          flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all duration-200
-          ${value === true
-            ? 'border-red-400 bg-red-50 shadow-md shadow-red-500/10'
-            : 'border-slate-200 bg-white active:scale-[0.97]'
-          }
-        `}
-      >
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${value === true ? 'bg-red-500' : 'bg-slate-200'} transition-colors`}>
-          <AlertOctagon className={`w-5 h-5 ${value === true ? 'text-white' : 'text-slate-400'}`} />
-        </div>
-        <div className="text-center">
-          <span className={`text-sm font-bold block ${value === true ? 'text-red-700' : 'text-slate-600'}`}>Sim</span>
-          <span className={`text-[10px] ${value === true ? 'text-red-600' : 'text-slate-400'}`}>Parada / Imobilizada</span>
-        </div>
-      </button>
-    </div>
-  </div>
-);
-
-// ─── Tipo de Problema (sem emojis) ────────────────────────────
-const TipoProblemaSelector = ({ selected, onChange }) => (
-  <div className="px-5">
-    <label className="block text-sm font-semibold text-slate-700 mb-2">
-      Tipo de Problema
-    </label>
-    <div className="grid grid-cols-2 gap-2">
-      {TIPOS_PROBLEMA.map((tipo) => {
-        const isActive = selected === tipo.id;
-        return (
-          <button
-            key={tipo.id}
-            onClick={() => onChange(tipo.id)}
-            className={`
-              relative flex flex-col px-3 py-2.5 rounded-xl border-2 transition-all duration-200 text-left
-              ${isActive
-                ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-500/10'
-                : 'border-slate-200 bg-white active:scale-[0.97]'
-              }
-            `}
-          >
-            <span className={`text-xs font-bold ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>
-              {tipo.label}
-            </span>
-            <span className={`text-[9px] leading-tight mt-0.5 ${isActive ? 'text-blue-500' : 'text-slate-400'}`}>
-              {tipo.desc}
-            </span>
-            {isActive && (
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500" />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  </div>
-);
-
-// ─── Descrição ────────────────────────────────────────────────
-const DescricaoInput = ({ value, onChange }) => (
-  <div className="px-5">
-    <label className="block text-sm font-semibold text-slate-700 mb-2">
-      O que aconteceu?
-    </label>
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      rows={3}
-      placeholder="Ex: O braço hidráulico não levanta, ouve-se um barulho estranho no cilindro direito..."
-      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
-    />
-  </div>
-);
-
-// ─── Splash Screen de Sucesso ─────────────────────────────────
-const SuccessScreen = ({ onClose }) => (
-  <div
-    className="fixed inset-0 z-50 flex flex-col items-center justify-center px-8"
-    style={{ background: `linear-gradient(160deg, ${CASAIS_BLUE} 0%, #003d7a 60%, #001f4d 100%)` }}
-  >
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-white/5" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-white/5" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full border border-white/10" />
-    </div>
-
-    <div className="relative flex flex-col items-center text-center animate-fadeInUp">
-      <div className="w-24 h-24 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center mb-8 shadow-2xl shadow-black/20 animate-bounceIn">
-        <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/40">
-          <CheckCircle2 className="w-9 h-9 text-white" />
-        </div>
-      </div>
-
-      <h2 className="text-2xl font-bold text-white mb-2">Avaria Reportada</h2>
-      <p className="text-blue-200/90 text-sm leading-relaxed max-w-xs mb-2">
-        A equipa de manutenção foi notificada e irá analisar a situação.
-      </p>
-      <p className="text-blue-300/60 text-xs mb-10">
-        Pode fechar esta janela ou submeter outra avaria.
-      </p>
-
-      <button
-        onClick={onClose}
-        className="w-full max-w-xs py-4 rounded-2xl bg-white text-slate-800 font-bold text-base shadow-xl shadow-black/20 active:scale-[0.97] transition-transform"
-      >
-        Nova Avaria
-      </button>
-
-      <p className="text-blue-300/40 text-xs mt-6">Casais Fleet Intelligence</p>
-    </div>
-
-    <style>{`
-      @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(30px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes bounceIn {
-        0%   { opacity: 0; transform: scale(0.3); }
-        50%  { transform: scale(1.08); }
-        70%  { transform: scale(0.95); }
-        100% { opacity: 1; transform: scale(1); }
-      }
-      .animate-fadeInUp { animation: fadeInUp 0.6s ease-out both; }
-      .animate-bounceIn { animation: bounceIn 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
-    `}</style>
-  </div>
-);
-
-// ─── View Principal ───────────────────────────────────────────
-const ReporteAvariaView = () => {
-  const submitAvaria = useAvariasStore((s) => s.submitAvaria);
-
-  const urlMachineId = new URLSearchParams(window.location.search).get('machine') || '';
-  const [machines, setMachines] = useState([]);
-  const [loadingMachines, setLoadingMachines] = useState(true);
-
-  useEffect(() => {
-    const db = getFirestore();
-    getDocs(collection(db, `${FIRESTORE_BASE}/machines`)).then(snap => {
-      const list = snap.docs
-        .filter(d => {
-          if (d.id.startsWith('procore_')) return false;
-          const data = d.data();
-          if (data._removed_at) return false;
-          if (String(data.name || '').includes('[REMOVIDO]')) return false;
-          return true;
-        })
-        .map(d => {
-          const data = d.data();
-          const code = data.equipmentCode || d.id;
-          const name = data.name || d.id;
-          return { id: d.id, label: `${code} — ${name}` };
-        }).sort((a, b) => a.label.localeCompare(b.label));
-      setMachines(list);
-    }).catch(() => {}).finally(() => setLoadingMachines(false));
+  // Aceitar URL param ?tool=<id> (novo) ou ?machine=<id> (legacy, fallback só para não crashar).
+  const initialToolId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tool') || params.get('machine') || null;
   }, []);
 
-  const [machineId, setMachineId] = useState(urlMachineId);
-  const [operadorNome, setOperadorNome] = useState('');
-  const [operadorTelefone, setOperadorTelefone] = useState('');
-  const [maquinaParada, setMaquinaParada] = useState(null);
-  const [tipoProblema, setTipoProblema] = useState('');
-  const [descricao, setDescricao] = useState('');
+  const [toolId, setToolId] = useState(initialToolId);
+  const [type, setType] = useState(TOOL_MAINTENANCE_TYPES.DAMAGE);
+  const [usable, setUsable] = useState(false);  // "A ferramenta está utilizável?"
+  const [notes, setNotes] = useState('');
+  const [cost, setCost] = useState('');
   const [photos, setPhotos] = useState([]);
-  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
 
-  const canSubmit = machineId && tipoProblema && maquinaParada !== null && descricao.trim().length > 5;
+  // Se URL passou um id que existe em tools, confirmar; senão mantém para o picker mostrar nada e o utilizador escolher.
+  useEffect(() => {
+    if (initialToolId && !tools.find(t => t.id === initialToolId)) {
+      // ID inválido — limpar para mostrar picker
+      setToolId(null);
+    }
+  }, [initialToolId, tools]);
 
-  const handleAddPhoto = useCallback((photo) => {
-    setPhotos((prev) => prev.length < 3 ? [...prev, photo] : prev);
-  }, []);
+  const selectedTool = tools.find(t => t.id === toolId);
 
-  const handleRemovePhoto = useCallback((photoId) => {
-    setPhotos((prev) => {
-      const removed = prev.find((p) => p.id === photoId);
-      if (removed?.url) URL.revokeObjectURL(removed.url);
-      return prev.filter((p) => p.id !== photoId);
-    });
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    if (!canSubmit || submitting) return;
+  async function submit() {
+    if (!toolId || !type) { setError('Seleciona a ferramenta e o tipo de problema'); return; }
     setSubmitting(true);
-
+    setError(null);
     try {
-      const photoFiles = photos.map(p => p.file).filter(Boolean);
-      await submitAvaria({
-        machineId,
-        operadorNome: operadorNome.trim() || 'Não identificado',
-        operadorTelefone: operadorTelefone.trim() || null,
-        maquinaParada,
-        tipoProblema,
-        categoria: tipoProblema,
-        urgencia: maquinaParada ? 'alta' : 'media',
-        descricao: descricao.trim(),
-        hasPhoto: photoFiles.length > 0,
-        photoCount: photoFiles.length,
-      }, photoFiles);
+      // Photos: nesta fase enviamos só URLs locais (objectURL). Upload real para Storage
+      // fica para fase seguinte — manter compat com schema que aceita array de strings.
+      const photoRefs = photos.map(p => p.id); // placeholder; quando integrar Storage substituir por download URL
 
-      setSubmitted(true);
+      await addToolMaintenance({
+        toolId,
+        type,
+        status: 'OPEN',
+        reportedBy: currentUser?.id || currentUser?.uid || 'anonymous',
+        obraId: selectedTool?.currentObraId || null,
+        notes: [
+          notes.trim(),
+          usable ? '[Utilizável]' : '[Inutilizável]',
+        ].filter(Boolean).join(' '),
+        photos: photoRefs,
+        ...(cost ? { cost: Number(cost) } : {}),
+      });
+      setDone(true);
     } catch (err) {
-      console.error('Erro ao submeter avaria:', err);
+      setError(err.message || 'Erro ao submeter reporte');
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, submitting, submitAvaria, machineId, operadorNome, operadorTelefone, maquinaParada, tipoProblema, descricao, photos]);
+  }
 
-  const handleReset = useCallback(() => {
-    photos.forEach((p) => { if (p.url) URL.revokeObjectURL(p.url); });
-    setMachineId(urlMachineId);
-    setOperadorNome('');
-    setOperadorTelefone('');
-    setMaquinaParada(null);
-    setTipoProblema('');
-    setDescricao('');
-    setPhotos([]);
-    setSubmitted(false);
-  }, [photos]);
-
-  if (submitted) {
-    return <SuccessScreen onClose={handleReset} />;
+  if (done) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <AppHeader />
+        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 text-center">
+          <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Reporte enviado</h2>
+          <p className="text-slate-500 text-sm max-w-xs">A equipa de manutenção vai analisar o problema. Obrigado.</p>
+          <a href="/" className="mt-4 px-6 py-3 bg-primary-500 text-white rounded-2xl font-bold text-sm">Voltar à app</a>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col pb-32">
       <AppHeader />
+      <div className="flex-1 flex flex-col gap-5 mt-4">
+        <ToolPicker tools={tools} value={toolId} onChange={setToolId} />
+        <TypePicker value={type} onChange={setType} />
 
-      <div className="flex-1 overflow-y-auto pb-32 space-y-5 pt-4">
-        <PhotoCapture photos={photos} onCapture={handleAddPhoto} onRemove={handleRemovePhoto} />
-        <MachineSelect value={machineId} onChange={setMachineId} machines={machines} loadingMachines={loadingMachines} />
-        <OperadorFields
-          nome={operadorNome}
-          onNomeChange={setOperadorNome}
-          telefone={operadorTelefone}
-          onTelefoneChange={setOperadorTelefone}
+        <div className="px-5">
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200">
+            <input
+              type="checkbox"
+              checked={usable}
+              onChange={e => setUsable(e.target.checked)}
+              className="w-5 h-5 rounded text-primary-500"
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">A ferramenta está utilizável?</p>
+              <p className="text-xs text-slate-500">Marca se ainda pode ser usada com cuidado até intervenção</p>
+            </div>
+          </label>
+        </div>
+
+        <div className="px-5">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição (opcional)</label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Descreve o problema, onde ocorreu, etc."
+            rows={4}
+            className="w-full p-3 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        {(type === TOOL_MAINTENANCE_TYPES.REPAIR || type === TOOL_MAINTENANCE_TYPES.DAMAGE) && (
+          <div className="px-5">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Custo estimado (€, opcional)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={cost}
+              onChange={e => setCost(e.target.value)}
+              placeholder="0"
+              className="w-full p-3 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        )}
+
+        <PhotoCapture
+          photos={photos}
+          onCapture={p => setPhotos(prev => [...prev, p])}
+          onRemove={id => setPhotos(prev => prev.filter(p => p.id !== id))}
         />
-        <MaquinaParouToggle value={maquinaParada} onChange={setMaquinaParada} />
-        <TipoProblemaSelector selected={tipoProblema} onChange={setTipoProblema} />
-        <DescricaoInput value={descricao} onChange={setDescricao} />
+
+        {error && (
+          <div className="px-5">
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>
+          </div>
+        )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200/80 px-5 py-4 safe-area-bottom">
+      <div className="fixed bottom-0 inset-x-0 p-4 bg-white border-t border-slate-200 safe-bottom">
         <button
-          onClick={handleSubmit}
-          disabled={!canSubmit || submitting}
-          className={`
-            w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-base font-bold shadow-xl transition-all duration-300
-            ${canSubmit && !submitting
-              ? 'text-white shadow-blue-500/30 active:scale-[0.97]'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-            }
-          `}
-          style={canSubmit && !submitting ? { background: `linear-gradient(135deg, ${CASAIS_BLUE} 0%, #003d7a 100%)` } : {}}
+          onClick={submit}
+          disabled={submitting || !toolId}
+          className="w-full py-4 rounded-2xl bg-primary-500 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
         >
-          {submitting ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              A enviar...
-            </>
-          ) : (
-            <>
-              <Send className="w-5 h-5" />
-              Submeter Avaria
-            </>
-          )}
+          {submitting ? 'A enviar…' : <><Send className="w-4 h-4" /> Submeter reporte</>}
         </button>
       </div>
-
-      <style>{`
-        .safe-area-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
-      `}</style>
     </div>
   );
-};
-
-export default ReporteAvariaView;
+}

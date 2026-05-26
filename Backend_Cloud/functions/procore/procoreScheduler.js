@@ -1,4 +1,10 @@
 /**
+ * LEGACY -- heavy machines model (pre-pivot 2026-05).
+ * Ver Backend_Cloud/functions/procore/_pivotStrategy.js.
+ * Nao consumir tool_sessions aqui. Quando houver exporter novo para tool_movements,
+ * estes ficheiros serao apagados.
+ */
+/**
  * CASAIS Fleet Intelligence — Procore Scheduler (Chunk 1C + Phase 3)
  *
  * Dois cron jobs:
