@@ -18,7 +18,7 @@ const navigation = [
       { id: 'obras-concluidas', label: 'Concluídas' },
     ],
   },
-  { id: 'maquinas',    label: 'Ferramentas',    icon: Package },
+  { id: 'maquinas',    label: 'Equipamentos',   icon: Package },
   { id: 'estaleiro',   label: 'Armazém',        icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
@@ -33,7 +33,7 @@ const navigation = [
     submenu: [
       { id: 'manutencao-alertas',   label: 'Alertas' },
       { id: 'manutencao-historico', label: 'Histórico' },
-      { id: 'manutencao-avarias',   label: 'Danos' },
+      { id: 'manutencao-avarias',   label: 'Avarias' },
     ],
   },
   { id: 'financeiro',  label: 'Financeiro',    icon: Wallet,

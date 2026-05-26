@@ -15,13 +15,13 @@ export const PERMISSIONS = {
   OBRAS_EDIT: 'obras:edit',
   OBRAS_DELETE: 'obras:delete',
 
-  // Ferramentas (pivot 2026-05 — substituí MACHINES_* por TOOLS_*)
+  // Equipamentos (pivot 2026-05 — substituí MACHINES_* por TOOLS_*)
   // Os valores de string foram mantidos 'tools:...' para separar claramente do modelo legacy.
   TOOLS_VIEW: 'tools:view',
   TOOLS_CREATE: 'tools:create',
   TOOLS_EDIT: 'tools:edit',
   TOOLS_DELETE: 'tools:delete',
-  TOOLS_MOVE: 'tools:move', // Transferir ferramenta entre obra/armazém
+  TOOLS_MOVE: 'tools:move', // Transferir equipamento entre obra/armazém
 
   // Operadores
   OPERATORS_VIEW: 'operators:view',
@@ -92,8 +92,8 @@ export const PERMISSIONS = {
  * Níveis hierárquicos de acesso ao PWA (menor = mais privilégios)
  *
  * NOTA IMPORTANTE:
- * Os operadores de ferramentas NÃO acedem ao PWA desktop.
- * Eles usam o Mobile Hub (scan NFC) e reportam avarias/danos.
+ * Os operadores de equipamentos NÃO acedem ao PWA desktop.
+ * Eles usam o Mobile Hub (scan NFC) e reportam avarias.
  * O PWA desktop é usado por gestores, supervisores, técnicos e IT.
  */
 export const ROLE_LEVELS = {
@@ -101,7 +101,7 @@ export const ROLE_LEVELS = {
   IT: 0,           // Acesso total + DevTools, integrações, logs
   GESTOR: 1,       // Gestores de área (frota, financeiro, sustentabilidade)
   SUPERVISOR: 2,   // Encarregados / Supervisores de obra / Técnicos manutenção
-  OPERADOR: 3,     // Operador de campo (Mobile Hub, scan NFC ferramentas, reportar danos, validar anomalias)
+  OPERADOR: 3,     // Operador de campo (Mobile Hub, scan NFC equipamentos, reportar avarias, validar anomalias)
 };
 
 // Perfis de acesso predefinidos
@@ -122,7 +122,7 @@ export const DEFAULT_ROLES = {
   gestor_frota: {
     id: 'gestor_frota',
     name: 'Gestor de Frota',
-    description: 'Gestão completa de ferramentas, obras e operadores',
+    description: 'Gestão completa de equipamentos, obras e operadores',
     color: 'blue',
     icon: 'Truck',
     level: ROLE_LEVELS.GESTOR,
@@ -218,7 +218,7 @@ export const DEFAULT_ROLES = {
   encarregado_obra: {
     id: 'encarregado_obra',
     name: 'Encarregado de Obra',
-    description: 'Gestão da sua obra, ferramentas e operadores associados',
+    description: 'Gestão da sua obra, equipamentos e operadores associados',
     color: 'amber',
     icon: 'HardHat',
     level: ROLE_LEVELS.SUPERVISOR,
@@ -226,7 +226,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.OBRAS_VIEW, // Só a sua obra (filtrado por assignedObraId)
       PERMISSIONS.TOOLS_VIEW,
-      PERMISSIONS.TOOLS_MOVE, // Transferir ferramentas entre obras na sua jurisdição
+      PERMISSIONS.TOOLS_MOVE, // Transferir equipamentos entre obras na sua jurisdição
       PERMISSIONS.OPERATORS_VIEW,
       PERMISSIONS.OPERATORS_CREATE,
       PERMISSIONS.OPERATORS_EDIT,
@@ -265,14 +265,14 @@ export const DEFAULT_ROLES = {
   tecnico_manutencao: {
     id: 'tecnico_manutencao',
     name: 'Técnico de Manutenção',
-    description: 'Gestão de manutenções, danos e saúde das ferramentas',
+    description: 'Gestão de manutenções, avarias e saúde dos equipamentos',
     color: 'orange',
     icon: 'Wrench',
     level: ROLE_LEVELS.SUPERVISOR,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.TOOLS_VIEW,
-      PERMISSIONS.TOOLS_EDIT,           // Pode atualizar estado da ferramenta
+      PERMISSIONS.TOOLS_EDIT,           // Pode atualizar estado do equipamento
       PERMISSIONS.TOOL_SESSIONS_VIEW,
       PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
       PERMISSIONS.MAINTENANCE_VIEW,
@@ -282,19 +282,19 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.QUALITY_VIEW,
       PERMISSIONS.QUALITY_VALIDATE,
       PERMISSIONS.SETTINGS_VIEW,
-      PERMISSIONS.SETTINGS_GENERAL,    // Definir thresholds de ferramentas
+      PERMISSIONS.SETTINGS_GENERAL,    // Definir thresholds de equipamentos
     ],
     isSystem: true,
     restrictedToOwnObra: false,
     canCreateRolesBelow: false,
-    // Dashboard: painel de saúde das ferramentas, danos abertos, preventivas
+    // Dashboard: painel de saúde dos equipamentos, avarias abertas, preventivas
     defaultDashboard: 'manutencao',
   },
 
   operador: {
     id: 'operador',
     name: 'Operador de Campo',
-    description: 'Mobile Hub, scan NFC de ferramentas, reportar danos e validar sessões próprias',
+    description: 'Mobile Hub, scan NFC de equipamentos, reportar avarias e validar sessões próprias',
     color: 'teal',
     icon: 'Smartphone',
     level: ROLE_LEVELS.OPERADOR,
@@ -302,13 +302,13 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.TOOLS_VIEW,
       PERMISSIONS.TOOL_SESSIONS_VIEW,   // Só as suas (filtrado)
-      PERMISSIONS.MAINTENANCE_VIEW,     // Ver estado das ferramentas que usa
+      PERMISSIONS.MAINTENANCE_VIEW,     // Ver estado dos equipamentos que usa
       PERMISSIONS.QUALITY_VALIDATE,     // Validar anomalias próprias
     ],
     isSystem: true,
     restrictedToOwnObra: true,
     canCreateRolesBelow: false,
-    // Dashboard: Mobile Hub (scan NFC, "minhas ferramentas", reportar dano)
+    // Dashboard: Mobile Hub (scan NFC, "meus equipamentos", reportar avaria)
     defaultDashboard: 'operador',
   },
 };
@@ -449,12 +449,12 @@ export const PERMISSION_CATEGORIES = {
     ],
   },
   tools: {
-    label: 'Ferramentas',
+    label: 'Equipamentos',
     permissions: [
-      { id: PERMISSIONS.TOOLS_VIEW, label: 'Ver Ferramentas' },
-      { id: PERMISSIONS.TOOLS_CREATE, label: 'Criar Ferramentas' },
-      { id: PERMISSIONS.TOOLS_EDIT, label: 'Editar Ferramentas' },
-      { id: PERMISSIONS.TOOLS_DELETE, label: 'Eliminar Ferramentas' },
+      { id: PERMISSIONS.TOOLS_VIEW, label: 'Ver Equipamentos' },
+      { id: PERMISSIONS.TOOLS_CREATE, label: 'Criar Equipamentos' },
+      { id: PERMISSIONS.TOOLS_EDIT, label: 'Editar Equipamentos' },
+      { id: PERMISSIONS.TOOLS_DELETE, label: 'Eliminar Equipamentos' },
       { id: PERMISSIONS.TOOLS_MOVE, label: 'Transferir Localização' },
     ],
   },
@@ -469,7 +469,7 @@ export const PERMISSION_CATEGORIES = {
     ],
   },
   tool_sessions: {
-    label: 'Sessões de Ferramentas',
+    label: 'Sessões de Equipamentos',
     permissions: [
       { id: PERMISSIONS.TOOL_SESSIONS_VIEW, label: 'Ver Sessões' },
       { id: PERMISSIONS.TOOL_SESSIONS_VIEW_ALL, label: 'Ver Todas as Obras' },

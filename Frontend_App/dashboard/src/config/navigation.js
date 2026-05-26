@@ -79,24 +79,24 @@ export const navigationStructure = [
   },
   {
     id: 'maquinas',
-    label: 'Ferramentas',
+    label: 'Equipamentos',
     icon: Truck,
     path: '/maquinas',
-    description: 'Inventario e gestao de ferramentas NFC',
+    description: 'Inventario e gestao de equipamentos NFC',
     submenu: [
       {
         id: 'maquinas-lista',
         label: 'Inventario',
         icon: List,
         path: '/maquinas',
-        description: 'Todas as ferramentas',
+        description: 'Todos os equipamentos',
       },
       {
         id: 'maquinas-categorias',
         label: 'Por Tipo',
         icon: Building2,
         path: '/maquinas/categorias',
-        description: 'Por tipo de ferramenta',
+        description: 'Por tipo de equipamento',
       },
       {
         id: 'maquinas-localizacoes',
@@ -149,7 +149,7 @@ export const navigationStructure = [
     label: 'Manutencao',
     icon: Wrench,
     path: '/manutencao',
-    description: 'Alertas e gestao de ferramentas',
+    description: 'Alertas e gestao de equipamentos',
     submenu: [
       {
         id: 'manutencao-alertas',
@@ -167,10 +167,10 @@ export const navigationStructure = [
       },
       {
         id: 'manutencao-avarias',
-        label: 'Danos',
+        label: 'Avarias',
         icon: AlertTriangle,
         path: '/manutencao/avarias',
-        description: 'Danos reportados',
+        description: 'Avarias reportadas',
       },
     ],
   },
