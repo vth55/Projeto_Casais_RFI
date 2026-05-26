@@ -11,16 +11,16 @@ import useOnlineStatus from '../../hooks/useOnlineStatus';
  * Não aparece offline porque os timers não funcionam sem rede.
  */
 const LiveSessionsBar = memo(() => {
-  const { sessions, machines, operators, setActiveView } = useStore();
+  const { toolSessions = [], tools = [], operators, setActiveView } = useStore();
   const { isOnline } = useOnlineStatus();
 
-  const activeSessions = sessions.filter(s => s.status === 'OPEN');
+  const activeSessions = toolSessions.filter(s => s.status === 'OPEN');
   
   if (activeSessions.length === 0 || !isOnline) return null;
 
   const first = activeSessions[0];
-  const firstMachine = machines.find(m => m.id === first.machineId);
-  const firstOperator = operators.find(o => o.id === first.cardId || o.cardId === first.cardId);
+  const firstTool = tools.find(t => t.id === first.toolId);
+  const firstOperator = operators.find(o => o.id === first.operatorId || o.cardId === first.operatorId);
 
   return (
     <button
@@ -39,16 +39,16 @@ const LiveSessionsBar = memo(() => {
         {activeSessions.length === 1 ? (
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold truncate">
-              {firstMachine?.name || first.machineId}
+              {firstTool?.name || first.toolName || first.toolId}
             </span>
             <span className="text-emerald-200 text-xs">•</span>
             <span className="text-emerald-100 text-xs truncate">
-              {firstOperator?.name || first.cardId}
+              {firstOperator?.name || first.operatorName || first.operatorId}
             </span>
           </div>
         ) : (
           <span className="text-sm font-semibold">
-            {activeSessions.length} sessões ativas
+            {activeSessions.length} ferramentas em uso
           </span>
         )}
       </div>
@@ -58,7 +58,7 @@ const LiveSessionsBar = memo(() => {
         <LiveTimer
           startTime={first.startTime}
           className="text-sm text-white flex-shrink-0"
-          warningAfterHours={5}
+          warningAfterHours={168}
         />
       )}
 

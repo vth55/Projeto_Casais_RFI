@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Truck } from 'lucide-react';
+import { Package } from 'lucide-react';
 import useStore from '../../store/useStore';
 
 const STATUS_RING = {
@@ -31,21 +31,21 @@ const STATUS_DOT = {
 };
 
 /**
- * MachineStoryRings — scroll horizontal de círculos por máquina, estilo Instagram Stories.
- * Cada anel é colorido pelo estado da máquina.
+ * MachineStoryRings — scroll horizontal de ferramentas em obra/armazém.
+ * Mantém o nome do componente por compatibilidade de imports.
  */
 const MachineStoryRings = memo(() => {
-  const { machines, sessions, setActiveView } = useStore();
-  if (!machines.length) return null;
+  const { tools = [], toolSessions = [], setActiveView } = useStore();
+  if (!tools.length) return null;
 
-  const activeSessions = sessions.filter(s => s.status === 'OPEN');
+  const activeSessions = toolSessions.filter(s => s.status === 'OPEN');
 
-  const getStatus = (machine) => {
-    const hasActiveSession = activeSessions.some(s => s.machineId === machine.id);
+  const getStatus = (tool) => {
+    const hasActiveSession = activeSessions.some(s => s.toolId === tool.id);
     if (hasActiveSession) return 'ACTIVE';
-    const status = (machine.status || '').toUpperCase();
+    const status = (tool.status || '').toUpperCase();
     if (status === 'MAINTENANCE') return 'MAINTENANCE';
-    if (status === 'ALERT') return 'ALERT';
+    if (status === 'ALERT' || status === 'DAMAGED' || status === 'LOST') return 'ALERT';
     return 'IDLE';
   };
 
@@ -57,7 +57,7 @@ const MachineStoryRings = memo(() => {
   return (
     <div className="md:hidden">
       <div className="flex items-center justify-between px-4 mb-3">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Frota</span>
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ferramentas</span>
         <button
           onClick={() => setActiveView('maquinas')}
           className="text-xs text-primary-600 font-semibold"
@@ -67,8 +67,8 @@ const MachineStoryRings = memo(() => {
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-2 px-4 scrollbar-hide snap-x snap-mandatory">
-        {machines.slice(0, 10).map((machine) => {
-          const status = getStatus(machine);
+        {tools.slice(0, 10).map((tool) => {
+          const status = getStatus(tool);
           const ring = STATUS_RING[status];
           const bg = STATUS_BG[status];
           const textColor = STATUS_TEXT[status];
@@ -76,35 +76,35 @@ const MachineStoryRings = memo(() => {
 
           return (
             <button
-              key={machine.id}
+              key={tool.id}
               onClick={() => setActiveView('maquinas')}
               className="flex flex-col items-center gap-1.5 flex-shrink-0 snap-start active:scale-95 transition-transform"
               style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               {/* Ring circle */}
               <div className={`relative w-14 h-14 rounded-full ${ring} ${bg} flex items-center justify-center`}>
-                <span className={`text-sm font-bold ${textColor}`}>{initials(machine.name)}</span>
+                <span className={`text-sm font-bold ${textColor}`}>{initials(tool.name)}</span>
                 {/* Status dot */}
                 <div className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-white ${dot}`} />
               </div>
               {/* Name */}
               <span className="text-xs text-slate-600 dark:text-slate-300 text-center leading-tight max-w-[56px] truncate">
-                {machine.name?.split(' ')[0] || machine.id}
+                {tool.name?.split(' ')[0] || tool.id}
               </span>
             </button>
           );
         })}
 
         {/* "Ver todos" circle if more than 10 */}
-        {machines.length > 10 && (
+        {tools.length > 10 && (
           <button
             onClick={() => setActiveView('maquinas')}
             className="flex flex-col items-center gap-1.5 flex-shrink-0 snap-start"
           >
             <div className="w-14 h-14 rounded-full ring-2 ring-slate-200 bg-slate-100 flex items-center justify-center">
-              <Truck className="w-5 h-5 text-slate-400" />
+              <Package className="w-5 h-5 text-slate-400" />
             </div>
-            <span className="text-xs text-slate-400 text-center">+{machines.length - 10}</span>
+            <span className="text-xs text-slate-400 text-center">+{tools.length - 10}</span>
           </button>
         )}
       </div>

@@ -21,7 +21,7 @@ import {
   FileText,
   Building2,
   User,
-  Truck,
+  Package,
   Calendar,
   Timer,
   History,
@@ -269,10 +269,10 @@ const AlertDetailModal = ({ alert, onClose }) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
-                <Truck className="w-4 h-4" />
-                Máquina
+                <Package className="w-4 h-4" />
+                Ferramenta
               </div>
-              <p className="font-semibold text-slate-900 dark:text-white">{alert.machineName}</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{alert.toolName || alert.machineName}</p>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
@@ -717,8 +717,8 @@ const SessoesCorrigidasView = () => {
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-slate-400" />
-                          <span className="font-medium">{alert.machineName}</span>
+                          <Package className="w-4 h-4 text-slate-400" />
+                          <span className="font-medium">{alert.toolName || alert.machineName}</span>
                         </div>
                       </Table.Cell>
                       <Table.Cell>

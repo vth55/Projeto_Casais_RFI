@@ -1,7 +1,7 @@
 import React, { useState, memo } from 'react';
 import {
   LayoutDashboard,
-  Truck,
+  Package,
   Clock,
   Wrench,
   Grid3x3,
@@ -21,7 +21,7 @@ import useAuthStore from '../../store/useAuthStore';
 // Os 4 tabs principais + "Mais"
 const PRIMARY_TABS = [
   { id: 'dashboard',    label: 'Início',    icon: LayoutDashboard },
-  { id: 'maquinas',     label: 'Máquinas',  icon: Truck },
+  { id: 'maquinas',     label: 'Ferram.',   icon: Package },
   { id: 'sessoes-ativas', label: 'Sessões', icon: Clock },
   { id: 'manutencao-alertas', label: 'Alertas', icon: Wrench },
 ];
@@ -39,12 +39,12 @@ const MORE_ITEMS = [
 ];
 
 const BottomNav = memo(() => {
-  const { activeView, setActiveView, sessions, machines } = useStore();
+  const { activeView, setActiveView, toolSessions = [], tools = [] } = useStore();
   const { canAccess } = useAuthStore();
   const [showMore, setShowMore] = useState(false);
 
-  const activeSessions = sessions.filter(s => s.status === 'OPEN').length;
-  const maintenanceAlerts = machines.filter(m => (m.partialHours || m.totalHours || 0) >= 120).length;
+  const activeSessions = toolSessions.filter(s => s.status === 'OPEN').length;
+  const maintenanceAlerts = tools.filter(t => ['MAINTENANCE', 'DAMAGED', 'LOST'].includes((t.status || '').toUpperCase())).length;
 
   const isTabActive = (id) => {
     if (id === 'dashboard') return activeView === 'dashboard';

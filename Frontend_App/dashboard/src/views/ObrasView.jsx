@@ -5,7 +5,7 @@ import {
   Edit2,
   Trash2,
   MapPin,
-  Truck,
+  Package,
   Users,
   Calendar,
   ExternalLink,
@@ -79,7 +79,7 @@ const ObraCard = ({ obra, procoreProject, getToolsByObraId, getToolSessionsByObr
       <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-            <Truck className="w-4 h-4 text-emerald-600" />
+            <Package className="w-4 h-4 text-emerald-600" />
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400">Ferramentas atribuídas</p>
@@ -298,7 +298,7 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 };
 
 // Vista detalhada da Obra
-const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, onBack, onEdit, onOpenMap, onAddLocationCard, onDeleteLocationCard, onDelete }) => {
+const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, onBack, onEdit, onOpenMap, onAddLocationCard, onDeleteLocationCard, onDelete }) => {
   const [newCardId, setNewCardId] = useState('');
   const [creatingCard, setCreatingCard] = useState(false);
 
@@ -307,12 +307,10 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
     return locationCards.filter(card => card.obraId === obra.id);
   }, [locationCards, obra.id]);
 
-  // Máquinas nesta obra
-  const machinesInObra = useMemo(() => {
-    return machines.filter(m =>
-      (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
-    );
-  }, [machines, obra.id]);
+  // Ferramentas atribuídas a esta obra
+  const toolsInObra = useMemo(() => {
+    return tools.filter(t => t.currentObraId === obra.id);
+  }, [tools, obra.id]);
 
   // Criar novo cartão de localização
   const handleCreateCard = async () => {
@@ -337,30 +335,29 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
     return operators.filter(op => op.assignedObraId === obra.id);
   }, [operators, obra.id]);
 
-  // Sessões desta obra (baseado nas máquinas na obra)
-  const machineIds = machinesInObra.map(m => m.id);
-  const sessionsInObra = useMemo(() => {
-    return sessions.filter(s => machineIds.includes(s.machineId));
-  }, [sessions, machineIds]);
+  // Checkouts desta obra
+  const checkoutsInObra = useMemo(() => {
+    return toolSessions.filter(s => s.obraId === obra.id);
+  }, [toolSessions, obra.id]);
 
   // Estatísticas
   const stats = useMemo(() => {
-    const activeSessions = sessionsInObra.filter(s => s.status === 'OPEN').length;
-    const totalHours = sessionsInObra
+    const activeSessions = checkoutsInObra.filter(s => s.status === 'OPEN').length;
+    const totalHours = checkoutsInObra
       .filter(s => s.status === 'CLOSED')
       .reduce((sum, s) => sum + (s.durationHours || 0), 0);
-    const activeMachines = machinesInObra.filter(m =>
-      sessions.some(s => s.machineId === m.id && s.status === 'OPEN')
+    const activeTools = toolsInObra.filter(t =>
+      toolSessions.some(s => s.toolId === t.id && s.status === 'OPEN')
     ).length;
 
     return {
-      totalMachines: machinesInObra.length,
-      activeMachines,
+      totalTools: toolsInObra.length,
+      activeTools,
       totalOperators: operatorsInObra.length,
       activeSessions,
       totalHours: Math.round(totalHours),
     };
-  }, [machinesInObra, operatorsInObra, sessionsInObra, sessions]);
+  }, [toolsInObra, operatorsInObra, checkoutsInObra, toolSessions]);
 
   const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
   const StatusIcon = status.icon;
@@ -413,46 +410,46 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <StatCard icon={Truck} title="Equipamentos" value={stats.totalMachines} color="primary" />
-        <StatCard icon={Activity} title="Ativos Agora" value={stats.activeMachines} color="emerald" />
+        <StatCard icon={Package} title="Ferramentas" value={stats.totalTools} color="primary" />
+        <StatCard icon={Activity} title="Em Uso Agora" value={stats.activeTools} color="emerald" />
         <StatCard icon={Users} title="Operadores" value={stats.totalOperators} color="blue" />
-        <StatCard icon={Clock} title="Sessões Ativas" value={stats.activeSessions} color="amber" />
-        <StatCard icon={BarChart3} title="Horas Total" value={stats.totalHours} unit="h" color="slate" />
+        <StatCard icon={Clock} title="Checkouts Ativos" value={stats.activeSessions} color="amber" />
+        <StatCard icon={BarChart3} title="Tempo Fora" value={stats.totalHours} unit="h" color="slate" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Lista de Máquinas */}
+        {/* Lista de Ferramentas */}
         <Card>
           <Card.Header>
             <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-primary-500" />
-              <Card.Title>Equipamentos na Obra</Card.Title>
+              <Package className="w-5 h-5 text-primary-500" />
+              <Card.Title>Ferramentas na Obra</Card.Title>
             </div>
           </Card.Header>
-          {machinesInObra.length === 0 ? (
+          {toolsInObra.length === 0 ? (
             <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-              <Truck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm">Nenhum equipamento nesta obra</p>
+              <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+              <p className="text-sm">Nenhuma ferramenta nesta obra</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
-              {machinesInObra.map(machine => {
-                const isActive = sessions.some(s => s.machineId === machine.id && s.status === 'OPEN');
-                const category = typeof machine.category === 'object' ? machine.category?.name : machine.category;
+              {toolsInObra.map(tool => {
+                const isActive = toolSessions.some(s => s.toolId === tool.id && s.status === 'OPEN');
+                const category = tool.type || tool.category;
                 return (
                   <div
-                    key={machine.id}
+                    key={tool.id}
                     className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">{machine.name}</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{tool.name}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{category || 'Sem categoria'}</p>
                       </div>
                     </div>
                     <Badge variant={isActive ? 'success' : 'default'} size="sm">
-                      {isActive ? 'Ativo' : 'Parado'}
+                      {isActive ? 'Em uso' : 'Disponível'}
                     </Badge>
                   </div>
                 );
@@ -477,8 +474,8 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {operatorsInObra.map(operator => {
-                const isActive = sessions.some(s => s.cardId === operator.id && s.status === 'OPEN');
-                const opSessions = sessions.filter(s => s.cardId === operator.id && s.status === 'CLOSED');
+                const isActive = toolSessions.some(s => (s.operatorId === operator.id || s.operatorId === operator.cardId) && s.status === 'OPEN');
+                const opSessions = toolSessions.filter(s => (s.operatorId === operator.id || s.operatorId === operator.cardId) && s.status === 'CLOSED');
                 const totalHours = opSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
                 return (
                   <div
@@ -493,7 +490,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
                       </div>
                       <div>
                         <p className="text-sm font-medium text-slate-900 dark:text-white">{operator.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(totalHours)}h trabalhadas</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(totalHours)}h com ferramentas</p>
                       </div>
                     </div>
                     <Badge variant={isActive ? 'success' : 'default'} size="sm">
@@ -634,7 +631,7 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
           <p className="text-xs font-medium text-slate-700 dark:text-slate-200 mb-1">Como usar:</p>
           <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
             <li>• Escreva o ID no cartão RFID físico (ex: LOC_PORTO_01)</li>
-            <li>• Quando o cartão for lido numa máquina, ela move para esta obra</li>
+            <li>• Quando a tag for lida, a ferramenta fica associada a esta obra</li>
             <li>• Ideal para entrada/saída de equipamentos no estaleiro</li>
           </ul>
         </div>
@@ -644,11 +641,11 @@ const ObraDetailView = ({ obra, machines, operators, sessions, locationCards, on
 };
 
 // Modal de Eliminação Segura (admin-only, 2 passos)
-const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, machinesCount, activeSessionsCount }) => {
+const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, toolsCount, activeSessionsCount }) => {
   const [confirmName, setConfirmName] = useState('');
   const [step, setStep] = useState(1);
 
-  const hasBlockers = machinesCount > 0 || activeSessionsCount > 0;
+  const hasBlockers = toolsCount > 0 || activeSessionsCount > 0;
   const nameMatches = confirmName.trim().toLowerCase() === obra?.name?.trim().toLowerCase();
 
   const handleClose = () => {
@@ -680,15 +677,15 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, machinesCount, acti
           </div>
         </div>
 
-        {/* Bloqueadores — se existir máquinas ou sessões ativas */}
+        {/* Bloqueadores — se existir ferramentas ou checkouts ativos */}
         {hasBlockers ? (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Não é possível eliminar esta obra porque:</p>
-            {machinesCount > 0 && (
+            {toolsCount > 0 && (
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <Truck className="w-5 h-5 text-amber-600" />
+                <Package className="w-5 h-5 text-amber-600" />
                 <span className="text-sm text-amber-800">
-                  <strong>{machinesCount}</strong> equipamento{machinesCount > 1 ? 's' : ''} ainda atribuído{machinesCount > 1 ? 's' : ''} a esta obra
+                  <strong>{toolsCount}</strong> ferramenta{toolsCount > 1 ? 's' : ''} ainda atribuída{toolsCount > 1 ? 's' : ''} a esta obra
                 </span>
               </div>
             )}
@@ -696,17 +693,17 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, machinesCount, acti
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <Activity className="w-5 h-5 text-amber-600" />
                 <span className="text-sm text-amber-800">
-                  <strong>{activeSessionsCount}</strong> sessão{activeSessionsCount > 1 ? 'ões' : ''} ativa{activeSessionsCount > 1 ? 's' : ''}
+                  <strong>{activeSessionsCount}</strong> checkout{activeSessionsCount > 1 ? 's' : ''} ativo{activeSessionsCount > 1 ? 's' : ''}
                 </span>
               </div>
             )}
-            <p className="text-xs text-slate-500 dark:text-slate-400">Mova os equipamentos e encerre as sessões antes de eliminar.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Mova as ferramentas e encerre os checkouts antes de eliminar.</p>
           </div>
         ) : step === 1 ? (
           /* Passo 1 — Confirmação inicial */
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Esta obra não tem equipamentos nem sessões ativas. Tem a certeza que pretende eliminar?
+              Esta obra não tem ferramentas nem checkouts ativos. Tem a certeza que pretende eliminar?
             </p>
             <div className="flex gap-3 justify-end">
               <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
@@ -822,9 +819,9 @@ const ObrasView = () => {
     activeView,
     setActiveView,
     obras,
-    machines,
+    tools,
     operators,
-    sessions,
+    toolSessions,
     loading,
     updateObra,
     deleteObra,
@@ -887,16 +884,9 @@ const ObrasView = () => {
 
   // Contagem de dependências para validação de eliminação
   const getObraDependencies = (obra) => {
-    const machinesCount = machines.filter(m =>
-      (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
-    ).length;
-    const activeSessionsCount = sessions.filter(s =>
-      s.status === 'OPEN' && machines.some(m =>
-        m.id === s.machineId &&
-        (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
-      )
-    ).length;
-    return { machinesCount, activeSessionsCount };
+    const toolsCount = getToolsByObraId(obra.id).length;
+    const activeSessionsCount = getToolSessionsByObraId(obra.id).filter(s => s.status === 'OPEN').length;
+    return { toolsCount, activeSessionsCount };
   };
 
   const handleRequestDelete = (obra) => {
@@ -926,9 +916,9 @@ const ObrasView = () => {
       <>
         <ObraDetailView
           obra={viewingObra}
-          machines={machines}
+          tools={tools}
           operators={operators}
-          sessions={sessions}
+          toolSessions={toolSessions}
           locationCards={locationCards || []}
           onBack={() => setViewingObra(null)}
           onEdit={(obra) => {
@@ -963,7 +953,7 @@ const ObrasView = () => {
             isOpen={showDeleteModal}
             onClose={() => { setShowDeleteModal(false); setDeletingObra(null); }}
             onConfirm={handleConfirmDelete}
-            {...(deletingObra ? getObraDependencies(deletingObra) : { machinesCount: 0, activeSessionsCount: 0 })}
+            {...(deletingObra ? getObraDependencies(deletingObra) : { toolsCount: 0, activeSessionsCount: 0 })}
           />
         )}
       </>
@@ -1133,7 +1123,7 @@ const ObrasView = () => {
 
           {/* Link discreto para o Estaleiro */}
           {(() => {
-            const estCount = machines.filter(m => m.obraId === 'estaleiro' || (!m.obraId && !m.location)).length;
+            const estCount = tools.filter(t => !t.currentObraId).length;
             if (estCount === 0) return null;
             return (
               <button
@@ -1141,7 +1131,7 @@ const ObrasView = () => {
                 className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 text-sm text-amber-700 hover:bg-amber-50 hover:border-amber-400 transition-colors"
               >
                 <span className="text-base">🏭</span>
-                <span>{estCount} equipamento{estCount !== 1 ? 's' : ''} no Estaleiro →</span>
+                <span>{estCount} ferramenta{estCount !== 1 ? 's' : ''} no Armazém →</span>
               </button>
             );
           })()}
@@ -1176,7 +1166,7 @@ const ObrasView = () => {
           isOpen={showDeleteModal}
           onClose={() => { setShowDeleteModal(false); setDeletingObra(null); }}
           onConfirm={handleConfirmDelete}
-          {...(deletingObra ? getObraDependencies(deletingObra) : { machinesCount: 0, activeSessionsCount: 0 })}
+          {...(deletingObra ? getObraDependencies(deletingObra) : { toolsCount: 0, activeSessionsCount: 0 })}
         />
       )}
     </div>

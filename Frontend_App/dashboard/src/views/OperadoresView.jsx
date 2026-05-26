@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Truck, Award, Link2, Smartphone, Radio } from 'lucide-react';
+import { Users, Plus, Search, CreditCard, Clock, Trash2, Activity, Briefcase, Building2, Edit2, Filter, Sparkles, ArrowRight, Check, X, Shield, Key, Award, Link2, Smartphone, Radio } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
 import { Card, StatCard, Button, Badge, Modal, Input, Table, EmptyState, Skeleton } from '../components/ui';
@@ -9,16 +9,15 @@ import { PERMISSIONS, getLevelLabel } from '../config/permissions';
  * Definição de cargos de TRABALHO (job roles - o que a pessoa FAZ no terreno)
  * Estes são diferentes dos perfis de SISTEMA (system roles - o que a pessoa pode ACEDER no PWA)
  *
- * NOTA: Operadores de máquinas normalmente NÃO acedem ao PWA.
- * Eles apenas usam RFID para login/logout nas máquinas.
+ * NOTA: operadores de obra usam RFID/NFC para levantar e devolver ferramentas.
  * O PWA é para gestores, supervisores e pessoal de escritório.
  */
 const EMPLOYEE_ROLES = [
-  { id: 'operador', label: 'Operador de Máquinas', color: 'primary', description: 'Opera equipamentos pesados (usa apenas RFID)', suggestedSystemRole: null },
+  { id: 'operador', label: 'Operador de Ferramentas', color: 'primary', description: 'Levanta e devolve ferramentas via RFID/NFC', suggestedSystemRole: null },
   { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra', suggestedSystemRole: 'encarregado_obra' },
   { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras', suggestedSystemRole: 'gestor_frota' },
-  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Manutenção de equipamentos', suggestedSystemRole: 'tecnico_manutencao' },
-  { id: 'gestor_frota', label: 'Gestor de Frota', color: 'blue', description: 'Gestão geral da frota', suggestedSystemRole: 'gestor_frota' },
+  { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Inspeção e reparação de ferramentas', suggestedSystemRole: 'tecnico_manutencao' },
+  { id: 'gestor_frota', label: 'Gestor de Inventário', color: 'blue', description: 'Gestão geral das ferramentas', suggestedSystemRole: 'gestor_frota' },
   { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas', suggestedSystemRole: 'operador' },
 ];
 
@@ -30,15 +29,15 @@ const getSessionDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-// Tipos de carta/licença de máquinas
+// Competências para manuseamento de ferramentas
 const LICENSE_TYPES = [
-  { id: 'escavadoras', label: 'Escavadoras', icon: '🚜', description: 'Escavadoras e retroescavadoras' },
-  { id: 'gruas', label: 'Gruas', icon: '🏗️', description: 'Gruas torre e móveis' },
-  { id: 'empilhadores', label: 'Empilhadores', icon: '📦', description: 'Empilhadores e telehandlers' },
-  { id: 'camioes', label: 'Camiões', icon: '🚛', description: 'Camiões e dumpers' },
-  { id: 'compactadores', label: 'Compactadores', icon: '🛞', description: 'Cilindros e compactadores' },
-  { id: 'geradores', label: 'Geradores', icon: '⚡', description: 'Geradores e compressores' },
-  { id: 'plataformas', label: 'Plataformas', icon: '📐', description: 'Plataformas elevatórias' },
+  { id: 'perfuracao', label: 'Perfuração', icon: '🛠️', description: 'Berbequins, SDS e martelos' },
+  { id: 'corte', label: 'Corte', icon: '🪚', description: 'Serras, rebarbadoras e cortadoras' },
+  { id: 'fixacao', label: 'Fixação', icon: '🔩', description: 'Parafusadoras e pistolas de pregos' },
+  { id: 'betao', label: 'Betão', icon: '🏗️', description: 'Vibradores, betoneiras e compactadores' },
+  { id: 'energia', label: 'Energia', icon: '⚡', description: 'Geradores e extensões críticas' },
+  { id: 'medicao', label: 'Medição', icon: '📐', description: 'Lasers e equipamentos de medição' },
+  { id: 'bombagem', label: 'Bombagem', icon: '💧', description: 'Bombas e equipamentos hidráulicos' },
 ];
 
 const RoleBadge = ({ roleId }) => {
@@ -392,17 +391,17 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
         </div>
       )}
 
-      {/* Licenças/Tipos de Máquinas */}
+      {/* Competências de ferramentas */}
       {(formData.role === 'operador' || formData.role === 'tecnico_manutencao') && (
         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
             <div className="flex items-center gap-1.5">
               <Award className="w-4 h-4" />
-              Licenças de Operação
+              Competências de Ferramentas
             </div>
           </label>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Selecione os tipos de máquinas que este operador está autorizado a operar
+            Selecione os tipos de ferramentas que este operador está autorizado a utilizar
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {LICENSE_TYPES.map(license => {
@@ -434,7 +433,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
           </div>
           {formData.licenses?.length > 0 && (
             <p className="mt-2 text-xs text-primary-600">
-              {formData.licenses.length} tipo(s) de máquina selecionado(s)
+              {formData.licenses.length} competência(s) selecionada(s)
             </p>
           )}
         </div>
@@ -456,7 +455,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
           placeholder="Ex: joao.silva@casais.pt"
         />
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Campo de contacto. O acesso à máquina é feito via cartão RFID, não email.
+          Campo de contacto. O levantamento de ferramentas é feito via cartão RFID/NFC, não email.
         </p>
       </div>
 
@@ -484,7 +483,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
             <Badge variant="primary">{suggestions.length}</Badge>
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Baseado no uso de máquinas, estes operadores podem ser atribuídos a novas obras.
+            Baseado nos checkouts de ferramentas, estes operadores podem ser atribuídos a novas obras.
           </p>
           <div className="mt-4 space-y-2">
             {suggestions.map(suggestion => (
@@ -531,7 +530,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
 };
 
 const OperadoresView = () => {
-  const { operators, sessions, toolSessions, obras, machines, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
+  const { operators, toolSessions, obras, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
   const { can, getAssignableRoles, getAllRoles } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
@@ -590,7 +589,7 @@ const OperadoresView = () => {
     });
   }, [operators, toolSessions, obras, allSystemRoles, procoreDirectory, matchOperatorToProcore]);
 
-  // Calcular sugestões de auto-assign baseado no uso de máquinas
+  // Calcular sugestões de auto-assign baseado nos checkouts de ferramentas
   const autoAssignSuggestions = useMemo(() => {
     const suggestions = [];
 
@@ -598,15 +597,16 @@ const OperadoresView = () => {
       // Ignorar operadores já dispensados
       if (dismissedSuggestions.includes(op.id)) return;
 
-      // Obter sessões do operador
-      const opSessions = sessions.filter(s => s.cardId === op.id && s.status === 'CLOSED');
+      // Obter checkouts fechados do operador
+      const opSessions = toolSessions.filter(s =>
+        (s.operatorId === op.id || s.operatorId === op.cardId) && s.status === 'CLOSED'
+      );
       if (opSessions.length === 0) return;
 
-      // Contar horas por obra (baseado na localização da máquina)
+      // Contar tempo fora por obra
       const hoursByObra = {};
       opSessions.forEach(session => {
-        const machine = machines.find(m => m.id === session.machineId);
-        const obraId = machine?.location?.workId;
+        const obraId = session.obraId;
         if (obraId) {
           if (!hoursByObra[obraId]) hoursByObra[obraId] = 0;
           hoursByObra[obraId] += session.durationHours || 0;
@@ -643,7 +643,7 @@ const OperadoresView = () => {
     });
 
     return suggestions.sort((a, b) => b.hoursInSuggestedObra - a.hoursInSuggestedObra);
-  }, [operators, sessions, machines, obras, dismissedSuggestions]);
+  }, [operators, toolSessions, obras, dismissedSuggestions]);
 
   // Pending operators: Procore directory entries not yet matched to a local operator
   const pendingFromProcore = useMemo(() => {
@@ -868,10 +868,10 @@ const OperadoresView = () => {
               <Table.Row>
                 <Table.Header>Operador</Table.Header>
                 <Table.Header>Cargo</Table.Header>
-                <Table.Header>Licenças</Table.Header>
+                <Table.Header>Competências</Table.Header>
                 <Table.Header>Obra Atribuída</Table.Header>
-                <Table.Header align="right">Sessões</Table.Header>
-                <Table.Header align="right">Horas</Table.Header>
+                <Table.Header align="right">Checkouts</Table.Header>
+                <Table.Header align="right">Tempo fora</Table.Header>
                 <Table.Header align="center">Estado</Table.Header>
                 <Table.Header align="right">Ações</Table.Header>
               </Table.Row>

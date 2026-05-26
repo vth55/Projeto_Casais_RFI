@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  ArrowLeft, Building2, Link2, Clock, Truck, Users, Leaf,
+  ArrowLeft, Building2, Link2, Clock, Package, Users,
   Activity, AlertTriangle, MapPin, Wrench, BarChart3, FileText,
   LogOut,
 } from 'lucide-react';
@@ -23,11 +23,10 @@ import { MAINTENANCE_ALERT_PCT } from '../../utils/sessionHelpers';
 
 const TABS = [
   { id: 'resumo',        label: 'Resumo',         icon: BarChart3 },
-  { id: 'equipamentos',  label: 'Equipamentos',   icon: Truck },
+  { id: 'equipamentos',  label: 'Ferramentas',    icon: Package },
   { id: 'trabalhadores', label: 'Trabalhadores',  icon: Users },
   { id: 'sessoes',       label: 'Sessões',        icon: Activity },
   { id: 'manutencao',    label: 'Manutenção',     icon: Wrench },
-  { id: 'co2',           label: 'CO₂',            icon: Leaf },
   { id: 'localizacao',   label: 'Localização',    icon: MapPin },
 ];
 
@@ -60,9 +59,9 @@ const CountTooltip = ({ active, payload, label }) => {
   );
 };
 
-const aggregateSessionsByCheckoutDay = (sessions) => {
+const aggregateCheckoutsByDay = (checkouts) => {
   const map = {};
-  sessions.forEach(s => {
+  checkouts.forEach(s => {
     if (!s.startTime) return;
     const d = s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -98,8 +97,8 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
     [obraId, prevDateRange, showComparison, toolSessions, tools]
   );
 
-  const dailyData = useMemo(() => aggregateSessionsByCheckoutDay(obraSessions), [obraSessions]);
-  const prevDailyData = useMemo(() => aggregateSessionsByCheckoutDay(prevSessions), [prevSessions]);
+  const dailyData = useMemo(() => aggregateCheckoutsByDay(obraSessions), [obraSessions]);
+  const prevDailyData = useMemo(() => aggregateCheckoutsByDay(prevSessions), [prevSessions]);
 
   // Merge current + previous for comparison overlay
   const chartData = useMemo(() => {
@@ -117,7 +116,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
   );
 
   const openAvarias = avarias.filter(a => {
-    const toolInObra = obraTools.some(t => t.id === (a.toolId || a.machineId));
+    const toolInObra = obraTools.some(t => t.id === a.toolId);
     return toolInObra && a.status !== 'resolvida';
   }).length;
   const alertTools = obraTools.filter(tool => {
@@ -193,7 +192,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
             <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>
-                <strong>{alertTools.length}</strong> equipamento{alertTools.length > 1 ? 's' : ''} próximo{alertTools.length > 1 ? 's' : ''} da manutenção
+                <strong>{alertTools.length}</strong> ferramenta{alertTools.length > 1 ? 's' : ''} próxima{alertTools.length > 1 ? 's' : ''} de inspeção/manutenção
               </span>
             </div>
           )}
@@ -268,7 +267,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
 // ─── MAIN LAYOUT ─────────────────────────────────────────────────────────────
 
 const ObraMenuLayout = () => {
-  const { obras, machines, setActiveView, procoreProjects, getMachinesByObraId } = useStore();
+  const { obras, tools, setActiveView, procoreProjects, getToolsByObraId } = useStore();
 
   const obraId = useObraId();
 
@@ -288,7 +287,7 @@ const ObraMenuLayout = () => {
     [dateRange, showComparison]
   );
 
-  const obraMachines = useMemo(() => getMachinesByObraId(obraId), [obraId, machines]);
+  const obraTools = useMemo(() => getToolsByObraId(obraId), [obraId, tools]);
 
   const hasProcoreLink = useMemo(
     () => obra?.source === 'procore' || procoreProjects?.some(p => p.id === obra?.procoreProjectId),
@@ -309,14 +308,13 @@ const ObraMenuLayout = () => {
   }
 
   const renderTab = () => {
-    const sharedProps = { obraId, dateRange, prevDateRange, showComparison, obraMachines };
+    const sharedProps = { obraId, dateRange, prevDateRange, showComparison, obraTools };
     switch (activeTab) {
       case 'resumo':        return <ResumoView {...sharedProps} />;
       case 'equipamentos':  return <EquipamentosObraView {...sharedProps} />;
       case 'trabalhadores': return <ComingSoon label="Trabalhadores" />;
       case 'sessoes':       return <SessoesObraView {...sharedProps} />;
-      case 'manutencao':    return <ManutencaoObraView obraId={obraId} obraMachines={obraMachines} />;
-      case 'co2':           return <ComingSoon label="CO₂" />;
+      case 'manutencao':    return <ManutencaoObraView obraId={obraId} obraMachines={obraTools} />;
       case 'localizacao':   return <ComingSoon label="Localização" />;
       default:              return null;
     }

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  LayoutDashboard, Truck, Users, Clock, Wrench, BarChart3,
+  LayoutDashboard, Package, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
   Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc,
 } from 'lucide-react';
@@ -18,7 +18,7 @@ const navigation = [
       { id: 'obras-concluidas', label: 'Concluídas' },
     ],
   },
-  { id: 'maquinas',    label: 'Equipamentos',   icon: Truck },
+  { id: 'maquinas',    label: 'Ferramentas',    icon: Package },
   { id: 'estaleiro',   label: 'Armazém',        icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
@@ -48,7 +48,7 @@ const navigation = [
 ];
 
 const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollapse }) => {
-  const { activeView, setActiveView, machines, sessions } = useStore();
+  const { activeView, setActiveView, tools = [], toolSessions = [] } = useStore();
   const { currentUser, canAccess, logout, getRole } = useAuthStore();
   const { active: nfcActive, supported: nfcSupported } = useNfcStore();
 
@@ -78,9 +78,9 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
   const isActive = (id) => activeView === id || activeView.startsWith(id + '-');
   const isExpanded = (id) => expandedMenus.includes(id);
 
-  const activeSessions = sessions.filter(s => s.status === 'OPEN').length;
-  const totalMachines = machines.length;
-  const estaleiroCount = machines.filter(m => m.obraId === 'estaleiro' || (!m.obraId && !m.location)).length;
+  const activeSessions = toolSessions.filter(s => s.status === 'OPEN').length;
+  const totalTools = tools.length;
+  const warehouseCount = tools.filter(t => !t.currentObraId).length;
 
   const userInitials = currentUser?.name
     ?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -193,10 +193,10 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
           </div>
           <div className="bg-slate-800/50 rounded-lg p-2.5 border border-slate-700/50">
             <div className="flex items-center gap-1.5">
-              <Truck className="w-3.5 h-3.5 text-primary-400" />
+              <Package className="w-3.5 h-3.5 text-primary-400" />
               <span className="text-xs text-slate-400">Equip.</span>
             </div>
-            <p className="text-lg font-bold text-white mt-0.5">{totalMachines}</p>
+            <p className="text-lg font-bold text-white mt-0.5">{totalTools}</p>
           </div>
         </div>
       </div>
@@ -237,9 +237,9 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
                   <div className="flex items-center gap-3">
                     <item.icon className={`w-4.5 h-4.5 ${itemActive ? 'text-primary-400' : 'text-slate-500'}`} style={{ width: '18px', height: '18px' }} />
                     <span>{item.label}</span>
-                    {item.id === 'estaleiro' && estaleiroCount > 0 && (
+                    {item.id === 'estaleiro' && warehouseCount > 0 && (
                       <span className="ml-auto mr-1 min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
-                        {estaleiroCount}
+                        {warehouseCount}
                       </span>
                     )}
                   </div>

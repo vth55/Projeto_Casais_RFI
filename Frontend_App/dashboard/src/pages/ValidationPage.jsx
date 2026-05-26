@@ -17,7 +17,6 @@ import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/fi
 import { db, projectId } from '../config/firebase';
 import {
   Clock,
-  Truck,
   Building2,
   User,
   Calendar,
@@ -568,11 +567,11 @@ const ValidationPage = ({ token }) => {
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                <Truck className="w-5 h-5 text-primary-600" />
+                <Wrench className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Máquina</p>
-                <p className="font-medium text-slate-900">{alert.machineName}</p>
+                <p className="text-xs text-slate-500">Ferramenta</p>
+                <p className="font-medium text-slate-900">{alert.toolName || alert.machineName}</p>
               </div>
             </div>
 
