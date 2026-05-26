@@ -10,6 +10,7 @@ import {
   Sparkles, Brain, ShieldAlert,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import useLegacyMachinesStore from '../store/legacy/machinesStore';
 import { parseFirestoreTimestamp } from '../utils/dateUtils';
 import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
@@ -210,7 +211,8 @@ const formatRelativeTime = (iso) => {
 };
 
 const useProcoreRecon = () => {
-  const { sessions } = useStore();
+  // LEGACY — usa sessions heavy machines para Procore reconciliation
+  const { sessions } = useLegacyMachinesStore();
   return useMemo(() => {
     const closed = sessions.filter(s => s.status === 'CLOSED' || s.status === 'AUTO_CLOSED');
     const exported = closed.filter(s => s.procoreExport?.exported === true);
@@ -946,13 +948,15 @@ const WorkFocusPanel = ({ machines, avarias }) => {
 // ============================================================
 
 const DashboardView = () => {
-  // Pivot 2026-05: dados primários vêm de tools/toolSessions. Machines/sessions ficam
-  // disponíveis para o painel Procore (legacy) e para os WorkFocus/Maintenance widgets.
+  // Pivot 2026-05: dados primários vêm de tools/toolSessions.
+  // machines/sessions (legacy) vêm do useLegacyMachinesStore — só para Procore e WorkFocus.
   const {
-    machines, operators, sessions, systemSettings, loading,
+    operators, systemSettings, loading,
     tools, toolSessions, getToolsInUse, getOverdueTools, getTopToolsByUsage, getToolKPIs,
     dateFilter, customRange,
   } = useStore();
+  // LEGACY — heavy machines para WorkFocusPanel + maintenanceAlerts badge
+  const { machines, sessions } = useLegacyMachinesStore();
   const { avarias } = useAvariasStore();
   const { isMobile } = useDeviceType();
 

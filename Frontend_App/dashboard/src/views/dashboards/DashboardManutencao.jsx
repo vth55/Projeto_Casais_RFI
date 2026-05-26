@@ -11,10 +11,12 @@
 import React, { useMemo } from 'react';
 import { Wrench, AlertTriangle, CheckCircle, Clock, Truck, Activity, TrendingUp, Shield } from 'lucide-react';
 import useStore from '../../store/useStore';
+import useLegacyMachinesStore from '../../store/legacy/machinesStore';
 import { Card, StatCard, Badge, StatusBadge, EmptyState } from '../../components/ui';
 
 const DashboardManutencao = () => {
-  const { machines, sessions, maintenanceRecords } = useStore();
+  // LEGACY — heavy machines model (pré-pivot). Usar toolMaintenance para novas features.
+  const { machines, sessions, maintenanceRecords } = useLegacyMachinesStore();
 
   // Estatísticas de saúde
   const stats = useMemo(() => {

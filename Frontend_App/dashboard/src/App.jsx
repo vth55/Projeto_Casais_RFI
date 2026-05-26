@@ -3,6 +3,7 @@ import { getDocs, collection } from 'firebase/firestore';
 import { db, projectId } from './config/firebase';
 import { createAllMockData } from './utils/mockData';
 import useStore from './store/useStore';
+import useLegacyMachinesStore from './store/legacy/machinesStore';
 import useThemeStore from './store/useThemeStore';
 import { Layout } from './components/layout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -250,9 +251,11 @@ export default function App() {
       // Inicializar listeners Firestore
       const cleanup = initializeListeners();
       const cleanupAvarias = useAvariasStore.getState().initializeListener();
+      // LEGACY — heavy machines/sessions para Procore sync e DashboardView
+      const cleanupLegacy = useLegacyMachinesStore.getState().initializeLegacyListeners();
       setLoading(false);
 
-      return () => { cleanup(); cleanupAvarias(); };
+      return () => { cleanup(); cleanupAvarias(); cleanupLegacy(); };
     };
 
     let cleanup;
