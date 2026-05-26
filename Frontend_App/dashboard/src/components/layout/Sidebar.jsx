@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  LayoutDashboard, Package, Users, Clock, Wrench, BarChart3,
+  Map, LayoutDashboard, Package, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
   Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc,
 } from 'lucide-react';
@@ -9,6 +9,7 @@ import useAuthStore from '../../store/useAuthStore';
 import useNfcStore from '../../store/useNfcStore';
 
 const navigation = [
+  { id: 'mapa',        label: 'Mapa',          icon: Map },
   { id: 'dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
   { id: 'obras',       label: 'Obras',          icon: Building2,
     submenu: [
@@ -19,8 +20,6 @@ const navigation = [
     ],
   },
   { id: 'maquinas',    label: 'Equipamentos',   icon: Package },
-  { id: 'estaleiro',   label: 'Armazém',        icon: Warehouse },
-  { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
     submenu: [
       { id: 'sessoes-ativas',     label: 'Sessões Ativas' },
@@ -29,6 +28,7 @@ const navigation = [
       { id: 'sessoes-corrigidas', label: 'Corrigidas' },
     ],
   },
+  { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'manutencao',  label: 'Manutenção',    icon: Wrench,
     submenu: [
       { id: 'manutencao-alertas',   label: 'Alertas' },
@@ -36,6 +36,7 @@ const navigation = [
       { id: 'manutencao-avarias',   label: 'Avarias' },
     ],
   },
+  { id: 'estaleiro',   label: 'Armazém',        icon: Warehouse },
   { id: 'financeiro',  label: 'Financeiro',    icon: Wallet,
     submenu: [
       { id: 'financeiro-tarifarios', label: 'Tarifários' },

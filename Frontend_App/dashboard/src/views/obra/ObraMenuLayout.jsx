@@ -23,7 +23,7 @@ import { MAINTENANCE_ALERT_PCT } from '../../utils/sessionHelpers';
 
 const TABS = [
   { id: 'resumo',        label: 'Resumo',         icon: BarChart3 },
-  { id: 'equipamentos',  label: 'Ferramentas',    icon: Package },
+  { id: 'equipamentos',  label: 'Equipamentos',   icon: Package },
   { id: 'trabalhadores', label: 'Trabalhadores',  icon: Users },
   { id: 'sessoes',       label: 'Sessões',        icon: Activity },
   { id: 'manutencao',    label: 'Manutenção',     icon: Wrench },

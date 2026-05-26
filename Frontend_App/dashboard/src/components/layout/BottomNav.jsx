@@ -21,7 +21,7 @@ import useAuthStore from '../../store/useAuthStore';
 // Os 4 tabs principais + "Mais"
 const PRIMARY_TABS = [
   { id: 'dashboard',    label: 'Início',    icon: LayoutDashboard },
-  { id: 'maquinas',     label: 'Ferram.',   icon: Package },
+  { id: 'maquinas',     label: 'Equip.',    icon: Package },
   { id: 'sessoes-ativas', label: 'Sessões', icon: Clock },
   { id: 'manutencao-alertas', label: 'Alertas', icon: Wrench },
 ];
