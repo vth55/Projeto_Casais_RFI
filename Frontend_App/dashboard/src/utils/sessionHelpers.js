@@ -1,21 +1,51 @@
-export const SESSION_ANOMALY_THRESHOLD_H = 5;
+/**
+ * sessionHelpers.js — CASAIS Fleet Intelligence
+ *
+ * Funções primárias (tool_sessions / modelo NFC activo):
+ *   detectToolSessionAnomalies, TOOL_OVERDUE_DAYS_DEFAULT, TOOL_LOST_DAYS_DEFAULT
+ *
+ * Funções legacy (heavy machines / RFID sessions):
+ *   detectSessionAnomalies, detectHardAnomalies, SESSION_ANOMALY_THRESHOLD_H,
+ *   HARD_ANOMALY_FLAGS, MAINTENANCE_ALERT_PCT, MAINTENANCE_OVERDUE_PCT
+ *   @deprecated LEGACY — heavy machines. Usar detectToolSessionAnomalies em código novo.
+ */
 
-// Hard anomalies require operational attention. NO_OPERATOR is informational only
-// (in localhost all sessions lack RFID operators, making it 100% noise there).
-export const HARD_ANOMALY_FLAGS = ['FATIGUE', 'AUTO_CLOSE', 'CORRECTED'];
+// ============================================================================
+// CONSTANTES PRIMÁRIAS — tool_sessions
+// ============================================================================
 
-// Shared maintenance thresholds — used by EquipamentosObraView, ManutencaoObraView, and ResumoView.
-// Both views must use the same cut-offs so a machine shows the same RAG status everywhere.
-export const MAINTENANCE_ALERT_PCT   = 0.8;  // ≥80 % → ALERT (amber)
-export const MAINTENANCE_OVERDUE_PCT = 1.0;  // ≥100 % → OVERDUE (red)
-
-// Thresholds para tool_sessions (configuraveis via settings/system).
+// Thresholds para tool_sessions (configuráveis via settings/system).
 export const TOOL_OVERDUE_DAYS_DEFAULT = 7;
 export const TOOL_LOST_DAYS_DEFAULT = 30;
 
-export function detectHardAnomalies(session) {
-  return detectSessionAnomalies(session).filter(f => HARD_ANOMALY_FLAGS.includes(f));
-}
+// ============================================================================
+// CONSTANTES LEGACY — heavy machines
+// @deprecated LEGACY — heavy machines.
+// ============================================================================
+
+/**
+ * @deprecated LEGACY — heavy machines. Não tem equivalente directo em tool_sessions.
+ */
+export const SESSION_ANOMALY_THRESHOLD_H = 5;
+
+/**
+ * Hard anomalies require operational attention. NO_OPERATOR is informational only.
+ * @deprecated LEGACY — heavy machines.
+ */
+export const HARD_ANOMALY_FLAGS = ['FATIGUE', 'AUTO_CLOSE', 'CORRECTED'];
+
+/**
+ * Shared maintenance thresholds — used by EquipamentosObraView, ManutencaoObraView, and ResumoView.
+ * Both views must use the same cut-offs so a machine shows the same RAG status everywhere.
+ * @deprecated LEGACY — heavy machines. Manutenção de máquinas pesadas.
+ */
+export const MAINTENANCE_ALERT_PCT   = 0.8;  // ≥80 % → ALERT (amber)
+/** @deprecated LEGACY — heavy machines. */
+export const MAINTENANCE_OVERDUE_PCT = 1.0;  // ≥100 % → OVERDUE (red)
+
+// ============================================================================
+// FUNÇÕES PARTILHADAS (usadas por ambos os modelos)
+// ============================================================================
 
 export function resolveTimestamp(ts) {
   if (!ts) return null;
@@ -29,6 +59,21 @@ export function formatDuration(hours) {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
+// ============================================================================
+// FUNÇÕES LEGACY — heavy machines
+// @deprecated LEGACY — heavy machines.
+// ============================================================================
+
+/**
+ * @deprecated LEGACY — heavy machines. Usar detectToolSessionAnomalies para tool_sessions.
+ */
+export function detectHardAnomalies(session) {
+  return detectSessionAnomalies(session).filter(f => HARD_ANOMALY_FLAGS.includes(f));
+}
+
+/**
+ * @deprecated LEGACY — heavy machines. Usar detectToolSessionAnomalies para tool_sessions.
+ */
 export function detectSessionAnomalies(session) {
   const flags = [];
   if (!session.operatorId) flags.push('NO_OPERATOR');
