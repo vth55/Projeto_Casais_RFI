@@ -70,7 +70,7 @@ const useStore = create((set, get) => ({
   maintenanceSchedules: [],
   loading: true,
   error: null,
-  activeView: 'dashboard',
+  activeView: 'mapa',
   sidebarOpen: false,
   dateFilter: 'month', // 'today' | 'week' | 'month' | 'custom'
   customRange: null,   // { start: Date, end: Date } — usado quando dateFilter === 'custom'

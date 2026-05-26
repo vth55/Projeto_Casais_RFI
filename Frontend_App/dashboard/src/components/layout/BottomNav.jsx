@@ -1,5 +1,6 @@
 import React, { useState, memo } from 'react';
 import {
+  Map,
   LayoutDashboard,
   Package,
   Clock,
@@ -20,7 +21,7 @@ import useAuthStore from '../../store/useAuthStore';
 
 // Os 4 tabs principais + "Mais"
 const PRIMARY_TABS = [
-  { id: 'dashboard',    label: 'Início',    icon: LayoutDashboard },
+  { id: 'mapa',         label: 'Mapa',      icon: Map },
   { id: 'maquinas',     label: 'Equip.',    icon: Package },
   { id: 'sessoes-ativas', label: 'Sessões', icon: Clock },
   { id: 'manutencao-alertas', label: 'Alertas', icon: Wrench },
@@ -28,6 +29,7 @@ const PRIMARY_TABS = [
 
 // Itens no sheet "Mais"
 const MORE_ITEMS = [
+  { id: 'dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
   { id: 'obras',       label: 'Obras',         icon: Building2 },
   { id: 'estaleiro',   label: 'Estaleiro',      icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
@@ -47,7 +49,7 @@ const BottomNav = memo(() => {
   const maintenanceAlerts = tools.filter(t => ['MAINTENANCE', 'DAMAGED', 'LOST'].includes((t.status || '').toUpperCase())).length;
 
   const isTabActive = (id) => {
-    if (id === 'dashboard') return activeView === 'dashboard';
+    if (id === 'dashboard' || id === 'mapa') return activeView === id;
     return activeView === id || activeView.startsWith(id.split('-')[0] + '-') || activeView === id.split('-')[0];
   };
 
