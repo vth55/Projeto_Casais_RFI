@@ -1032,7 +1032,7 @@ const OperationalSettingsSection = () => {
           <div className="flex items-center gap-2">
             <Fuel className="w-4 h-4 text-slate-400" />
             <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-              Parâmetros Legacy — Legacy Equipamentos Pesadas
+              Parâmetros Legacy — Equipamentos Pesados
             </span>
             <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
               Procore / SAP
@@ -1364,7 +1364,7 @@ const LegacyDbSection = ({ onClear, loading }) => {
       >
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Legacy — Legacy Equipamentos Pesadas</span>
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Legacy — Equipamentos Pesados</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Procore</span>
         </div>
         <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`} />

@@ -421,7 +421,7 @@ export default function EquipamentosView() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">Equipamentos</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Equipamentos pequenas com tag NFC — saídas e devoluções automáticas
+            Equipamentos pequenos com tag NFC — saídas e devoluções automáticas
           </p>
         </div>
         <button

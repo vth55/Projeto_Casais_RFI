@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import React, { useEffect, useMemo, useRef } from 'react';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import useStore from '../store/useStore';
 
@@ -36,6 +36,10 @@ function getObraState(obra, tools, toolSessions) {
 }
 
 export default function MapaObrasView() {
+  const mapNodeRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersLayerRef = useRef(null);
+
   const {
     obras = [],
     tools = [],
@@ -50,60 +54,81 @@ export default function MapaObrasView() {
     [obras],
   );
 
-  const openObra = (obraId) => {
-    window.history.pushState({}, '', `/obras/${obraId}`);
-    setActiveView('obra-detalhe');
-  };
+  useEffect(() => {
+    if (!mapNodeRef.current || mapInstanceRef.current) return;
+
+    const map = L.map(mapNodeRef.current, {
+      center: [39.5, -8.0],
+      zoom: 7,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+    }).addTo(map);
+
+    const markersLayer = L.layerGroup().addTo(map);
+    mapInstanceRef.current = map;
+    markersLayerRef.current = markersLayer;
+
+    return () => {
+      markersLayer.clearLayers();
+      map.remove();
+      markersLayerRef.current = null;
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const markersLayer = markersLayerRef.current;
+    if (!markersLayer) return;
+
+    markersLayer.clearLayers();
+
+    obrasWithCoords.forEach(({ obra, coords }) => {
+      const { color, obraTools, openSessions, overdueSessions } = getObraState(obra, tools, toolSessions);
+      const marker = L.circleMarker(coords, {
+        radius: 11,
+        color: '#0f172a',
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.9,
+      });
+
+      const popup = document.createElement('div');
+      popup.className = 'min-w-48 space-y-2';
+      popup.innerHTML = `
+        <div>
+          <p class="font-bold text-slate-900">${obra.name || obra.id}</p>
+          ${obra.address ? `<p class="text-xs text-slate-500">${obra.address}</p>` : ''}
+        </div>
+        <p class="text-sm text-slate-700">
+          Equipamentos: ${obraTools.length} · Em uso: ${openSessions.length} · Overdue: ${overdueSessions.length}
+        </p>
+      `;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'w-full rounded-md bg-primary-600 px-3 py-2 text-sm font-bold text-white hover:bg-primary-700';
+      button.textContent = 'Ver obra →';
+      button.addEventListener('click', () => {
+        window.history.pushState({}, '', `/obras/${obra.id}`);
+        setActiveView('obra-detalhe');
+      });
+      popup.appendChild(button);
+
+      marker.bindPopup(popup);
+      marker.addTo(markersLayer);
+    });
+  }, [obrasWithCoords, tools, toolSessions, setActiveView]);
 
   return (
     <div className="h-full w-full min-h-[calc(100vh-64px)] overflow-hidden">
-      <MapContainer
-        center={[39.5, -8.0]}
-        zoom={7}
+      <div
+        ref={mapNodeRef}
         className="h-full w-full min-h-[calc(100vh-64px)]"
-        scrollWheelZoom
-      >
-        <TileLayer
-          attribution="© OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        {obrasWithCoords.map(({ obra, coords }) => {
-          const { color, obraTools, openSessions, overdueSessions } = getObraState(obra, tools, toolSessions);
-          return (
-            <CircleMarker
-              key={obra.id}
-              center={coords}
-              radius={11}
-              pathOptions={{
-                color: '#0f172a',
-                weight: 2,
-                fillColor: color,
-                fillOpacity: 0.9,
-              }}
-            >
-              <Popup>
-                <div className="min-w-48 space-y-2">
-                  <div>
-                    <p className="font-bold text-slate-900">{obra.name || obra.id}</p>
-                    {obra.address && <p className="text-xs text-slate-500">{obra.address}</p>}
-                  </div>
-                  <p className="text-sm text-slate-700">
-                    Equipamentos: {obraTools.length} · Em uso: {openSessions.length} · Overdue: {overdueSessions.length}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openObra(obra.id)}
-                    className="w-full rounded-md bg-primary-600 px-3 py-2 text-sm font-bold text-white hover:bg-primary-700"
-                  >
-                    Ver obra →
-                  </button>
-                </div>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
+        aria-label="Mapa de obras"
+      />
     </div>
   );
 }

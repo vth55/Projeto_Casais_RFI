@@ -11,7 +11,7 @@ const reportTypes = [
   {
     id: 'inventory',
     name: 'Inventário por obra',
-    description: 'Equipamentos atribuídas a cada obra, com estado e último checkout conhecido.',
+    description: 'Equipamentos atribuídos a cada obra, com estado e último checkout conhecido.',
     icon: PackageSearch,
     filename: 'inventario_equipamentos_por_obra',
   },

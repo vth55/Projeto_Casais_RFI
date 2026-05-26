@@ -82,7 +82,7 @@ const ObraCard = ({ obra, procoreProject, getToolsByObraId, getToolSessionsByObr
             <Package className="w-4 h-4 text-emerald-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Equipamentos atribuídas</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Equipamentos atribuídos</p>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">{assignedToolsCount}</p>
           </div>
         </div>
@@ -307,7 +307,7 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, o
     return locationCards.filter(card => card.obraId === obra.id);
   }, [locationCards, obra.id]);
 
-  // Equipamentos atribuídas a esta obra
+  // Equipamentos atribuídos a esta obra
   const toolsInObra = useMemo(() => {
     return tools.filter(t => t.currentObraId === obra.id);
   }, [tools, obra.id]);

@@ -18,7 +18,7 @@ const CASAIS_BLUE = '#005EB8';
 // Tipos de problema mapeados directamente aos enums de tool_maintenance.
 const TIPOS = [
   { id: TOOL_MAINTENANCE_TYPES.DAMAGE,      label: 'Avaria',                 desc: 'Avaria, fissura, peça partida, mau funcionamento' },
-  { id: TOOL_MAINTENANCE_TYPES.LOSS,        label: 'Perdida',              desc: 'Equipamento extraviada ou não encontrada' },
+  { id: TOOL_MAINTENANCE_TYPES.LOSS,        label: 'Perdido',              desc: 'Equipamento extraviado ou não encontrado' },
   { id: TOOL_MAINTENANCE_TYPES.INSPECTION,  label: 'Precisa inspeção',     desc: 'Pedido de verificação técnica' },
   { id: TOOL_MAINTENANCE_TYPES.REPAIR,      label: 'Precisa reparação',    desc: 'Reparação necessária para voltar ao serviço' },
 ];
@@ -191,7 +191,7 @@ export default function ReporteAvariaView() {
 
   const [toolId, setToolId] = useState(initialToolId);
   const [type, setType] = useState(TOOL_MAINTENANCE_TYPES.DAMAGE);
-  const [usable, setUsable] = useState(false);  // "A equipamento está utilizável?"
+  const [usable, setUsable] = useState(false);  // "O equipamento está utilizável?"
   const [notes, setNotes] = useState('');
   const [cost, setCost] = useState('');
   const [photos, setPhotos] = useState([]);
@@ -271,7 +271,7 @@ export default function ReporteAvariaView() {
               className="w-5 h-5 rounded text-primary-500"
             />
             <div>
-              <p className="text-sm font-semibold text-slate-900">A equipamento está utilizável?</p>
+              <p className="text-sm font-semibold text-slate-900">O equipamento está utilizável?</p>
               <p className="text-xs text-slate-500">Marca se ainda pode ser usada com cuidado até intervenção</p>
             </div>
           </label>

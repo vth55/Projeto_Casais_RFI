@@ -30,7 +30,7 @@ export default function MachineQrView() {
 
   useEffect(() => {
     if (!machineId) {
-      setError('ID de máquina em falta na URL.');
+      setError('ID de equipamento em falta na URL.');
       setLoading(false);
       return;
     }
@@ -38,7 +38,7 @@ export default function MachineQrView() {
     const db = getFirestore();
     getDoc(doc(db, `${basePath}/machines`, machineId)).then(async snap => {
       if (!snap.exists()) {
-        setError('Máquina não encontrada.');
+        setError('Equipamento não encontrado.');
         setLoading(false);
         return;
       }
@@ -53,7 +53,7 @@ export default function MachineQrView() {
       }
       setLoading(false);
     }).catch(err => {
-      setError('Erro ao carregar dados da máquina.');
+      setError('Erro ao carregar dados do equipamento.');
       setLoading(false);
       console.error(err);
     });

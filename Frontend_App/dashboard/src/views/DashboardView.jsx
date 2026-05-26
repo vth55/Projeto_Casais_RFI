@@ -1180,7 +1180,7 @@ const DashboardView = () => {
         />
         <StatCard
           icon={Wrench}
-          title="Manutenção (legacy)"
+          title="Manutenção"
           value={maintenanceAlerts.length}
           color={maintenanceAlerts.length > 0 ? 'amber' : 'slate'}
         />
