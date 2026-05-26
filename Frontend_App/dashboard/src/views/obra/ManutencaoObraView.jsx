@@ -1,378 +1,337 @@
+/**
+ * ManutencaoObraView — Manutenção de ferramentas filtrada por obra (pivot 2026-05).
+ *
+ * Versão compacta de ManutencaoView para o contexto de uma obra específica.
+ * Recebe `obraId` via prop e filtra tool_maintenance por esse obraId.
+ *
+ * Consome: tools, getToolMaintenanceByObraId, updateToolMaintenance, resolveToolMaintenance
+ * Semântica: inspeção / dano / reparação / calibração / substituição / perda
+ */
 import React, { useState, useMemo } from 'react';
 import {
-  Wrench, AlertTriangle, X, ChevronRight,
-  CheckCircle, ExternalLink, XCircle, AlertCircle,
+  Wrench, X, ChevronRight, AlertTriangle, CheckCircle,
+  Clock, Euro, ClipboardList, ShieldAlert, RotateCcw, Gauge,
+  RefreshCw, Trash2, CheckCircle2, AlertCircle,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
-import useAvariasStore from '../../store/useAvariasStore';
-import KpiCard from '../../components/obra/KpiCard';
-import { MAINTENANCE_ALERT_PCT, MAINTENANCE_OVERDUE_PCT } from '../../utils/sessionHelpers';
+import useAuthStore from '../../store/useAuthStore';
+import { TOOL_MAINTENANCE_TYPES } from '../../types';
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+// ─── META ─────────────────────────────────────────────────────────────────────
 
-const DEFAULT_THRESHOLD = 150; // hours — fallback when machine has no threshold configured
-
-const RAG = {
-  OVERDUE: {
-    label: 'Vencida',
-    color: 'text-red-600 dark:text-red-400',
-    bg:    'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800',
-    bar:   'bg-red-500',
-    dot:   'bg-red-500',
+const TYPE_META = {
+  [TOOL_MAINTENANCE_TYPES.INSPECTION]: {
+    label: 'Inspeção',
+    icon: ClipboardList,
+    color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
+    dot: 'bg-blue-500',
   },
-  ALERT: {
-    label: 'Em alerta',
-    color: 'text-amber-600 dark:text-amber-400',
-    bg:    'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800',
-    bar:   'bg-amber-400',
-    dot:   'bg-amber-400',
+  [TOOL_MAINTENANCE_TYPES.DAMAGE]: {
+    label: 'Dano',
+    icon: AlertTriangle,
+    color: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
+    dot: 'bg-red-500',
   },
-  NORMAL: {
-    label: 'Normal',
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg:    'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800',
-    bar:   'bg-emerald-400',
-    dot:   'bg-emerald-400',
+  [TOOL_MAINTENANCE_TYPES.REPAIR]: {
+    label: 'Reparação',
+    icon: Wrench,
+    color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+    dot: 'bg-amber-500',
   },
-  UNKNOWN: {
-    label: 'Sem dados',
-    color: 'text-slate-400',
-    bg:    'bg-slate-50 border-slate-200 dark:bg-slate-700/30 dark:border-slate-600',
-    bar:   'bg-slate-300',
-    dot:   'bg-slate-300',
+  [TOOL_MAINTENANCE_TYPES.CALIBRATION]: {
+    label: 'Calibração',
+    icon: Gauge,
+    color: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',
+    dot: 'bg-purple-500',
+  },
+  [TOOL_MAINTENANCE_TYPES.REPLACEMENT]: {
+    label: 'Substituição',
+    icon: RefreshCw,
+    color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300',
+    dot: 'bg-orange-500',
+  },
+  [TOOL_MAINTENANCE_TYPES.LOSS]: {
+    label: 'Perda',
+    icon: Trash2,
+    color: 'bg-slate-50 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300',
+    dot: 'bg-slate-400',
   },
 };
 
-const FILTER_OPTIONS = [
-  { value: 'all',     label: 'Todos'      },
-  { value: 'OVERDUE', label: 'Vencida'    },
-  { value: 'ALERT',   label: 'Em alerta' },
-  { value: 'NORMAL',  label: 'Normal'     },
+const STATUS_META = {
+  OPEN: {
+    label: 'Aberto',
+    dot: 'bg-red-500',
+    badge: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
+  },
+  IN_PROGRESS: {
+    label: 'Em progresso',
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+  },
+  DONE: {
+    label: 'Resolvido',
+    dot: 'bg-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+  },
+};
+
+const TYPE_FILTER_OPTIONS = [
+  { value: 'all', label: 'Todos os tipos' },
+  ...Object.entries(TYPE_META).map(([value, meta]) => ({ value, label: meta.label })),
+];
+
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'OPEN', label: 'Abertos' },
+  { value: 'IN_PROGRESS', label: 'Em progresso' },
+  { value: 'DONE', label: 'Resolvidos' },
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-function getEffectiveThreshold(machine, systemDefault) {
-  return machine.maintenanceThreshold || machine.maintenanceInterval || systemDefault;
-}
-
-function getMachineRag(partialHours, threshold) {
-  if (!threshold) return 'UNKNOWN';
-  const pct = partialHours / threshold;
-  if (pct >= MAINTENANCE_OVERDUE_PCT) return 'OVERDUE';
-  if (pct >= MAINTENANCE_ALERT_PCT)   return 'ALERT';
-  return 'NORMAL';
-}
-
-function getRagPriority(rag) {
-  return { OVERDUE: 0, ALERT: 1, NORMAL: 2, UNKNOWN: 3 }[rag] ?? 3;
-}
-
-function formatLastMaintenance(ts) {
-  if (!ts) return null;
+function formatDate(ts) {
+  if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
+  if (isNaN(d)) return '—';
   return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// ─── PROGRESS BAR ─────────────────────────────────────────────────────────────
+function formatRelative(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days >= 1) return `há ${days}d`;
+  const hours = Math.floor(diff / 3600000);
+  if (hours >= 1) return `há ${hours}h`;
+  const min = Math.floor(diff / 60000);
+  if (min >= 1) return `há ${min}min`;
+  return 'agora';
+}
 
-const MaintenanceBar = ({ partialHours, threshold, rag }) => {
-  const pct = threshold > 0 ? Math.min((partialHours / threshold) * 100, 100) : 0;
-  const r   = RAG[rag] || RAG.UNKNOWN;
+// ─── KPI CARD (obra-level) ────────────────────────────────────────────────────
+
+const KpiCard = ({ label, value, icon: Icon, color = 'primary' }) => {
+  const colorMap = {
+    primary: 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20',
+    amber:   'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20',
+    emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20',
+    red:     'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20',
+    slate:   'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/40',
+  };
+  const cls = colorMap[color] || colorMap.primary;
   return (
-    <div className="w-full">
-      <div className="flex justify-between text-xs mb-1">
-        <span className={`font-medium ${r.color}`}>{pct.toFixed(0)}%</span>
-        <span className="text-slate-400 tabular-nums">{partialHours}h / {threshold}h</span>
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex items-center gap-3">
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${cls}`}>
+        <Icon className="w-4 h-4" />
       </div>
-      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${r.bar}`} style={{ width: `${pct}%` }} />
+      <div className="min-w-0">
+        <p className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{value}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
       </div>
     </div>
   );
 };
 
-// ─── SUMMARY HEADER ───────────────────────────────────────────────────────────
+// ─── RESOLVE DRAWER ───────────────────────────────────────────────────────────
 
-const SummaryHeader = ({ enriched, openAvarias, onFilterOverdue }) => {
-  const overdue = enriched.filter(m => m.rag === 'OVERDUE').length;
-  const alert   = enriched.filter(m => m.rag === 'ALERT').length;
-  return (
-    <div className="p-4 md:p-5 space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard
-          label="Máquinas na obra"
-          value={enriched.length}
-          icon={Wrench}
-          color="primary"
-        />
-        <KpiCard
-          label="Em alerta"
-          value={alert}
-          icon={AlertTriangle}
-          color={alert > 0 ? 'amber' : 'slate'}
-        />
-        <KpiCard
-          label="Manutenção vencida"
-          value={overdue}
-          icon={XCircle}
-          color={overdue > 0 ? 'red' : 'slate'}
-        />
-        <KpiCard
-          label="Avarias abertas"
-          value={openAvarias}
-          icon={AlertCircle}
-          color={openAvarias > 0 ? 'red' : 'slate'}
-        />
-      </div>
+const ResolveDrawer = ({ record, onClose, onResolve }) => {
+  const [notes, setNotes] = useState('');
+  const [cost, setCost] = useState('');
+  const [saving, setSaving] = useState(false);
 
-      {overdue > 0 && (
-        <button
-          onClick={onFilterOverdue}
-          className="w-full flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left"
-        >
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span>
-            <strong>{overdue}</strong> máquina{overdue > 1 ? 's' : ''} com manutenção vencida — bloquear utilização recomendado.
-          </span>
-          <ChevronRight className="w-4 h-4 ml-auto flex-shrink-0" />
-        </button>
-      )}
-    </div>
-  );
-};
+  if (!record) return null;
 
-// ─── FILTER BAR ───────────────────────────────────────────────────────────────
+  const typeMeta = TYPE_META[record.type] || TYPE_META[TOOL_MAINTENANCE_TYPES.REPAIR];
+  const TypeIcon = typeMeta.icon;
 
-const FilterBar = ({ filter, setFilter, search, setSearch }) => (
-  <div className="px-4 md:px-5 pb-3 flex flex-col sm:flex-row gap-2 sm:items-center flex-wrap border-b border-slate-100 dark:border-slate-700/50">
-    <div className="flex gap-1.5 flex-wrap">
-      {FILTER_OPTIONS.map(opt => (
-        <button
-          key={opt.value}
-          onClick={() => setFilter(opt.value)}
-          className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
-            filter === opt.value
-              ? 'bg-primary-600 text-white'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-primary-400'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-    <input
-      type="text"
-      value={search}
-      onChange={e => setSearch(e.target.value)}
-      placeholder="Pesquisar máquina…"
-      className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 w-full sm:w-48"
-    />
-  </div>
-);
-
-// ─── MACHINE ROW (desktop table) ──────────────────────────────────────────────
-
-const MachineRow = ({ machine, onClick }) => {
-  const r   = RAG[machine.rag] || RAG.UNKNOWN;
-  const pct = machine.threshold > 0
-    ? Math.min((machine.partialHours / machine.threshold) * 100, 100)
-    : 0;
+  async function handleResolve() {
+    setSaving(true);
+    try {
+      await onResolve(record.id, {
+        notes: notes.trim() || record.notes,
+        cost: cost ? Number(cost) : undefined,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <tr
-      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-700"
-      onClick={onClick}
-    >
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.dot}`} />
-          <div>
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{machine.name}</p>
-            <p className="text-xs text-slate-400">{machine.type || machine.category || '—'}</p>
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/40" />
+      <div
+        className="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${typeMeta.color}`}>
+              <TypeIcon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-bold text-slate-900 dark:text-white">Resolver registo</h2>
+              <p className="text-xs text-slate-500 truncate">{record.toolName || record.toolId}</p>
+            </div>
           </div>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${r.bg} ${r.color}`}>
-          {r.label}
-        </span>
-      </td>
-      <td className="px-4 py-3 w-48">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-            <div className={`h-full rounded-full ${r.bar}`} style={{ width: `${pct}%` }} />
-          </div>
-          <span className="text-xs tabular-nums text-slate-500 whitespace-nowrap w-8 text-right">
-            {pct.toFixed(0)}%
-          </span>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-sm tabular-nums text-slate-600 dark:text-slate-300 whitespace-nowrap">
-        {machine.partialHours}h / {machine.threshold}h
-      </td>
-      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
-        {machine.lastMaintenanceFormatted ?? <span className="italic">Desconhecida</span>}
-      </td>
-      <td className="px-4 py-3 text-right">
-        {machine.openAvarias > 0 && (
-          <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-            {machine.openAvarias} avaria{machine.openAvarias > 1 ? 's' : ''}
-          </span>
-        )}
-      </td>
-      <td className="px-4 py-3 w-8">
-        <ChevronRight className="w-4 h-4 text-slate-300" />
-      </td>
-    </tr>
-  );
-};
-
-// ─── MACHINE CARD (mobile) ────────────────────────────────────────────────────
-
-const MachineCard = ({ machine, onClick }) => {
-  const r   = RAG[machine.rag] || RAG.UNKNOWN;
-  const pct = machine.threshold > 0
-    ? Math.min((machine.partialHours / machine.threshold) * 100, 100)
-    : 0;
-
-  return (
-    <div
-      className={`rounded-xl border p-4 cursor-pointer hover:shadow-md transition-shadow bg-white dark:bg-slate-800 ${r.bg}`}
-      onClick={onClick}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="min-w-0">
-          <p className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">{machine.name}</p>
-          <p className="text-xs text-slate-400">{machine.type || machine.category || '—'}</p>
-        </div>
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ml-2 ${r.bg} ${r.color}`}>
-          {r.label}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 mb-1">
-        <div className="flex-1 h-2 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-          <div className={`h-full rounded-full ${r.bar}`} style={{ width: `${pct}%` }} />
-        </div>
-        <span className="text-xs tabular-nums text-slate-500 w-8 text-right">{pct.toFixed(0)}%</span>
-      </div>
-      <div className="flex justify-between text-xs text-slate-400 mt-1">
-        <span>{machine.partialHours}h / {machine.threshold}h</span>
-        {machine.openAvarias > 0 && (
-          <span className="text-red-500 font-medium">
-            {machine.openAvarias} avaria{machine.openAvarias > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ─── MACHINE DRAWER ───────────────────────────────────────────────────────────
-
-const MachineDrawer = ({ machine, onClose }) => {
-  if (!machine) return null;
-  const r        = RAG[machine.rag] || RAG.UNKNOWN;
-  const pct      = machine.threshold > 0
-    ? Math.min((machine.partialHours / machine.threshold) * 100, 100)
-    : 0;
-  const hoursLeft = machine.threshold > 0
-    ? Math.max(machine.threshold - machine.partialHours, 0)
-    : null;
-  const hoursOver = machine.rag === 'OVERDUE'
-    ? Math.round(machine.partialHours - machine.threshold)
-    : 0;
-
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/20 dark:bg-black/40" onClick={onClose} />
-
-      {/* Panel */}
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-          <div>
-            <h2 className="font-semibold text-slate-900 dark:text-white text-lg leading-tight">{machine.name}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{machine.type || machine.category || '—'}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ml-3 flex-shrink-0"
-          >
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg ml-2 shrink-0">
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* RAG + progress */}
-          <div className={`rounded-xl border p-4 ${r.bg}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${r.dot}`} />
-              <span className={`text-sm font-semibold ${r.color}`}>{r.label}</span>
-            </div>
-            <MaintenanceBar
-              partialHours={machine.partialHours}
-              threshold={machine.threshold}
-              rag={machine.rag}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+              Notas de resolução
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder={record.notes || 'Descreve a resolução…'}
+              rows={4}
+              className="w-full p-3 text-sm border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-            {machine.rag !== 'OVERDUE' && hoursLeft !== null && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                {hoursLeft}h restantes até manutenção
-              </p>
-            )}
-            {machine.rag === 'OVERDUE' && (
-              <p className={`text-xs mt-2 font-medium ${r.color}`}>
-                Vencida há {hoursOver}h — intervenção necessária
-              </p>
-            )}
           </div>
-
-          {/* Detail grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-              <p className="text-xs text-slate-400 mb-1">Horas parciais</p>
-              <p className="text-xl font-bold text-slate-800 dark:text-slate-100 tabular-nums">
-                {machine.partialHours}<span className="text-sm font-normal text-slate-400 ml-0.5">h</span>
-              </p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-              <p className="text-xs text-slate-400 mb-1">Threshold</p>
-              <p className="text-xl font-bold text-slate-800 dark:text-slate-100 tabular-nums">
-                {machine.threshold}<span className="text-sm font-normal text-slate-400 ml-0.5">h</span>
-              </p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-              <p className="text-xs text-slate-400 mb-1">Última manutenção</p>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {machine.lastMaintenanceFormatted ?? (
-                  <span className="text-slate-400 text-xs italic">Desconhecida</span>
-                )}
-              </p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-              <p className="text-xs text-slate-400 mb-1">Avarias abertas</p>
-              <p className={`text-xl font-bold tabular-nums ${machine.openAvarias > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>
-                {machine.openAvarias}
-              </p>
-            </div>
-          </div>
-
-          {/* Procore deep-link */}
-          {machine.procoreEquipmentId && (
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-[#005EB8]/5 border border-[#005EB8]/20 rounded-xl text-xs text-[#005EB8] dark:text-blue-400">
-              <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>Procore Equipment ID: {machine.procoreEquipmentId}</span>
-            </div>
-          )}
-
-          {/* Deferred CTA stub */}
-          <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 p-4 text-center">
-            <Wrench className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-            <p className="text-sm font-medium text-slate-400">Registar manutenção</p>
-            <p className="text-xs text-slate-400 mt-0.5">Disponível em próxima fase</p>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+              Custo real (€, opcional)
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={cost}
+              onChange={e => setCost(e.target.value)}
+              placeholder="0"
+              className="w-full p-3 text-sm border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
           </div>
         </div>
+
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+          <button
+            onClick={handleResolve}
+            disabled={saving}
+            className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            {saving ? 'A guardar…' : 'Marcar como resolvido'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── DETAIL DRAWER ────────────────────────────────────────────────────────────
+
+const DetailDrawer = ({ record, toolName, onClose, onMarkInProgress, onOpenResolve }) => {
+  if (!record) return null;
+
+  const typeMeta   = TYPE_META[record.type] || TYPE_META[TOOL_MAINTENANCE_TYPES.REPAIR];
+  const statusMeta = STATUS_META[record.status] || STATUS_META.OPEN;
+  const TypeIcon   = typeMeta.icon;
+
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/40" />
+      <div
+        className="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${typeMeta.color}`}>
+              <TypeIcon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={`w-2 h-2 rounded-full ${statusMeta.dot}`} />
+                <span className="text-xs font-medium text-slate-500">{statusMeta.label}</span>
+              </div>
+              <h2 className="font-bold text-slate-900 dark:text-white truncate">{toolName || record.toolId}</h2>
+              <p className="text-xs text-slate-500">{typeMeta.label}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg ml-2 shrink-0">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+              <p className="text-xs text-slate-400 mb-0.5">Reportado por</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{record.reportedBy || '—'}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+              <p className="text-xs text-slate-400 mb-0.5">Data</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{formatDate(record.reportedAt)}</p>
+            </div>
+            {record.notes && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 col-span-2">
+                <p className="text-xs text-slate-400 mb-0.5">Notas</p>
+                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{record.notes}</p>
+              </div>
+            )}
+            {record.cost != null && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+                <p className="text-xs text-slate-400 mb-0.5">Custo</p>
+                <p className="font-bold text-slate-900 dark:text-white">{record.cost}€</p>
+              </div>
+            )}
+            {record.resolvedBy && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+                <p className="text-xs text-slate-400 mb-0.5">Resolvido por</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{record.resolvedBy}</p>
+              </div>
+            )}
+            {record.resolvedAt && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+                <p className="text-xs text-slate-400 mb-0.5">Data resolução</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{formatDate(record.resolvedAt)}</p>
+              </div>
+            )}
+          </div>
+
+          {record.photos && record.photos.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Fotos ({record.photos.length})</p>
+              <div className="grid grid-cols-3 gap-2">
+                {record.photos.map((p, i) => (
+                  <div key={i} className="aspect-square rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400">
+                    #{i + 1}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        {record.status !== 'DONE' && (
+          <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
+            {record.status === 'OPEN' && (
+              <button
+                onClick={() => { onMarkInProgress(record.id); onClose(); }}
+                className="w-full py-2.5 rounded-xl bg-amber-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
+              >
+                <Clock className="w-4 h-4" />
+                Marcar em progresso
+              </button>
+            )}
+            <button
+              onClick={() => { onClose(); onOpenResolve(record); }}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Resolver
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -380,119 +339,278 @@ const MachineDrawer = ({ machine, onClose }) => {
 
 // ─── MAIN VIEW ────────────────────────────────────────────────────────────────
 
-const ManutencaoObraView = ({ obraId, obraMachines }) => {
-  const { systemSettings } = useStore();
-  const { avarias }        = useAvariasStore();
+const ManutencaoObraView = ({ obraId }) => {
+  const { tools = [], getToolMaintenanceByObraId, updateToolMaintenance, resolveToolMaintenance } = useStore();
+  const { currentUser } = useAuthStore();
 
-  const [filter,   setFilter]   = useState('all');
-  const [search,   setSearch]   = useState('');
-  const [selected, setSelected] = useState(null);
+  const [typeFilter,   setTypeFilter]   = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selected,     setSelected]     = useState(null);
+  const [resolving,    setResolving]    = useState(null);
 
-  const systemDefault = systemSettings?.defaultMaintenanceInterval || DEFAULT_THRESHOLD;
-
-  // Enrich machines with maintenance state — sorted by criticality
-  const enriched = useMemo(() => {
-    return obraMachines
-      .map(m => {
-        const threshold             = getEffectiveThreshold(m, systemDefault);
-        const partialHours          = m.partialHours || 0;
-        const rag                   = getMachineRag(partialHours, threshold);
-        // NOTE: avarias have no obraId field — join is via machineId only.
-        // A machine that moved between obras carries avarias from prior obras.
-        // This is a known data limitation; no fix attempted here.
-        const machineAvarias        = avarias.filter(a => a.machineId === m.id && a.status !== 'resolvida');
-        const lastMaintenanceFormatted = formatLastMaintenance(m.lastMaintenance);
-        return { ...m, threshold, partialHours, rag, openAvarias: machineAvarias.length, lastMaintenanceFormatted };
-      })
-      .sort((a, b) => {
-        const pa = getRagPriority(a.rag);
-        const pb = getRagPriority(b.rag);
-        if (pa !== pb) return pa - pb;
-        // Within same RAG group: most consumed first
-        const pctA = a.threshold > 0 ? a.partialHours / a.threshold : 0;
-        const pctB = b.threshold > 0 ? b.partialHours / b.threshold : 0;
-        return pctB - pctA;
-      });
-  }, [obraMachines, avarias, systemDefault]);
-
-  const openAvarias = useMemo(
-    () => enriched.reduce((sum, m) => sum + m.openAvarias, 0),
-    [enriched]
+  // Raw records for this obra
+  const rawRecords = useMemo(
+    () => getToolMaintenanceByObraId(obraId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [obraId, getToolMaintenanceByObraId]
   );
 
+  // Enrich with tool name/type
+  const enriched = useMemo(() => {
+    const toolMap = new Map(tools.map(t => [t.id, t]));
+    return rawRecords.map(r => ({
+      ...r,
+      tool: toolMap.get(r.toolId) || null,
+    }));
+  }, [rawRecords, tools]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const open       = enriched.filter(r => r.status === 'OPEN').length;
+    const inProgress = enriched.filter(r => r.status === 'IN_PROGRESS').length;
+    const done       = enriched.filter(r => r.status === 'DONE').length;
+    const critical   = enriched.filter(r =>
+      (r.type === TOOL_MAINTENANCE_TYPES.DAMAGE || r.type === TOOL_MAINTENANCE_TYPES.LOSS) &&
+      r.status !== 'DONE'
+    ).length;
+    return { open, inProgress, done, critical };
+  }, [enriched]);
+
+  // Filtered list
   const filtered = useMemo(() => {
     let list = enriched;
-    if (filter !== 'all')    list = list.filter(m => m.rag === filter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(m =>
-        m.name.toLowerCase().includes(q) || (m.type || m.category || '').toLowerCase().includes(q)
-      );
-    }
+    if (typeFilter !== 'all')   list = list.filter(r => r.type === typeFilter);
+    if (statusFilter !== 'all') list = list.filter(r => r.status === statusFilter);
     return list;
-  }, [enriched, filter, search]);
+  }, [enriched, typeFilter, statusFilter]);
 
-  if (obraMachines.length === 0) {
+  async function handleMarkInProgress(recordId) {
+    await updateToolMaintenance(recordId, { status: 'IN_PROGRESS' });
+  }
+
+  async function handleResolve(recordId, { notes, cost }) {
+    await resolveToolMaintenance(recordId, {
+      resolvedBy: currentUser?.id || currentUser?.uid || 'unknown',
+      notes,
+      cost,
+    });
+  }
+
+  if (enriched.length === 0 && typeFilter === 'all' && statusFilter === 'all') {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-        <Wrench className="w-12 h-12 mb-4 opacity-30" />
-        <p className="font-medium text-slate-500">Sem máquinas nesta obra</p>
+      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+        <Wrench className="w-10 h-10 mb-3 opacity-30" />
+        <p className="text-sm font-medium text-slate-500">Sem registos de manutenção nesta obra</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <p className="text-xs text-slate-400 px-4 md:px-5 pt-3 pb-0">
-        Estado actual da frota — independente do período seleccionado
-      </p>
-      <SummaryHeader
-        enriched={enriched}
-        openAvarias={openAvarias}
-        onFilterOverdue={() => setFilter('OVERDUE')}
-      />
+    <div className="space-y-4">
 
-      <FilterBar filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="Abertos"       value={stats.open}       icon={AlertCircle}  color={stats.open > 0 ? 'red' : 'slate'} />
+        <KpiCard label="Em progresso"  value={stats.inProgress} icon={Clock}        color={stats.inProgress > 0 ? 'amber' : 'slate'} />
+        <KpiCard label="Resolvidos"    value={stats.done}       icon={CheckCircle}  color="emerald" />
+        <KpiCard label="Danos críticos" value={stats.critical}  icon={ShieldAlert}  color={stats.critical > 0 ? 'red' : 'slate'} />
+      </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
+          {TYPE_FILTER_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setTypeFilter(opt.value)}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
+                typeFilter === opt.value
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-primary-400'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {STATUS_FILTER_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
+                statusFilter === opt.value
+                  ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-900'
+                  : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-400'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* List */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
           <CheckCircle className="w-10 h-10 mb-3 opacity-30" />
-          <p className="text-sm font-medium text-slate-500">Nenhuma máquina neste estado</p>
+          <p className="text-sm">Sem registos com estes filtros</p>
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden lg:block overflow-x-auto">
+          <div className="hidden lg:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
             <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                  <th className="px-4 py-2.5 text-left font-medium">Máquina</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Estado</th>
-                  <th className="px-4 py-2.5 text-left font-medium w-48">Consumo</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Horas</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Última manut.</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Avarias</th>
-                  <th className="px-4 py-2.5 w-8" />
+              <thead className="bg-slate-50 dark:bg-slate-700/50">
+                <tr>
+                  {['Ferramenta', 'Tipo', 'Estado', 'Reportado por', 'Data', 'Notas', 'Custo', ''].map((h, i) => (
+                    <th key={i} className="px-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide text-left">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(m => (
-                  <MachineRow key={m.id} machine={m} onClick={() => setSelected(m)} />
-                ))}
+                {filtered.map(r => {
+                  const typeMeta   = TYPE_META[r.type]   || TYPE_META[TOOL_MAINTENANCE_TYPES.REPAIR];
+                  const statusMeta = STATUS_META[r.status] || STATUS_META.OPEN;
+                  const TypeIcon   = typeMeta.icon;
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                      onClick={() => setSelected(r)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${typeMeta.dot}`} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{r.tool?.name || r.toolId}</p>
+                            <p className="text-xs text-slate-400 truncate">{r.tool?.type || '—'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${typeMeta.color}`}>
+                          <TypeIcon className="w-3 h-3" />
+                          {typeMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusMeta.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
+                          {statusMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{r.reportedBy || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{formatRelative(r.reportedAt)}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 truncate max-w-[160px]">{r.notes || '—'}</td>
+                      <td className="px-4 py-3 text-xs tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">{r.cost != null ? `${r.cost}€` : '—'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                          {r.status === 'OPEN' && (
+                            <button
+                              onClick={() => handleMarkInProgress(r.id)}
+                              className="px-2 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 font-medium whitespace-nowrap"
+                            >
+                              Em progresso
+                            </button>
+                          )}
+                          {r.status !== 'DONE' && (
+                            <button
+                              onClick={() => setResolving(r)}
+                              className="px-2 py-1 text-xs rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 font-medium"
+                            >
+                              Resolver
+                            </button>
+                          )}
+                          <ChevronRight className="w-4 h-4 text-slate-300" />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile cards */}
-          <div className="lg:hidden p-4 space-y-3">
-            {filtered.map(m => (
-              <MachineCard key={m.id} machine={m} onClick={() => setSelected(m)} />
-            ))}
+          <div className="lg:hidden space-y-3">
+            {filtered.map(r => {
+              const typeMeta   = TYPE_META[r.type]   || TYPE_META[TOOL_MAINTENANCE_TYPES.REPAIR];
+              const statusMeta = STATUS_META[r.status] || STATUS_META.OPEN;
+              const TypeIcon   = typeMeta.icon;
+              return (
+                <div
+                  key={r.id}
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer hover:border-primary-400 transition-colors"
+                  onClick={() => setSelected(r)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-white truncate">{r.tool?.name || r.toolId}</p>
+                      <p className="text-xs text-slate-400 truncate">{r.tool?.type || '—'}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ml-2 ${statusMeta.badge}`}>
+                      {statusMeta.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${typeMeta.color}`}>
+                      <TypeIcon className="w-3 h-3" />
+                      {typeMeta.label}
+                    </span>
+                    {r.cost != null && (
+                      <span className="text-xs text-slate-500 flex items-center gap-0.5 ml-auto">
+                        <Euro className="w-3 h-3" />{r.cost}
+                      </span>
+                    )}
+                  </div>
+                  {r.notes && (
+                    <p className="text-xs text-slate-500 truncate mb-2">{r.notes}</p>
+                  )}
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <span className="text-xs text-slate-400">{r.reportedBy || '—'}</span>
+                    <span className="text-xs text-slate-400 ml-auto">{formatRelative(r.reportedAt)}</span>
+                  </div>
+                  {r.status !== 'DONE' && (
+                    <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                      {r.status === 'OPEN' && (
+                        <button
+                          onClick={() => handleMarkInProgress(r.id)}
+                          className="flex-1 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 font-medium"
+                        >
+                          Em progresso
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setResolving(r)}
+                        className="flex-1 py-1.5 text-xs rounded-lg bg-emerald-50 text-emerald-700 font-medium"
+                      >
+                        Resolver
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
 
-      {selected && <MachineDrawer machine={selected} onClose={() => setSelected(null)} />}
+      {/* Detail Drawer */}
+      <DetailDrawer
+        record={selected}
+        toolName={selected?.tool?.name || selected?.toolId}
+        onClose={() => setSelected(null)}
+        onMarkInProgress={handleMarkInProgress}
+        onOpenResolve={r => { setSelected(null); setResolving(r); }}
+      />
+
+      {/* Resolve Drawer */}
+      <ResolveDrawer
+        record={resolving}
+        onClose={() => setResolving(null)}
+        onResolve={handleResolve}
+      />
     </div>
   );
 };
