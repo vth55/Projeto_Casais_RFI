@@ -807,6 +807,8 @@ const OperationalSettingsSection = () => {
     fuelPricePerLitre: '',
     co2FactorPerLitre: '',
     defaultMaintenanceInterval: '',
+    toolOverdueDays: '',
+    toolLostDays: '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -816,6 +818,8 @@ const OperationalSettingsSection = () => {
       fuelPricePerLitre: String(systemSettings.fuelPricePerLitre ?? ''),
       co2FactorPerLitre: String(systemSettings.co2FactorPerLitre ?? ''),
       defaultMaintenanceInterval: String(systemSettings.defaultMaintenanceInterval ?? ''),
+      toolOverdueDays: String(systemSettings.toolOverdueDays ?? 7),
+      toolLostDays: String(systemSettings.toolLostDays ?? 30),
     });
   }, [systemSettings]);
 
@@ -826,6 +830,8 @@ const OperationalSettingsSection = () => {
         fuelPricePerLitre: parseFloat(form.fuelPricePerLitre) || 1.89,
         co2FactorPerLitre: parseFloat(form.co2FactorPerLitre) || 2.68,
         defaultMaintenanceInterval: parseInt(form.defaultMaintenanceInterval, 10) || 150,
+        toolOverdueDays: parseInt(form.toolOverdueDays, 10) || 7,
+        toolLostDays: parseInt(form.toolLostDays, 10) || 30,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -837,7 +843,9 @@ const OperationalSettingsSection = () => {
   const hasChanges =
     String(systemSettings.fuelPricePerLitre) !== form.fuelPricePerLitre ||
     String(systemSettings.co2FactorPerLitre) !== form.co2FactorPerLitre ||
-    String(systemSettings.defaultMaintenanceInterval) !== form.defaultMaintenanceInterval;
+    String(systemSettings.defaultMaintenanceInterval) !== form.defaultMaintenanceInterval ||
+    String(systemSettings.toolOverdueDays ?? 7) !== form.toolOverdueDays ||
+    String(systemSettings.toolLostDays ?? 30) !== form.toolLostDays;
 
   return (
     <ConfigSection
@@ -916,6 +924,56 @@ const OperationalSettingsSection = () => {
             onChange={e => setForm({ ...form, defaultMaintenanceInterval: e.target.value })}
             className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Ferramenta overdue (dias)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Atraso de devolução</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="1"
+            min="1"
+            max="30"
+            value={form.toolOverdueDays}
+            onChange={e => setForm({ ...form, toolOverdueDays: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Após estes dias sem devolução, dispara alerta TOOL_OVERDUE
+          </p>
+        </div>
+
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Ferramenta presumed lost (dias)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Escalação de perda</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="1"
+            min="7"
+            max="90"
+            value={form.toolLostDays}
+            onChange={e => setForm({ ...form, toolLostDays: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Após estes dias, escala para TOOL_PRESUMED_LOST
+          </p>
         </div>
       </div>
 

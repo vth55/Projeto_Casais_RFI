@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  ArrowLeft, Building2, Link2, Clock, Truck, Users, Euro, Leaf,
+  ArrowLeft, Building2, Link2, Clock, Truck, Users, Leaf,
   Activity, AlertTriangle, MapPin, Wrench, BarChart3, FileText,
+  LogOut,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,7 +16,7 @@ import KpiCard from '../../components/obra/KpiCard';
 import EquipamentosObraView from './EquipamentosObraView';
 import SessoesObraView from './SessoesObraView';
 import ManutencaoObraView from './ManutencaoObraView';
-import { getDateRangeFromPreset, getPreviousPeriodRange, aggregateSessionsByDay, aggregateSessionsByMachine } from '../../utils/chartDataHelpers';
+import { getDateRangeFromPreset, getPreviousPeriodRange } from '../../utils/chartDataHelpers';
 import { MAINTENANCE_ALERT_PCT } from '../../utils/sessionHelpers';
 
 // ─── TAB DEFINITIONS ─────────────────────────────────────────────────────────
@@ -42,63 +43,86 @@ const ComingSoon = ({ label }) => (
 
 // ─── CUSTOM TOOLTIP ──────────────────────────────────────────────────────────
 
-const HoursTooltip = ({ active, payload, label }) => {
+const CountTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-lg text-sm">
       <p className="font-semibold text-slate-700 dark:text-slate-200 mb-1">{label}</p>
       <p className="text-primary-600 dark:text-primary-400">
-        <span className="font-bold">{payload[0].value}</span> h
+        <span className="font-bold">{payload[0].value}</span> checkouts
       </p>
       {payload[1] && (
         <p className="text-sky-400 mt-0.5">
-          <span className="font-bold">{payload[1].value}</span> h (anterior)
+          <span className="font-bold">{payload[1].value}</span> checkouts (anterior)
         </p>
       )}
     </div>
   );
 };
 
+const aggregateSessionsByCheckoutDay = (sessions) => {
+  const map = {};
+  sessions.forEach(s => {
+    if (!s.startTime) return;
+    const d = s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (!map[key]) map[key] = { date: key, count: 0 };
+    map[key].count += 1;
+  });
+  return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+};
+
 // ─── RESUMO VIEW ─────────────────────────────────────────────────────────────
 
-const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, obraMachines, loading }) => {
-  const { getObraKPIs, getSessionsByObraId, sessions, machines } = useStore();
+const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading }) => {
+  const {
+    getToolKPIs,
+    getToolSessionsByObraId,
+    toolSessions,
+    tools,
+    getToolsByObraId,
+    getTopToolsByUsage,
+  } = useStore();
   const { avarias } = useAvariasStore();
 
-  const kpis = useMemo(() => getObraKPIs(obraId, dateRange), [obraId, dateRange, sessions, machines]);
+  const kpis = useMemo(() => getToolKPIs(obraId, dateRange), [obraId, dateRange, toolSessions, tools]);
   const prevKpis = useMemo(
-    () => (showComparison && prevDateRange ? getObraKPIs(obraId, prevDateRange) : null),
-    [obraId, prevDateRange, showComparison, sessions, machines]
+    () => (showComparison && prevDateRange ? getToolKPIs(obraId, prevDateRange) : null),
+    [obraId, prevDateRange, showComparison, toolSessions, tools]
   );
 
-  const obraSessions = useMemo(() => getSessionsByObraId(obraId, dateRange), [obraId, dateRange, sessions, machines]);
+  const obraTools = useMemo(() => getToolsByObraId(obraId), [obraId, tools]);
+  const obraSessions = useMemo(() => getToolSessionsByObraId(obraId, dateRange), [obraId, dateRange, toolSessions, tools]);
   const prevSessions = useMemo(
-    () => (showComparison && prevDateRange ? getSessionsByObraId(obraId, prevDateRange) : []),
-    [obraId, prevDateRange, showComparison, sessions, machines]
+    () => (showComparison && prevDateRange ? getToolSessionsByObraId(obraId, prevDateRange) : []),
+    [obraId, prevDateRange, showComparison, toolSessions, tools]
   );
 
-  const dailyData = useMemo(() => aggregateSessionsByDay(obraSessions), [obraSessions]);
-  const prevDailyData = useMemo(() => aggregateSessionsByDay(prevSessions), [prevSessions]);
+  const dailyData = useMemo(() => aggregateSessionsByCheckoutDay(obraSessions), [obraSessions]);
+  const prevDailyData = useMemo(() => aggregateSessionsByCheckoutDay(prevSessions), [prevSessions]);
 
   // Merge current + previous for comparison overlay
   const chartData = useMemo(() => {
-    if (!showComparison || !prevDailyData.length) return dailyData.map(d => ({ ...d, hoursPrev: undefined }));
+    if (!showComparison || !prevDailyData.length) return dailyData.map(d => ({ ...d, countPrev: undefined }));
     const byIdx = dailyData.map((d, i) => ({
       ...d,
-      hoursPrev: prevDailyData[i]?.hours ?? null,
+      countPrev: prevDailyData[i]?.count ?? null,
     }));
     return byIdx;
   }, [dailyData, prevDailyData, showComparison]);
 
-  const machineData = useMemo(() => aggregateSessionsByMachine(obraSessions, obraMachines), [obraSessions, obraMachines]);
+  const toolData = useMemo(
+    () => (typeof getTopToolsByUsage === 'function' ? getTopToolsByUsage(dateRange, 6) : []),
+    [getTopToolsByUsage, dateRange, toolSessions, tools]
+  );
 
   const openAvarias = avarias.filter(a => {
-    const machineInObra = obraMachines.some(m => m.id === a.machineId);
-    return machineInObra && a.status !== 'resolvida';
+    const toolInObra = obraTools.some(t => t.id === (a.toolId || a.machineId));
+    return toolInObra && a.status !== 'resolvida';
   }).length;
-  const alertMachines = obraMachines.filter(m => {
-    const t = m.maintenanceThreshold || m.maintenanceInterval || 150;
-    return ((m.partialHours || 0) / t) >= MAINTENANCE_ALERT_PCT;
+  const alertTools = obraTools.filter(tool => {
+    const threshold = tool.maintenanceThreshold || tool.maintenanceInterval || 150;
+    return ((tool.partialHours || 0) / threshold) >= MAINTENANCE_ALERT_PCT;
   });
 
   const formatDate = (d) => {
@@ -119,66 +143,57 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, obraMach
       {/* KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <KpiCard
-          label="Máquinas activas"
-          value={kpis.totalMachines > 0 ? Math.round((kpis.uniqueMachines / kpis.totalMachines) * 100) : 0}
-          unit="%"
-          icon={Truck}
+          label="Ferramentas na obra"
+          value={kpis.totalTools}
+          icon={Wrench}
           color="primary"
-          description={`${kpis.uniqueMachines} / ${kpis.totalMachines} no período`}
-          previousValue={prevKpis ? (prevKpis.totalMachines > 0 ? Math.round((prevKpis.uniqueMachines / prevKpis.totalMachines) * 100) : 0) : undefined}
+          previousValue={prevKpis?.totalTools}
+        />
+        <KpiCard
+          label="Em uso agora"
+          value={kpis.activeNow}
+          icon={Activity}
+          color={kpis.activeNow > 0 ? 'emerald' : 'slate'}
+          previousValue={prevKpis?.activeNow}
+        />
+        <KpiCard
+          label="Overdue"
+          value={kpis.overdueCount}
+          icon={AlertTriangle}
+          color={kpis.overdueCount > 0 ? 'red' : 'slate'}
+          previousValue={prevKpis?.overdueCount}
+        />
+        <KpiCard
+          label="Checkouts no período"
+          value={kpis.totalCheckouts}
+          icon={LogOut}
+          color="primary"
+          previousValue={prevKpis?.totalCheckouts}
         />
         <KpiCard
           label="Trabalhadores"
           value={kpis.uniqueOperators}
-          unit="op."
           icon={Users}
           color="violet"
-          description="operadores no período"
           previousValue={prevKpis?.uniqueOperators}
         />
         <KpiCard
-          label="Horas período"
-          value={kpis.totalHours}
-          unit="h"
+          label="Duração média"
+          value={`${kpis.avgDurationHours}h`}
           icon={Clock}
-          color="emerald"
-          previousValue={prevKpis?.totalHours}
-        />
-        <KpiCard
-          label="Custo estimado"
-          value={kpis.totalCost}
-          unit="€"
-          icon={Euro}
-          color="amber"
-          previousValue={prevKpis?.totalCost}
-        />
-        <KpiCard
-          label="CO₂ estimado"
-          value={kpis.totalCO2}
-          unit="kg"
-          icon={Leaf}
           color="slate"
-          previousValue={prevKpis?.totalCO2}
-          ragInvert
-        />
-        <KpiCard
-          label="Sessões activas"
-          value={kpis.activeSessions}
-          unit=""
-          icon={Activity}
-          color={kpis.activeSessions > 0 ? 'emerald' : 'slate'}
-          description="abertas agora"
+          previousValue={prevKpis?.avgDurationHours}
         />
       </div>
 
       {/* ALERTS STRIP */}
-      {(alertMachines.length > 0 || openAvarias > 0) && (
+      {(alertTools.length > 0 || openAvarias > 0 || kpis.overdueCount > 0) && (
         <div className="flex flex-wrap gap-2">
-          {alertMachines.length > 0 && (
+          {alertTools.length > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>
-                <strong>{alertMachines.length}</strong> equipamento{alertMachines.length > 1 ? 's' : ''} próximo{alertMachines.length > 1 ? 's' : ''} da manutenção
+                <strong>{alertTools.length}</strong> equipamento{alertTools.length > 1 ? 's' : ''} próximo{alertTools.length > 1 ? 's' : ''} da manutenção
               </span>
             </div>
           )}
@@ -188,14 +203,20 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, obraMach
               <span><strong>{openAvarias}</strong> avaria{openAvarias > 1 ? 's' : ''} em aberto</span>
             </div>
           )}
+          {kpis.overdueCount > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span><strong>{kpis.overdueCount}</strong> ferramenta(s) com devolução atrasada</span>
+            </div>
+          )}
         </div>
       )}
 
       {/* CHARTS ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* HORAS / DIA */}
+        {/* CHECKOUTS / DIA */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Horas por dia</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Checkouts por dia</h3>
           {chartData.length === 0 ? (
             <div className="flex items-center justify-center h-36 text-sm text-slate-400">Sem dados no período</div>
           ) : (
@@ -214,27 +235,27 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, obraMach
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} />
                 <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <Tooltip content={<HoursTooltip />} />
-                <Area type="monotone" dataKey="hours" stroke="#005EB8" strokeWidth={2} fill="url(#hoursGrad)" dot={false} name="Horas" />
-                {showComparison && <Area type="monotone" dataKey="hoursPrev" stroke="#0EA5E9" strokeWidth={1.5} strokeDasharray="4 3" fill="url(#hoursPrevGrad)" dot={false} name="Anterior" />}
+                <Tooltip content={<CountTooltip />} />
+                <Area type="monotone" dataKey="count" stroke="#005EB8" strokeWidth={2} fill="url(#hoursGrad)" dot={false} name="Checkouts" />
+                {showComparison && <Area type="monotone" dataKey="countPrev" stroke="#0EA5E9" strokeWidth={1.5} strokeDasharray="4 3" fill="url(#hoursPrevGrad)" dot={false} name="Anterior" />}
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
 
-        {/* HORAS POR MÁQUINA */}
+        {/* TOP FERRAMENTAS */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Horas por máquina</h3>
-          {machineData.length === 0 ? (
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Top ferramentas (checkouts)</h3>
+          {toolData.length === 0 ? (
             <div className="flex items-center justify-center h-36 text-sm text-slate-400">Sem dados</div>
           ) : (
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={machineData.slice(0, 6)} layout="vertical" margin={{ top: 0, right: 4, left: 4, bottom: 0 }}>
+              <BarChart data={toolData} layout="vertical" margin={{ top: 0, right: 4, left: 4, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.6} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <YAxis dataKey="machineName" type="category" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={80} />
-                <Tooltip formatter={(v) => [`${v} h`, 'Horas']} />
-                <Bar dataKey="hours" fill="#005EB8" radius={[0, 4, 4, 0]} maxBarSize={16} />
+                <YAxis dataKey="toolName" type="category" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={80} />
+                <Tooltip formatter={(v) => [v, 'Checkouts']} />
+                <Bar dataKey="count" fill="#005EB8" radius={[0, 4, 4, 0]} maxBarSize={16} />
               </BarChart>
             </ResponsiveContainer>
           )}

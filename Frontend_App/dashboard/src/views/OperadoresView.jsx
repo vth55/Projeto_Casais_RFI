@@ -23,6 +23,12 @@ const EMPLOYEE_ROLES = [
 ];
 
 const getRoleInfo = (roleId) => EMPLOYEE_ROLES.find(r => r.id === roleId) || EMPLOYEE_ROLES[0];
+const getSessionDate = (value) => {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate();
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 // Tipos de carta/licença de máquinas
 const LICENSE_TYPES = [
@@ -525,7 +531,7 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
 };
 
 const OperadoresView = () => {
-  const { operators, sessions, obras, machines, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
+  const { operators, sessions, toolSessions, obras, machines, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
   const { can, getAssignableRoles, getAllRoles } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
@@ -549,9 +555,23 @@ const OperadoresView = () => {
 
   const operatorStats = useMemo(() => {
     return operators.map(op => {
-      const opSessions = sessions.filter(s => s.cardId === op.id);
-      const totalHours = opSessions.filter(s => s.status === 'CLOSED').reduce((sum, s) => sum + (s.durationHours || 0), 0);
+      const opSessions = toolSessions.filter(
+        s => s.operatorId === op.id || s.operatorId === op.cardId
+      );
+      const totalHours = opSessions
+        .filter(s => s.status === 'CLOSED')
+        .reduce((sum, s) => sum + (s.durationHours || 0), 0);
       const isActive = opSessions.some(s => s.status === 'OPEN');
+      const lastSession = opSessions.reduce((latest, session) => {
+        const sessionDate = getSessionDate(session.endTime) || getSessionDate(session.startTime);
+        const latestDate = latest
+          ? getSessionDate(latest.endTime) || getSessionDate(latest.startTime)
+          : null;
+
+        if (!sessionDate) return latest;
+        if (!latestDate || sessionDate > latestDate) return session;
+        return latest;
+      }, null);
       const assignedObra = obras.find(o => o.id === op.assignedObraId);
       const systemRoleInfo = allSystemRoles[op.systemRole];
       // Procore enrichment: matching por email/nome contra a directory sincronizada
@@ -561,13 +581,14 @@ const OperadoresView = () => {
         totalHours: Math.round(totalHours * 10) / 10,
         sessionCount: opSessions.length,
         isActive,
+        lastSession,
         assignedObraName: assignedObra?.name || null,
         systemRoleName: systemRoleInfo?.name || 'Operador',
         systemRoleLevel: systemRoleInfo?.level,
         procoreUser: procoreUser || null,
       };
     });
-  }, [operators, sessions, obras, allSystemRoles, procoreDirectory, matchOperatorToProcore]);
+  }, [operators, toolSessions, obras, allSystemRoles, procoreDirectory, matchOperatorToProcore]);
 
   // Calcular sugestões de auto-assign baseado no uso de máquinas
   const autoAssignSuggestions = useMemo(() => {
@@ -722,7 +743,7 @@ const OperadoresView = () => {
         <StatCard icon={CreditCard} title="Com RFID" value={operators.filter(o => o.cardId).length} color="blue" />
         <StatCard icon={Briefcase} title="Encarregados" value={roleStats.encarregado || 0} color="amber" />
         <StatCard icon={Briefcase} title="Técnicos" value={roleStats.tecnico_manutencao || 0} color="emerald" />
-        <StatCard icon={Clock} title="Horas Total" value={operatorStats.reduce((sum, op) => sum + op.totalHours, 0).toFixed(0)} unit="h" color="slate" />
+        <StatCard icon={Clock} title="Checkouts totais" value={operatorStats.reduce((sum, op) => sum + op.sessionCount, 0)} color="slate" />
       </div>
 
       {/* Auto-Assign Suggestions */}

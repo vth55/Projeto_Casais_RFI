@@ -1,10 +1,11 @@
 /**
- * NAVEGAÇÃO - CASAIS FLEET INTELLIGENCE
- * 
- * Estrutura criada do zero - Organização própria
+ * NAVEGACAO - CASAIS FLEET INTELLIGENCE
+ *
+ * Estrutura criada do zero - Organizacao propria
  */
 
 import {
+  Map,
   LayoutDashboard,
   Truck,
   Users,
@@ -26,25 +27,69 @@ import {
 
 export const navigationStructure = [
   {
+    id: 'mapa',
+    label: 'Mapa',
+    icon: Map,
+    path: '/mapa',
+    description: 'Vista geografica principal da operacao',
+  },
+  {
     id: 'dashboard',
-    label: 'Painel Principal',
+    label: 'Dashboard',
     icon: LayoutDashboard,
     path: '/',
-    description: 'Visão geral e métricas principais',
+    description: 'Visao geral e metricas principais',
+  },
+  {
+    id: 'obras',
+    label: 'Obras',
+    icon: Building2,
+    path: '/obras',
+    description: 'Gestao de obras e localizacoes',
+    submenu: [
+      {
+        id: 'obras-todas',
+        label: 'Todas',
+        icon: List,
+        path: '/obras',
+        description: 'Todas as obras',
+      },
+      {
+        id: 'obras-em-curso',
+        label: 'Em Curso',
+        icon: Activity,
+        path: '/obras',
+        description: 'Obras atualmente ativas',
+      },
+      {
+        id: 'obras-planeadas',
+        label: 'Planeadas',
+        icon: Calendar,
+        path: '/obras',
+        description: 'Obras em planeamento',
+      },
+      {
+        id: 'obras-concluidas',
+        label: 'Concluidas',
+        icon: ClipboardList,
+        path: '/obras',
+        description: 'Obras finalizadas',
+      },
+    ],
   },
   {
     id: 'maquinas',
-    label: 'Máquinas',
+    label: 'Ferramentas',
     icon: Truck,
     path: '/maquinas',
-    description: 'Gestão completa da frota',
+    description: 'Gestao de ferramentas e equipamentos',
     submenu: [
       {
         id: 'maquinas-lista',
         label: 'Lista',
         icon: List,
         path: '/maquinas',
-        description: 'Todas as máquinas',
+        description: 'Todas as ferramentas',
       },
       {
         id: 'maquinas-categorias',
@@ -55,10 +100,40 @@ export const navigationStructure = [
       },
       {
         id: 'maquinas-localizacoes',
-        label: 'Localizações',
+        label: 'Localizacoes',
         icon: MapPin,
         path: '/maquinas/localizacoes',
-        description: 'Por obra/estaleiro',
+        description: 'Por obra ou estaleiro',
+      },
+    ],
+  },
+  {
+    id: 'sessoes',
+    label: 'Sessoes',
+    icon: ClipboardList,
+    path: '/sessoes',
+    description: 'Historico de operacao',
+    submenu: [
+      {
+        id: 'sessoes-ativas',
+        label: 'Sessoes Ativas',
+        icon: Activity,
+        path: '/sessoes/ativas',
+        description: 'Em curso agora',
+      },
+      {
+        id: 'sessoes-historico',
+        label: 'Historico',
+        icon: Calendar,
+        path: '/sessoes',
+        description: 'Todas as sessoes',
+      },
+      {
+        id: 'sessoes-validacoes',
+        label: 'Validacoes',
+        icon: AlertTriangle,
+        path: '/sessoes/validacoes',
+        description: 'Pendentes',
       },
     ],
   },
@@ -67,55 +142,25 @@ export const navigationStructure = [
     label: 'Operadores',
     icon: Users,
     path: '/operadores',
-    description: 'Gestão de operadores',
-  },
-  {
-    id: 'sessoes',
-    label: 'Sessões',
-    icon: ClipboardList,
-    path: '/sessoes',
-    description: 'Histórico de operação',
-    submenu: [
-      {
-        id: 'sessoes-ativas',
-        label: 'Sessões Ativas',
-        icon: Activity,
-        path: '/sessoes/ativas',
-        description: 'Em curso agora',
-      },
-      {
-        id: 'sessoes-historico',
-        label: 'Histórico',
-        icon: Calendar,
-        path: '/sessoes',
-        description: 'Todas as sessões',
-      },
-      {
-        id: 'sessoes-validacoes',
-        label: 'Validações',
-        icon: AlertTriangle,
-        path: '/sessoes/validacoes',
-        description: 'Pendentes',
-      },
-    ],
+    description: 'Gestao de operadores',
   },
   {
     id: 'manutencao',
-    label: 'Manutenção',
+    label: 'Manutencao',
     icon: Wrench,
     path: '/manutencao',
-    description: 'Alertas e gestão',
+    description: 'Alertas e gestao',
     submenu: [
       {
         id: 'manutencao-alertas',
         label: 'Alertas',
         icon: AlertTriangle,
         path: '/manutencao',
-        description: 'Manutenção necessária',
+        description: 'Manutencao necessaria',
       },
       {
         id: 'manutencao-calendario',
-        label: 'Calendário',
+        label: 'Calendario',
         icon: Calendar,
         path: '/manutencao/calendario',
         description: 'Agendamentos',
@@ -131,24 +176,24 @@ export const navigationStructure = [
   },
   {
     id: 'analises',
-    label: 'Análises',
+    label: 'Analises',
     icon: BarChart3,
     path: '/analises',
-    description: 'Gráficos e métricas',
+    description: 'Graficos e metricas',
     submenu: [
       {
         id: 'analises-geral',
-        label: 'Visão Geral',
+        label: 'Visao Geral',
         icon: TrendingUp,
         path: '/analises',
         description: 'KPIs principais',
       },
       {
         id: 'analises-emissoes',
-        label: 'Emissões CO₂',
+        label: 'Emissoes CO2',
         icon: Gauge,
         path: '/analises/emissoes',
-        description: 'Análise ambiental',
+        description: 'Analise ambiental',
       },
       {
         id: 'analises-custos',
@@ -161,17 +206,17 @@ export const navigationStructure = [
   },
   {
     id: 'relatorios',
-    label: 'Relatórios',
+    label: 'Relatorios',
     icon: FileText,
     path: '/relatorios',
-    description: 'Exportações e documentos',
+    description: 'Exportacoes e documentos',
   },
   {
     id: 'configuracoes',
-    label: 'Configurações',
+    label: 'Configuracoes',
     icon: Settings,
     path: '/configuracoes',
-    description: 'Sistema e preferências',
+    description: 'Sistema e preferencias',
   },
 ];
 

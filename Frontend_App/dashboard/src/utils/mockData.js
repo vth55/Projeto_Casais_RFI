@@ -3,179 +3,149 @@ import { db, projectId } from '../config/firebase';
 
 const BASE_PATH = `artifacts/${projectId}/public/data`;
 
-export const createMockMachines = async () => {
-  const machines = [
-    {
-      id: 'M_ESC_01',
-      name: 'Escavadora 01 - Obra Porto',
-      category: {
-        id: 'escavadoras',
-        name: 'Escavadoras',
-        code: 'ESC',
+const obras = [
+  { id: 'procore_328122', name: 'Torre Boavista', lat: 41.1579, lng: -8.6291 },
+  { id: 'obra_lisboa_centro', name: 'Lisboa Centro', lat: 38.7223, lng: -9.1393 },
+  { id: 'obra_braga_norte', name: 'Braga Norte', lat: 41.5518, lng: -8.4229 },
+  { id: 'obra_gaia_sul', name: 'Gaia Sul', lat: 41.1239, lng: -8.6118 },
+];
+
+const storageLocations = [
+  'Armazem Central',
+  'Armazem Norte',
+  'Oficina Equipamentos',
+];
+
+const toolFixtures = [
+  ['tool_martelo_001', 'Martelo Pneumatico #1', 'Martelo Pneumatico', 'MARTELO_001', 18],
+  ['tool_martelo_002', 'Martelo Pneumatico #2', 'Martelo Pneumatico', 'MARTELO_002', 18],
+  ['tool_rebarbadora_230', 'Rebarbadora 230mm', 'Rebarbadora', 'REBARB_230', 8],
+  ['tool_perfurador_sds', 'Perfurador SDS Max', 'Perfurador', 'SDS_MAX_001', 12],
+  ['tool_parafusadora_ind', 'Parafusadora Industrial', 'Parafusadora', 'PARAF_IND_001', 6],
+  ['tool_serra_circular', 'Serra Circular', 'Serra', 'SERRA_CIRC_001', 7],
+  ['tool_lixadora', 'Lixadora Orbital', 'Lixadora', 'LIXADORA_001', 5],
+  ['tool_pistola_pregos', 'Pistola de Pregos', 'Pistola de Pregos', 'PIST_PREGOS_001', 9],
+  ['tool_betoneira_peq', 'Betoneira Pequena', 'Betoneira', 'BETONEIRA_PEQ_001', 14],
+  ['tool_vibrador_betao', 'Vibrador de Betao', 'Vibrador de Betao', 'VIB_BETAO_001', 11],
+  ['tool_gerador_portatil', 'Gerador Portatil 5kVA', 'Gerador', 'GERADOR_5KVA_001', 16],
+  ['tool_compactador', 'Compactador Placa', 'Compactador', 'COMPACT_PLACA_001', 20],
+  ['tool_laser_nivel', 'Laser Nivelador', 'Laser Nivelador', 'LASER_NIVEL_001', 10],
+  ['tool_cortadora_azulejo', 'Cortadora de Azulejo', 'Cortadora', 'CORT_AZULEJO_001', 6],
+  ['tool_bomba_submersivel', 'Bomba Submersivel', 'Bomba', 'BOMBA_SUB_001', 13],
+];
+
+export const createMockObras = async () => {
+  const now = Timestamp.now();
+  const results = [];
+
+  for (const obra of obras) {
+    const payload = {
+      id: obra.id,
+      name: obra.name,
+      address: {
+        procore_328122: 'Avenida da Boavista, Porto',
+        obra_lisboa_centro: 'Avenida da Liberdade, Lisboa',
+        obra_braga_norte: 'Rua de Sao Vicente, Braga',
+        obra_gaia_sul: 'Avenida da Republica, Vila Nova de Gaia',
+      }[obra.id],
+      gps: {
+        latitude: obra.lat,
+        longitude: obra.lng,
       },
-      location: {
-        workId: 'obra_porto_2025',
-        workName: 'Obra Porto 2025',
-        gps: {
-          latitude: 41.1579,
-          longitude: -8.6291,
-        },
-        lastUpdated: Timestamp.now(),
-      },
-      status: 'ACTIVE',
-      totalHours: 1250.5,
-      partialHours: 135.2, // Horas desde última manutenção
-      consumptionRate: 12.5, // L/h
-      currentTariff: {
-        id: 'tariff_2025_12_01',
-        type: 'MACHINE_AND_OPERATOR',
-        machineCostPerHour: 25.0,
-        operatorCostPerHour: 15.0,
-        totalCostPerHour: 40.0,
-        validFrom: Timestamp.now(),
-      },
-      co2Factor: 2.68,
-      createdAt: Timestamp.now(),
-    },
-    {
-      id: 'M_GRU_02',
-      name: 'Grua 02 - Obra Lisboa',
-      category: {
-        id: 'gruas',
-        name: 'Gruas',
-        code: 'GRU',
-      },
-      location: {
-        workId: 'obra_lisboa_2025',
-        workName: 'Obra Lisboa 2025',
-        gps: {
-          latitude: 38.7223,
-          longitude: -9.1393,
-        },
-        lastUpdated: Timestamp.now(),
-      },
-      status: 'ACTIVE',
-      totalHours: 980.3,
-      partialHours: 95.8,
-      consumptionRate: 15.2,
-      currentTariff: {
-        id: 'tariff_2025_12_01',
-        type: 'MACHINE_AND_OPERATOR',
-        machineCostPerHour: 35.0,
-        operatorCostPerHour: 15.0,
-        totalCostPerHour: 50.0,
-        validFrom: Timestamp.now(),
-      },
-      co2Factor: 2.68,
-      createdAt: Timestamp.now(),
-    },
-    {
-      id: 'M_BET_03',
-      name: 'Betoneira 03 - Obra Porto',
-      category: {
-        id: 'betoneiras',
-        name: 'Betoneiras',
-        code: 'BET',
-      },
-      location: {
-        workId: 'obra_porto_2025',
-        workName: 'Obra Porto 2025',
-        gps: {
-          latitude: 41.1579,
-          longitude: -8.6291,
-        },
-        lastUpdated: Timestamp.now(),
-      },
-      status: 'ACTIVE',
-      totalHours: 650.7,
-      partialHours: 45.3,
-      consumptionRate: 8.5,
-      currentTariff: {
-        id: 'tariff_2025_12_01',
-        type: 'MACHINE_ONLY',
-        machineCostPerHour: 18.0,
-        operatorCostPerHour: 0,
-        totalCostPerHour: 18.0,
-        validFrom: Timestamp.now(),
-      },
-      co2Factor: 2.68,
-      createdAt: Timestamp.now(),
-    },
-    {
-      id: 'M_ESC_04',
-      name: 'Escavadora 04 - Obra Braga',
-      category: {
-        id: 'escavadoras',
-        name: 'Escavadoras',
-        code: 'ESC',
-      },
-      location: {
-        workId: 'obra_braga_2025',
-        workName: 'Obra Braga 2025',
-        gps: {
-          latitude: 41.5518,
-          longitude: -8.4229,
-        },
-        lastUpdated: Timestamp.now(),
-      },
-      status: 'IDLE',
-      totalHours: 890.2,
-      partialHours: 120.5,
-      consumptionRate: 12.5,
-      currentTariff: {
-        id: 'tariff_2025_12_01',
-        type: 'MACHINE_AND_OPERATOR',
-        machineCostPerHour: 25.0,
-        operatorCostPerHour: 15.0,
-        totalCostPerHour: 40.0,
-        validFrom: Timestamp.now(),
-      },
-      co2Factor: 2.68,
-      createdAt: Timestamp.now(),
-    },
-  ];
+      status: 'active',
+      source: 'mock',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    try {
+      await setDoc(doc(db, `${BASE_PATH}/obras`, obra.id), payload);
+      results.push({ id: obra.id, success: true });
+    } catch (error) {
+      console.error(`Erro ao criar obra ${obra.id}:`, error);
+      results.push({ id: obra.id, success: false, error: error.message });
+    }
+  }
+
+  return results;
+};
+
+/**
+ * Criar ferramentas pequenas de exemplo para o fluxo NFC.
+ */
+export const createMockTools = async () => {
+  const now = Timestamp.now();
+  const tools = toolFixtures.map(([id, name, type, nfcTagId, hourlyCost], index) => {
+    const obra = obras[index % obras.length];
+    return {
+      id,
+      name,
+      type,
+      nfcTagId,
+      storageLocation: storageLocations[index % storageLocations.length],
+      currentObraId: obra.id,
+      currentObraName: obra.name,
+      status: index % 5 === 0 ? 'MAINTENANCE' : 'AVAILABLE',
+      hourlyCost,
+      procoreSynced: false,
+      sapSynced: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 
   const results = [];
-  for (const machine of machines) {
+  for (const tool of tools) {
     try {
-      await setDoc(doc(db, `${BASE_PATH}/machines`, machine.id), machine);
-      results.push({ id: machine.id, success: true });
+      await setDoc(doc(db, `${BASE_PATH}/tools`, tool.id), tool);
+      results.push({ id: tool.id, success: true });
     } catch (error) {
-      console.error(`Erro ao criar máquina ${machine.id}:`, error);
-      results.push({ id: machine.id, success: false, error: error.message });
+      console.error(`Erro ao criar ferramenta ${tool.id}:`, error);
+      results.push({ id: tool.id, success: false, error: error.message });
     }
   }
   return results;
 };
 
 /**
- * Criar operadores de exemplo
+ * Criar operadores de exemplo.
  */
 export const createMockOperators = async () => {
   const operators = [
     {
       id: 'OP_001',
-      name: 'João Silva',
+      name: 'Joao Silva',
       email: 'joao.silva@casais.com',
+      role: 'operador',
       registeredAt: Timestamp.fromDate(new Date('2024-01-15')),
     },
     {
       id: 'OP_002',
       name: 'Maria Santos',
       email: 'maria.santos@casais.com',
+      role: 'encarregado',
       registeredAt: Timestamp.fromDate(new Date('2024-02-20')),
     },
     {
       id: 'OP_003',
       name: 'Carlos Oliveira',
       email: 'carlos.oliveira@casais.com',
+      role: 'operador',
       registeredAt: Timestamp.fromDate(new Date('2024-03-10')),
     },
     {
       id: 'OP_004',
       name: 'Ana Costa',
       email: 'ana.costa@casais.com',
+      role: 'gestor',
       registeredAt: Timestamp.fromDate(new Date('2024-04-05')),
+    },
+    {
+      id: 'OP_005',
+      name: 'Pedro Costa',
+      email: 'pedro.costa@casais.com',
+      role: 'operador',
+      registeredAt: Timestamp.fromDate(new Date('2024-05-12')),
     },
   ];
 
@@ -193,87 +163,77 @@ export const createMockOperators = async () => {
 };
 
 /**
- * Criar sessões de exemplo (últimas 2 semanas)
+ * Criar sessoes de ferramentas dos ultimos 30 dias.
  */
-export const createMockSessions = async () => {
-  const machines = ['M_ESC_01', 'M_GRU_02', 'M_BET_03', 'M_ESC_04'];
-  const operators = ['OP_001', 'OP_002', 'OP_003', 'OP_004'];
+export const createMockToolSessions = async () => {
+  const operators = ['OP_001', 'OP_002', 'OP_003', 'OP_004', 'OP_005'];
+  const operatorNames = {
+    OP_001: 'Joao Silva',
+    OP_002: 'Maria Santos',
+    OP_003: 'Carlos Oliveira',
+    OP_004: 'Ana Costa',
+    OP_005: 'Pedro Costa',
+  };
+
   const sessions = [];
+  const now = new Date();
 
-  // Criar sessões para os últimos 14 dias
-  const today = new Date();
-  for (let day = 0; day < 14; day++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - day);
-
-    // 2-4 sessões por dia
-    const sessionsPerDay = Math.floor(Math.random() * 3) + 2;
+  for (let day = 0; day < 30; day++) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - day);
+    const sessionsPerDay = 2 + (day % 4);
 
     for (let i = 0; i < sessionsPerDay; i++) {
-      const machineId = machines[Math.floor(Math.random() * machines.length)];
-      const operatorId = operators[Math.floor(Math.random() * operators.length)];
-
-      // Hora de início aleatória (entre 8h e 18h)
-      const startHour = Math.floor(Math.random() * 10) + 8;
-      const startMinute = Math.floor(Math.random() * 60);
+      const tool = toolFixtures[(day + i) % toolFixtures.length];
+      const obra = obras[(day + i) % obras.length];
+      const operatorId = operators[(day + i) % operators.length];
       const startTime = new Date(date);
-      startTime.setHours(startHour, startMinute, 0, 0);
-
-      // Duração aleatória (entre 2h e 10h)
-      const durationHours = Math.random() * 8 + 2;
-
-      const endTime = new Date(startTime);
-      endTime.setHours(startTime.getHours() + Math.floor(durationHours));
-      endTime.setMinutes(startTime.getMinutes() + Math.floor((durationHours % 1) * 60));
+      startTime.setHours(8 + ((day + i) % 9), (i * 15) % 60, 0, 0);
+      const durationHours = 1.5 + ((day + i) % 7) * 0.75;
+      const endTime = new Date(startTime.getTime() + durationHours * 3_600_000);
+      const isOpen = day === 0 && i < 3;
 
       sessions.push({
-        cardId: operatorId,
-        machineId: machineId,
+        toolId: tool[0],
+        toolName: tool[1],
+        toolType: tool[2],
+        nfcTagId: tool[3],
+        operatorId,
+        operatorName: operatorNames[operatorId],
+        obraId: obra.id,
+        obraName: obra.name,
+        sapOrigin: storageLocations[(day + i) % storageLocations.length],
+        sapDestination: obra.name,
+        sapWorker: operatorId,
+        status: isOpen ? 'OPEN' : 'CLOSED',
         startTime: Timestamp.fromDate(startTime),
-        endTime: Timestamp.fromDate(endTime),
-        durationHours: Math.round(durationHours * 10) / 10,
-        status: 'CLOSED',
-        closeReason: 'MANUAL',
+        endTime: isOpen ? null : Timestamp.fromDate(endTime),
+        durationHours: isOpen ? null : Math.round(durationHours * 100) / 100,
+        procoreSynced: false,
+        sapSynced: !isOpen,
+        sapMode: 'mock',
+        sapNotificationId: null,
+        location: {
+          lat: obra.lat + ((i % 3) - 1) * 0.002,
+          lng: obra.lng + ((i % 2) - 0.5) * 0.002,
+          accuracy: 18 + ((day + i) % 30),
+          timestamp: Timestamp.fromDate(startTime),
+        },
         createdAt: Timestamp.fromDate(startTime),
       });
     }
   }
 
-  // Adicionar algumas sessões ativas
-  const activeSessions = [
-    {
-      cardId: 'OP_001',
-      machineId: 'M_ESC_01',
-      startTime: Timestamp.fromDate(new Date(Date.now() - 3 * 60 * 60 * 1000)), // 3h atrás
-      endTime: null,
-      durationHours: null,
-      status: 'OPEN',
-      createdAt: Timestamp.fromDate(new Date(Date.now() - 3 * 60 * 60 * 1000)),
-    },
-    {
-      cardId: 'OP_002',
-      machineId: 'M_GRU_02',
-      startTime: Timestamp.fromDate(new Date(Date.now() - 1.5 * 60 * 60 * 1000)), // 1.5h atrás
-      endTime: null,
-      durationHours: null,
-      status: 'OPEN',
-      createdAt: Timestamp.fromDate(new Date(Date.now() - 1.5 * 60 * 60 * 1000)),
-    },
-  ];
-
-  const allSessions = [...sessions, ...activeSessions];
   const results = [];
-
-  for (const session of allSessions) {
+  for (const session of sessions) {
     try {
-      const docRef = await addDoc(collection(db, `${BASE_PATH}/sessions`), session);
+      const docRef = await addDoc(collection(db, `${BASE_PATH}/tool_sessions`), session);
       results.push({ id: docRef.id, success: true });
     } catch (error) {
-      console.error('Erro ao criar sessão:', error);
+      console.error('Erro ao criar sessao de ferramenta:', error);
       results.push({ success: false, error: error.message });
     }
   }
-
   return results;
 };
 
@@ -286,38 +246,60 @@ const generateValidationToken = () => {
 
 export const createMockAlerts = async () => {
   const now = Date.now();
-  const HOUR = 60 * 60 * 1000;
+  const day = 24 * 60 * 60 * 1000;
 
   const fixtures = [
-    { type: 'LONG_SESSION', ageHours: 4, machineId: 'M_ESC_01', machineName: 'Escavadora 01 - Obra Porto', operatorId: 'OP_001', operatorName: 'João Silva', operatorEmail: 'joao.silva@casais.pt', obraId: 'obra_porto_2025', obraName: 'Obra Porto 2025', durationHours: 6.4 },
-    { type: 'LONG_SESSION', ageHours: 30, machineId: 'M_GRU_02', machineName: 'Grua 02 - Obra Lisboa', operatorId: 'OP_002', operatorName: 'Maria Santos', operatorEmail: 'maria.santos@casais.pt', obraId: 'obra_lisboa_2025', obraName: 'Obra Lisboa 2025', durationHours: 7.8 },
-    { type: 'AUTO_CLOSE', ageHours: 56, machineId: 'M_ESC_01', machineName: 'Escavadora 01 - Obra Porto', operatorId: 'OP_003', operatorName: 'Pedro Costa', operatorEmail: 'pedro.costa@casais.pt', obraId: 'obra_porto_2025', obraName: 'Obra Porto 2025', durationHours: 14.0 },
+    {
+      type: 'TOOL_OVERDUE',
+      ageDays: 8,
+      toolId: 'tool_martelo_001',
+      toolName: 'Martelo Pneumatico #1',
+      operatorId: 'OP_001',
+      operatorName: 'Joao Silva',
+      operatorEmail: 'joao.silva@casais.pt',
+      obraId: 'procore_328122',
+      obraName: 'Torre Boavista',
+    },
+    {
+      type: 'TOOL_MISSING_LOCATION',
+      ageDays: 2,
+      toolId: 'tool_gerador_portatil',
+      toolName: 'Gerador Portatil 5kVA',
+      operatorId: 'OP_003',
+      operatorName: 'Carlos Oliveira',
+      operatorEmail: 'carlos.oliveira@casais.pt',
+      obraId: 'obra_braga_norte',
+      obraName: 'Braga Norte',
+    },
+    {
+      type: 'SAP_SYNC_PENDING',
+      ageDays: 1,
+      toolId: 'tool_compactador',
+      toolName: 'Compactador Placa',
+      operatorId: 'OP_005',
+      operatorName: 'Pedro Costa',
+      operatorEmail: 'pedro.costa@casais.pt',
+      obraId: 'obra_gaia_sul',
+      obraName: 'Gaia Sul',
+    },
   ];
 
   const results = [];
   for (const f of fixtures) {
-    const createdAt = new Date(now - f.ageHours * HOUR);
-    const startTime = new Date(createdAt.getTime() - f.durationHours * HOUR);
+    const createdAt = new Date(now - f.ageDays * day);
     const id = `alert_${createdAt.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
     const alert = {
       id,
       validationToken: generateValidationToken(),
       type: f.type,
       status: 'PENDING',
-      sessionId: `mock_session_${id}`,
-      machineId: f.machineId,
-      machineName: f.machineName,
+      toolId: f.toolId,
+      toolName: f.toolName,
       operatorId: f.operatorId,
       operatorName: f.operatorName,
       operatorEmail: f.operatorEmail,
       obraId: f.obraId,
       obraName: f.obraName,
-      originalStartTime: Timestamp.fromDate(startTime),
-      originalEndTime: Timestamp.fromDate(createdAt),
-      originalDurationHours: f.durationHours,
-      correctedStartTime: null,
-      correctedEndTime: null,
-      correctedDurationHours: null,
       createdAt: Timestamp.fromDate(createdAt),
       validatedAt: null,
       validatedBy: null,
@@ -343,24 +325,28 @@ export const createAllMockData = async () => {
   console.log('A criar dados mock...');
 
   try {
-    const machines = await createMockMachines();
-    console.log(`${machines.filter((m) => m.success).length} máquinas criadas`);
+    const createdObras = await createMockObras();
+    console.log(`${createdObras.filter((obra) => obra.success).length} obras criadas`);
+
+    const tools = await createMockTools();
+    console.log(`${tools.filter((tool) => tool.success).length} ferramentas criadas`);
 
     const operators = await createMockOperators();
-    console.log(`${operators.filter((o) => o.success).length} operadores criados`);
+    console.log(`${operators.filter((operator) => operator.success).length} operadores criados`);
 
-    const sessions = await createMockSessions();
-    console.log(`${sessions.filter((s) => s.success).length} sessões criadas`);
+    const toolSessions = await createMockToolSessions();
+    console.log(`${toolSessions.filter((session) => session.success).length} sessoes de ferramentas criadas`);
 
     const alerts = await createMockAlerts();
-    console.log(`${alerts.filter((a) => a.success).length} alertas pendentes criados`);
+    console.log(`${alerts.filter((alert) => alert.success).length} alertas pendentes criados`);
 
     return {
       success: true,
-      machines: machines.filter((m) => m.success).length,
-      operators: operators.filter((o) => o.success).length,
-      sessions: sessions.filter((s) => s.success).length,
-      alerts: alerts.filter((a) => a.success).length,
+      obras: createdObras.filter((obra) => obra.success).length,
+      tools: tools.filter((tool) => tool.success).length,
+      operators: operators.filter((operator) => operator.success).length,
+      toolSessions: toolSessions.filter((session) => session.success).length,
+      alerts: alerts.filter((alert) => alert.success).length,
     };
   } catch (error) {
     console.error('Erro ao criar dados mock:', error);
@@ -370,4 +356,3 @@ export const createAllMockData = async () => {
     };
   }
 };
-

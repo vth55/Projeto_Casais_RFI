@@ -61,6 +61,7 @@ const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
 const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
 const SessoesCorrigidasView = lazy(() => import('./views/SessoesCorrigidasView'));
 const EstaleiroView = lazy(() => import('./views/EstaleiroView'));
+const MapaObrasView = lazy(() => import('./views/MapaObrasView'));
 const ObraMenuLayout = lazy(() => import('./views/obra/ObraMenuLayout'));
 
 // Dashboard Router (perfis)
@@ -125,6 +126,7 @@ export default function App() {
       '/analises': 'analises-geral',
       '/relatorios': 'relatorios',
       '/configuracoes': 'configuracoes',
+      '/mapa': 'mapa',
     };
     const mappedView = PATH_TO_VIEW[path];
     if (mappedView) {
@@ -216,14 +218,14 @@ export default function App() {
       if (db) {
         try {
           const basePath = `artifacts/${projectId}/public/data`;
-          const [machinesSnap, operatorsSnap, sessionsSnap, alertsSnap] = await Promise.all([
-            getDocs(collection(db, `${basePath}/machines`)),
+          const [toolsSnap, operatorsSnap, toolSessionsSnap, alertsSnap] = await Promise.all([
+            getDocs(collection(db, `${basePath}/tools`)),
             getDocs(collection(db, `${basePath}/operators`)),
-            getDocs(collection(db, `${basePath}/sessions`)),
+            getDocs(collection(db, `${basePath}/tool_sessions`)),
             getDocs(collection(db, `${basePath}/alerts`)),
           ]);
 
-          if (machinesSnap.empty && operatorsSnap.empty && sessionsSnap.empty) {
+          if (toolsSnap.empty && operatorsSnap.empty && toolSessionsSnap.empty) {
             console.log('Criando dados mock...');
             await createAllMockData();
           } else if (alertsSnap.empty) {
@@ -264,6 +266,7 @@ export default function App() {
     if (activeView.startsWith('analises')) return <AnalisesView />;
     if (activeView === 'relatorios') return <RelatoriosView />;
     if (activeView === 'configuracoes') return <ConfiguracoesView />;
+    if (activeView === 'mapa') return <MapaObrasView />;
     return <DashboardRouter DefaultDashboard={DashboardView} />;
   }, [activeView, currentUser?.systemRole]);
 

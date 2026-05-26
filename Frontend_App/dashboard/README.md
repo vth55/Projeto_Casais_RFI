@@ -1,51 +1,44 @@
-# 🎨 Frontend_App - PWA Dashboard
+# Frontend_App - PWA Dashboard
 
-Interface principal de gestão e visualização de dados do *Casais Fleet Intelligence*. Desenvolvida como uma Progressive Web Application (PWA) de alto desempenho.
+Interface principal do Casais Fleet Intelligence.
+Desde 2026-05-25 o frontend ativo deixou de ser sobre frota pesada e passou a focar ferramentas pequenas com NFC.
 
----
+## Tecnologias
 
-## 🛠️ Tecnologias
-- **React 19** + **Vite**
-- **Tailwind CSS** (Styling)
-- **Zustand** (Estado Global)
-- **Lucide React** (Ícones)
-- **Firebase SDK** (Sync em tempo real)
+- React 19 + Vite
+- Tailwind CSS
+- Zustand
+- Firebase SDK
+- Capacitor Android
 
----
+## Superficies principais
 
-## 📂 Estrutura de Pastas
-- `src/components/`: Componentes UI reutilizáveis (Card, StatCard, Button).
-- `src/store/`: Gestão de estado centralizada.
-  - `useStore.js`: Estado principal de máquinas, sessões e obras.
-  - `useAuthStore.js`: Sistema de autenticação e RBAC.
-- `src/views/`: Páginas completas da aplicação.
-  - `DashboardView.jsx`: Painel de controlo principal.
-  - `MaquinasView.jsx`: Gestão de equipamentos e custos.
-- `src/config/`: Configurações de permissões e Firebase.
-- `public/`: Assets estáticos e `manifest.json`.
+- Dashboard e navegacao operacional
+- `FerramentasView.jsx` para CRUD de ferramentas pequenas
+- `ToolTagPage.jsx` para deep link `/t/:tagId`
+- shell legado de obras, sessoes, manutencao e analytics
 
----
+## Estrutura relevante
 
-## 🔐 Segurança (RBAC)
-O sistema utiliza um modelo de **Role-Based Access Control** com 5 perfis:
-1. **Admin**: Acesso total.
-2. **IT/Sistemas**: Gestão técnica e integrações.
-3. **Gestor (Frota/Financeiro)**: Operação e custos.
-4. **Supervisor**: Focado em obras e manutenção.
-5. **Operador**: Mobile Hub (NFC) e reporte de avarias.
+- `src/views/FerramentasView.jsx` - gestao de ferramentas pequenas
+- `src/pages/ToolTagPage.jsx` - leitura operacional via NFC URL
+- `src/views/MaquinasView.jsx` - referencia legada, nao e a vista ativa principal
+- `src/store/` - stores Zustand
+- `android/` - projeto nativo Capacitor
 
----
+## Android
 
-## 📶 Modo Offline
-Graças ao `enableIndexedDbPersistence` do Firebase e ao Service Worker configurado no `vite.config.js`, a app pode ser utilizada sem rede, sincronizando os dados automaticamente assim que a ligação for restabelecida.
+- `npm run build:android` gera `dist/` para o Capacitor
+- deep links `https://casais-rfid.web.app/t/*` sao tratados no APK
+- NFC e intent filters estao no AndroidManifest
 
----
+## Como correr
 
-## 🚀 Como Correr
 ```bash
 npm install
 npm run dev
 ```
 
----
-> **Style Guide**: Seguimos os padrões oficiais da Casais (#005EB8). Evitar o uso de cores roxas/violetas conforme as regras de design do projeto.
+## Nota
+
+Se encontrares docs ou componentes a falar de maquinas como produto principal, trata isso como legado pre-pivoto a menos que o codigo atual ainda dependa explicitamente deles.

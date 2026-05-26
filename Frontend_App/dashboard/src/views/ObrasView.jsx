@@ -37,11 +37,9 @@ const OBRA_STATUS = {
 };
 
 // Card de Obra
-const ObraCard = ({ obra, machines, operators, procoreProject, onViewDetails, onEdit, onOpenMap }) => {
-  const machinesInObra = machines.filter(m =>
-    (typeof m.location === 'object' ? m.location?.workId : m.location) === obra.id
-  );
-  const operatorsInObra = operators.filter(op => op.assignedObraId === obra.id);
+const ObraCard = ({ obra, procoreProject, getToolsByObraId, getToolSessionsByObraId, onViewDetails, onEdit, onOpenMap }) => {
+  const assignedToolsCount = getToolsByObraId(obra.id).length;
+  const activeToolSessionsCount = getToolSessionsByObraId(obra.id).filter(s => s.status === 'OPEN').length;
 
   const status = OBRA_STATUS[obra.status] || OBRA_STATUS.ACTIVE;
   const StatusIcon = status.icon;
@@ -84,17 +82,17 @@ const ObraCard = ({ obra, machines, operators, procoreProject, onViewDetails, on
             <Truck className="w-4 h-4 text-emerald-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Equipamentos</p>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{machinesInObra.length}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Ferramentas atribuídas</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{assignedToolsCount}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
-            <Users className="w-4 h-4 text-primary-600" />
+            <Activity className="w-4 h-4 text-primary-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Operadores</p>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{operatorsInObra.length}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Em uso agora</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{activeToolSessionsCount}</p>
           </div>
         </div>
       </div>
@@ -820,7 +818,23 @@ const VIEW_TO_FILTER = {
 };
 
 const ObrasView = () => {
-  const { activeView, setActiveView, obras, machines, operators, sessions, loading, updateObra, deleteObra, locationCards, addLocationCard, deleteLocationCard, matchObraToProcore } = useStore();
+  const {
+    activeView,
+    setActiveView,
+    obras,
+    machines,
+    operators,
+    sessions,
+    loading,
+    updateObra,
+    deleteObra,
+    locationCards,
+    addLocationCard,
+    deleteLocationCard,
+    matchObraToProcore,
+    getToolsByObraId,
+    getToolSessionsByObraId,
+  } = useStore();
   const { isAdmin } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
@@ -1106,9 +1120,9 @@ const ObrasView = () => {
                 <ObraCard
                   key={obra.id}
                   obra={obra}
-                  machines={machines}
-                  operators={operators}
                   procoreProject={matchObraToProcore(obra).procoreProject}
+                  getToolsByObraId={getToolsByObraId}
+                  getToolSessionsByObraId={getToolSessionsByObraId}
                   onViewDetails={handleViewDetails}
                   onEdit={handleEdit}
                   onOpenMap={handleOpenMap}

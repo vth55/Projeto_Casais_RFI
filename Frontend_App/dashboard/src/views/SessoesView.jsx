@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Clock, Play, Search, Download, Truck, User, Timer, Activity,
+  Clock, Play, Search, Download, Wrench, User, Timer, Activity,
   CheckCircle, Calendar, AlertTriangle, XCircle, Eye,
 } from 'lucide-react';
 import useStore from '../store/useStore';
@@ -9,40 +9,114 @@ import { Card, StatCard, Button, Badge, StatusBadge, Table, EmptyState, Skeleton
 import LiveTimer from '../components/ui/LiveTimer';
 import TabNav from '../components/TabNav';
 import { PERMISSIONS } from '../config/permissions';
+import { getDateRangeFromPreset } from '../utils/chartDataHelpers';
+import { detectToolSessionAnomalies, resolveTimestamp } from '../utils/sessionHelpers';
 
-// ─── Active Session Card ───────────────────────────────────────────────────────
-const ActiveSessionCard = ({ session, machine, operator }) => {
-  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
-  const durationMs = Date.now() - startTime.getTime();
-  const isLong = durationMs >= 5 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const toValidDate = (value) => {
+  const date = resolveTimestamp(value);
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+};
+
+const getSessionStart = (session) => toValidDate(session?.startTime);
+const getSessionEnd = (session) => toValidDate(session?.endTime);
+
+const getSessionDurationHours = (session) => {
+  if (typeof session?.durationHours === 'number') return session.durationHours;
+
+  const start = getSessionStart(session);
+  if (!start) return 0;
+
+  const end = getSessionEnd(session) || new Date();
+  return Math.max(0, (end.getTime() - start.getTime()) / 3600000);
+};
+
+const getDaysOpen = (session) => {
+  const start = getSessionStart(session);
+  if (!start) return 0;
+  return Math.max(0, Math.floor((Date.now() - start.getTime()) / DAY_MS));
+};
+
+const formatDuration = (session) => {
+  const hours = getSessionDurationHours(session);
+  return hours > 0 ? `${hours.toFixed(1)}h` : '-';
+};
+
+const findTool = (tools, session) =>
+  tools.find(tool => tool.id === session?.toolId);
+
+const findOperator = (operators, session) =>
+  operators.find(operator =>
+    operator.id === session?.operatorId ||
+    operator.cardId === session?.operatorId ||
+    operator.rfidCard === session?.operatorId
+  );
+
+const getToolName = (tool, session) =>
+  tool?.name || session?.toolName || session?.toolId || 'Ferramenta';
+
+const getOperatorName = (operator, session) =>
+  operator?.name || session?.operatorName || session?.operatorId || 'Operador';
+
+const getAnomalyLabel = (flag) => {
+  if (flag === 'TOOL_PRESUMED_LOST') return 'Presumida perdida';
+  if (flag === 'TOOL_OVERDUE') return 'Devolução atrasada';
+  return flag;
+};
+
+const getAnomalyVariant = (flag) =>
+  flag === 'TOOL_PRESUMED_LOST' ? 'danger' : 'warning';
+
+// Active Session Card
+const ActiveSessionCard = ({ session, tool, operator }) => {
+  const startTime = getSessionStart(session);
+  const anomalies = detectToolSessionAnomalies(session);
+  const isOverdue = anomalies.length > 0;
 
   return (
-    <Card className={`border-l-4 ${isLong ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isLong ? 'bg-amber-100' : 'bg-emerald-100'}`}>
-            <Play className={`w-6 h-6 ${isLong ? 'text-amber-600' : 'text-emerald-600'}`} />
+    <Card className={`border-l-4 ${isOverdue ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isOverdue ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+            <Play className={`w-6 h-6 ${isOverdue ? 'text-amber-600' : 'text-emerald-600'}`} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-900 dark:text-white">{machine?.name || session.machineId}</h3>
-              {isLong && <Badge variant="warning">+5h</Badge>}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-slate-900 dark:text-white truncate">
+                {getToolName(tool, session)}
+              </h3>
+              {anomalies.map(flag => (
+                <Badge key={flag} variant={getAnomalyVariant(flag)} size="sm">
+                  {getAnomalyLabel(flag)}
+                </Badge>
+              ))}
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-1">
-              <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" />{operator?.name || session.cardId}</span>
+            <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
               <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" />
-                {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                <User className="w-3.5 h-3.5" />
+                {getOperatorName(operator, session)}
               </span>
+              {startTime && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {session.obraName && <span>{session.obraName}</span>}
             </div>
           </div>
         </div>
-        <div className="text-right">
-          <LiveTimer
-            startTime={startTime}
-            tickMs={1000}
-            className={`text-2xl ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}
-          />
+        <div className="text-right flex-shrink-0">
+          {startTime ? (
+            <LiveTimer
+              startTime={startTime}
+              tickMs={1000}
+              className={`text-2xl ${isOverdue ? 'text-amber-600' : 'text-emerald-600'}`}
+            />
+          ) : (
+            <p className="text-2xl text-slate-400">-</p>
+          )}
           <p className="text-xs text-slate-500 dark:text-slate-400">em curso</p>
         </div>
       </div>
@@ -50,10 +124,10 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
   );
 };
 
-// ─── Validation Modal (merged from QualidadeView) ──────────────────────────────
-const ValidationModal = ({ session, machine, operator, onValidate, onClose }) => {
+// Validation Modal, preserving the existing validation action flow.
+const ValidationModal = ({ session, tool, operator, onValidate, onClose }) => {
   const [action, setAction] = useState('approve');
-  const [correctedHours, setCorrectedHours] = useState(session?.durationHours?.toFixed(2) || '');
+  const [correctedHours, setCorrectedHours] = useState(session ? getSessionDurationHours(session).toFixed(2) : '');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = () => {
@@ -68,70 +142,71 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
 
   if (!session) return null;
 
-  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
-  const endTime = session.endTime?.toDate?.() || new Date(session.endTime);
-  const hasDurationAnomaly = session.durationHours >= 5;
+  const startTime = getSessionStart(session);
+  const endTime = getSessionEnd(session);
+  const anomalies = detectToolSessionAnomalies(session);
+  const daysOpen = getDaysOpen(session);
 
   return (
     <div className="space-y-6">
-      {/* Detalhes da sessão */}
       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/40 rounded-lg flex items-center justify-center">
-            <Truck className="w-5 h-5 text-primary-600" />
+            <Wrench className="w-5 h-5 text-primary-600" />
           </div>
           <div>
-            <p className="font-medium text-slate-900 dark:text-white">{machine?.name || session.machineId}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Operador: {operator?.name || session.cardId}</p>
+            <p className="font-medium text-slate-900 dark:text-white">{getToolName(tool, session)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Operador: {getOperatorName(operator, session)}
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200 dark:border-slate-700">
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400">Início</p>
             <p className="text-sm font-medium text-slate-900 dark:text-white">
-              {startTime.toLocaleDateString('pt-PT')}{' '}
-              {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+              {startTime
+                ? `${startTime.toLocaleDateString('pt-PT')} ${startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}`
+                : '-'}
             </p>
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400">Fim</p>
             <p className="text-sm font-medium text-slate-900 dark:text-white">
-              {endTime.toLocaleDateString('pt-PT')}{' '}
-              {endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+              {endTime
+                ? `${endTime.toLocaleDateString('pt-PT')} ${endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Em curso'}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Duração Registada</p>
-            <p className={`text-sm font-semibold ${hasDurationAnomaly ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>
-              {session.durationHours?.toFixed(2)}h
+            <p className="text-xs text-slate-500 dark:text-slate-400">Tempo em aberto</p>
+            <p className={`text-sm font-semibold ${anomalies.length ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>
+              {daysOpen} dias
             </p>
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400">Estado Atual</p>
-            <StatusBadge status={session.validationStatus || 'PENDING'} />
+            <StatusBadge status={session.validationStatus || session.status || 'PENDING'} />
           </div>
         </div>
       </div>
 
-      {/* Alerta de anomalia de duração */}
-      {hasDurationAnomaly && (
+      {anomalies.length > 0 && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="font-medium text-amber-800 dark:text-amber-300">Anomalia de Duração</p>
+            <p className="font-medium text-amber-800 dark:text-amber-300">Anomalia de ferramenta</p>
             <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
-              Esta sessão excede 5 horas contínuas ({session.durationHours?.toFixed(1)}h).
-              Verifique se a duração está correta ou se foi um esquecimento de fecho.
+              {anomalies.map(getAnomalyLabel).join(', ')}. Confirme se a ferramenta continua em uso,
+              se já foi devolvida ou se precisa de correção administrativa.
             </p>
           </div>
         </div>
       )}
 
-      {/* Seleção de ação */}
       <div className="space-y-3">
         <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Ação de Validação</p>
-        <div className="grid grid-cols-3 gap-3">
-          {/* Aprovar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
             onClick={() => setAction('approve')}
             className={`p-4 rounded-lg border-2 text-center transition-all ${
@@ -145,7 +220,6 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
               Aprovar
             </p>
           </button>
-          {/* Corrigir */}
           <button
             onClick={() => setAction('correct')}
             className={`p-4 rounded-lg border-2 text-center transition-all ${
@@ -159,7 +233,6 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
               Corrigir
             </p>
           </button>
-          {/* Rejeitar */}
           <button
             onClick={() => setAction('reject')}
             className={`p-4 rounded-lg border-2 text-center transition-all ${
@@ -176,7 +249,6 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
         </div>
       </div>
 
-      {/* Campo de horas corrigidas — só quando corrigir */}
       {action === 'correct' && (
         <Input
           label="Horas Corrigidas"
@@ -190,7 +262,6 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
         />
       )}
 
-      {/* Notas */}
       <Input
         label="Notas (opcional)"
         value={notes}
@@ -198,7 +269,6 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
         placeholder="Adicione observações sobre esta validação..."
       />
 
-      {/* Botões de ação */}
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
         <Button variant="ghost" onClick={onClose}>
           Cancelar
@@ -216,49 +286,47 @@ const ValidationModal = ({ session, machine, operator, onValidate, onClose }) =>
   );
 };
 
-// ─── Validation Session Card ───────────────────────────────────────────────────
-const ValidationSessionCard = ({ session, machine, operator, onSelect, canValidate }) => {
-  const startTime = session.startTime?.toDate?.() || new Date(session.startTime);
-  const isFatigue = session.durationHours >= 5;
-  const isValidated = session.validationStatus === 'VALIDATED';
-  const isCorrected = !!session.corrected;
+const ValidationSessionCard = ({ session, tool, operator, onSelect, canValidate }) => {
+  const startTime = getSessionStart(session);
+  const anomalies = detectToolSessionAnomalies(session);
+  const isValidated = session.validationStatus === 'VALIDATED' || session.validationStatus === 'RESOLVED';
+  const isCorrected = !!session.corrected || !!session.correctedByAdmin;
 
   return (
     <div
       className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
         canValidate ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''
       } ${
-        isFatigue && !isValidated
+        anomalies.length && !isValidated
           ? 'border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10'
           : 'border-slate-200 dark:border-slate-700'
       }`}
       onClick={() => canValidate && onSelect(session)}
     >
-      {/* Lado esquerdo — info da sessão */}
       <div className="flex items-center gap-3 min-w-0">
         <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
           isValidated ? 'bg-emerald-100 dark:bg-emerald-900/30' :
-          isFatigue ? 'bg-amber-100 dark:bg-amber-900/30' :
+          anomalies.length ? 'bg-amber-100 dark:bg-amber-900/30' :
           'bg-primary-100 dark:bg-primary-900/30'
         }`}>
           {isValidated
             ? <CheckCircle className="w-5 h-5 text-emerald-600" />
-            : isFatigue
+            : anomalies.length
               ? <AlertTriangle className="w-5 h-5 text-amber-600" />
-              : <Truck className="w-5 h-5 text-primary-600" />
+              : <Wrench className="w-5 h-5 text-primary-600" />
           }
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-medium text-slate-900 dark:text-white truncate">
-              {machine?.name || session.machineId}
+              {getToolName(tool, session)}
             </p>
-            {isFatigue && !isValidated && (
-              <Badge variant="warning" size="sm">
+            {anomalies.map(flag => (
+              <Badge key={flag} variant={getAnomalyVariant(flag)} size="sm">
                 <AlertTriangle className="w-3 h-3 mr-1" />
-                Possível Esquecimento
+                {getAnomalyLabel(flag)}
               </Badge>
-            )}
+            ))}
             {isCorrected && (
               <Badge variant="primary" size="sm">Corrigida</Badge>
             )}
@@ -266,25 +334,27 @@ const ValidationSessionCard = ({ session, machine, operator, onSelect, canValida
           <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
             <span className="flex items-center gap-1">
               <User className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{operator?.name || session.cardId}</span>
+              <span className="truncate">{getOperatorName(operator, session)}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-              {startTime.toLocaleDateString('pt-PT')}
-            </span>
+            {startTime && (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                {startTime.toLocaleDateString('pt-PT')}
+              </span>
+            )}
+            {session.obraName && <span>{session.obraName}</span>}
           </div>
         </div>
       </div>
 
-      {/* Lado direito — duração + ação */}
       <div className="flex items-center gap-3 flex-shrink-0 ml-3">
         <div className="text-right">
           <p className={`text-lg font-semibold ${
-            isFatigue && !isValidated ? 'text-amber-600' : 'text-slate-900 dark:text-white'
+            anomalies.length && !isValidated ? 'text-amber-600' : 'text-slate-900 dark:text-white'
           }`}>
-            {session.durationHours?.toFixed(1)}h
+            {getDaysOpen(session)}d
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">duração</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">em aberto</p>
         </div>
         {canValidate && !isValidated && (
           <Button variant="outline" size="sm" icon={Eye}>
@@ -299,15 +369,23 @@ const ValidationSessionCard = ({ session, machine, operator, onSelect, canValida
   );
 };
 
-// ─── Main Component ────────────────────────────────────────────────────────────
 const SessoesView = () => {
-  const { activeView, setActiveView, sessions, machines, operators, getFilteredSessions, resolveSessionAnomaly, loading } = useStore();
+  const {
+    activeView,
+    setActiveView,
+    toolSessions = [],
+    tools = [],
+    operators = [],
+    resolveSessionAnomaly,
+    loading,
+    dateFilter,
+    customRange,
+  } = useStore();
   const { can } = useAuthStore();
 
   const canViewValidations = can(PERMISSIONS.QUALITY_VIEW) || can(PERMISSIONS.SESSIONS_VIEW_ALL);
   const canValidate = can(PERMISSIONS.QUALITY_VALIDATE);
 
-  // Derivar tab directamente do activeView
   const activeTab = activeView === 'sessoes-historico'
     ? 'history'
     : activeView === 'sessoes-validacoes'
@@ -316,58 +394,48 @@ const SessoesView = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [validatingSession, setValidatingSession] = useState(null);
-  const [validationSubTab, setValidationSubTab] = useState('pending');
 
-  const filteredSessions = getFilteredSessions();
-  const activeSessions = useMemo(() => sessions.filter(s => s.status === 'OPEN'), [sessions]);
-  const closedSessions = useMemo(() => filteredSessions.filter(s => s.status === 'CLOSED'), [filteredSessions]);
+  const filteredSessions = useMemo(() => {
+    const { start, end } = getDateRangeFromPreset(dateFilter, customRange);
+    return toolSessions.filter(session => {
+      const sessionDate = getSessionStart(session);
+      return sessionDate && sessionDate >= start && sessionDate <= end;
+    });
+  }, [toolSessions, dateFilter, customRange]);
 
-  // Validações — sessões fechadas pendentes (duração >=5h ou autoClose, não validadas)
-  const pendingValidations = useMemo(() => closedSessions.filter(s =>
-    (s.durationHours >= 5 || s.autoClose === true) &&
-    s.validationStatus !== 'VALIDATED' &&
-    s.validationStatus !== 'RESOLVED'
-  ), [closedSessions]);
+  const activeSessions = useMemo(
+    () => toolSessions.filter(session => session.status === 'OPEN'),
+    [toolSessions],
+  );
 
-  // Anomalias — só >5h (pode estar validada ou não)
-  const fatigueAlerts = useMemo(() => sessions.filter(s => s.durationHours >= 5), [sessions]);
+  const closedSessions = useMemo(
+    () => filteredSessions.filter(session => session.status === 'CLOSED'),
+    [filteredSessions],
+  );
 
-  // Histórico de validadas
-  const validatedSessions = useMemo(() => sessions.filter(s => s.validationStatus === 'VALIDATED'), [sessions]);
+  const anomalySessions = useMemo(
+    () => toolSessions.filter(session => detectToolSessionAnomalies(session).length > 0),
+    [toolSessions],
+  );
 
-  const stats = useMemo(() => {
-    const totalHours = closedSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-    return {
-      active: activeSessions.length,
-      closed: closedSessions.length,
-      totalHours: Math.round(totalHours),
-      avgDuration: closedSessions.length > 0
-        ? Math.round((totalHours / closedSessions.length) * 10) / 10
-        : 0,
-      pendingValidations: pendingValidations.length,
-      fatigueAlerts: fatigueAlerts.length,
-      validated: validatedSessions.length,
-      corrected: validatedSessions.filter(s => s.corrected).length,
-    };
-  }, [activeSessions, closedSessions, pendingValidations, fatigueAlerts, validatedSessions]);
-
-  // Sessões para a tab de validações conforme sub-tab
-  const validationList = useMemo(() => {
-    if (validationSubTab === 'pending') return pendingValidations;
-    if (validationSubTab === 'fatigue') return fatigueAlerts;
-    return validatedSessions;
-  }, [validationSubTab, pendingValidations, fatigueAlerts, validatedSessions]);
+  const stats = useMemo(() => ({
+    total: filteredSessions.length,
+    active: activeSessions.length,
+    closed: closedSessions.length,
+    anomalies: anomalySessions.length,
+  }), [filteredSessions, activeSessions, closedSessions, anomalySessions]);
 
   const applySearch = (list) => {
     if (!searchTerm) return list;
     const term = searchTerm.toLowerCase();
-    return list.filter(s => {
-      const machine = machines.find(m => m.id === s.machineId);
-      const operator = operators.find(o => o.id === s.cardId);
+    return list.filter(session => {
+      const tool = findTool(tools, session);
+      const operator = findOperator(operators, session);
       return (
-        machine?.name?.toLowerCase().includes(term) ||
-        operator?.name?.toLowerCase().includes(term) ||
-        s.machineId?.toLowerCase().includes(term)
+        getToolName(tool, session).toLowerCase().includes(term) ||
+        getOperatorName(operator, session).toLowerCase().includes(term) ||
+        session.toolId?.toLowerCase().includes(term) ||
+        session.obraName?.toLowerCase().includes(term)
       );
     });
   };
@@ -377,49 +445,51 @@ const SessoesView = () => {
       ? activeSessions
       : activeTab === 'history'
         ? closedSessions
-        : validationList;
+        : anomalySessions;
     return applySearch(base).slice(0, 30);
-  }, [activeTab, activeSessions, closedSessions, validationList, searchTerm]);
+  }, [activeTab, activeSessions, closedSessions, anomalySessions, searchTerm, tools, operators]);
 
-  // Exportar CSV
   const handleExportCSV = () => {
     const sessionsToExport = activeTab === 'active'
       ? activeSessions
       : activeTab === 'history'
         ? closedSessions
-        : pendingValidations;
+        : anomalySessions;
 
     if (sessionsToExport.length === 0) {
       alert('Não há sessões para exportar');
       return;
     }
-    const headers = ['ID', 'Equipamento', 'Operador', 'Data', 'Início', 'Fim', 'Duração (h)', 'Estado'];
-    const rows = sessionsToExport.map(s => {
-      const machine = machines.find(m => m.id === s.machineId);
-      const operator = operators.find(o => o.id === s.cardId);
-      const startTime = s.startTime?.toDate?.() || new Date(s.startTime);
-      const endTime = s.endTime?.toDate?.() || (s.status === 'OPEN' ? new Date() : null);
+
+    const headers = ['Ferramenta', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Obra', 'Anomalias'];
+    const rows = sessionsToExport.map(session => {
+      const tool = findTool(tools, session);
+      const operator = findOperator(operators, session);
+      const startTime = getSessionStart(session);
+      const endTime = getSessionEnd(session);
+      const anomalies = detectToolSessionAnomalies(session).map(getAnomalyLabel).join(', ');
+
       return [
-        s.id,
-        machine?.name || s.machineId,
-        operator?.name || s.cardId,
-        startTime.toLocaleDateString('pt-PT'),
-        startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+        getToolName(tool, session),
+        getOperatorName(operator, session),
+        startTime ? startTime.toLocaleDateString('pt-PT') : '-',
+        startTime ? startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '-',
         endTime ? endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '-',
-        s.durationHours?.toFixed(1) || '-',
-        s.status,
+        formatDuration(session),
+        session.obraName || session.obraId || '-',
+        anomalies || '-',
       ];
     });
-    const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+
+    const csv = [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `sessoes_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `sessoes_ferramentas_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
 
-  // Validar sessão via store
   const handleValidate = async (validationData) => {
     await resolveSessionAnomaly(validationData.sessionId, {
       action: validationData.action,
@@ -428,20 +498,12 @@ const SessoesView = () => {
     });
   };
 
-  // Tabs principais
   const mainTabs = [
     { id: 'active', label: 'Ativas', count: stats.active },
     { id: 'history', label: 'Histórico', count: stats.closed },
     ...(canViewValidations
-      ? [{ id: 'validations', label: 'Validações', count: stats.pendingValidations }]
+      ? [{ id: 'validations', label: 'Validações', count: stats.anomalies }]
       : []),
-  ];
-
-  // Sub-tabs dentro de Validações
-  const validationSubTabs = [
-    { id: 'pending', label: 'Pendentes', count: pendingValidations.length },
-    { id: 'fatigue', label: 'Anomalias >5h', count: fatigueAlerts.length },
-    { id: 'history', label: 'Validadas', count: validatedSessions.length },
   ];
 
   if (loading) return (
@@ -456,55 +518,22 @@ const SessoesView = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sessões</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Histórico de utilização de equipamentos</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Histórico de utilização de ferramentas</p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExportCSV}>Exportar CSV</Button>
       </div>
 
-      {/* KPI Cards — mudam conforme tab ativa */}
-      {activeTab !== 'validations' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard icon={Play} title="Ativas" value={stats.active} color={stats.active > 0 ? 'emerald' : 'slate'} />
-          <StatCard icon={Clock} title="Total" value={stats.closed} color="primary" />
-          <StatCard icon={Timer} title="Horas" value={stats.totalHours} unit="h" color="primary" />
-          <StatCard icon={Activity} title="Média" value={stats.avgDuration} unit="h" color="slate" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard
-            icon={AlertTriangle}
-            title="Pendentes"
-            value={stats.pendingValidations}
-            color={stats.pendingValidations > 0 ? 'amber' : 'emerald'}
-          />
-          <StatCard
-            icon={Timer}
-            title="Anomalias >5h"
-            value={stats.fatigueAlerts}
-            color={stats.fatigueAlerts > 0 ? 'red' : 'emerald'}
-          />
-          <StatCard
-            icon={CheckCircle}
-            title="Validadas"
-            value={stats.validated}
-            color="emerald"
-          />
-          <StatCard
-            icon={XCircle}
-            title="Corrigidas"
-            value={stats.corrected}
-            color="primary"
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard icon={Timer} title="Total" value={stats.total} color="primary" />
+        <StatCard icon={Play} title="Ativas" value={stats.active} color={stats.active > 0 ? 'emerald' : 'slate'} />
+        <StatCard icon={CheckCircle} title="Fechadas" value={stats.closed} color="slate" />
+        <StatCard icon={AlertTriangle} title="Anomalias" value={stats.anomalies} color={stats.anomalies > 0 ? 'amber' : 'emerald'} />
+      </div>
 
-      {/* Card Principal */}
       <Card padding="none">
-        {/* Tabs principais */}
         <TabNav
           tabs={mainTabs}
           activeTab={activeTab}
@@ -519,51 +548,12 @@ const SessoesView = () => {
           scrollable={true}
         />
 
-        {/* Sub-tabs de validações */}
-        {activeTab === 'validations' && (
-          <div className="px-4 pt-3 pb-0">
-            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 w-fit">
-              {validationSubTabs.map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => { setValidationSubTab(sub.id); setSearchTerm(''); }}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    validationSubTab === sub.id
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {sub.label}
-                  {sub.count > 0 && (
-                    <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
-                      validationSubTab === sub.id
-                        ? sub.id === 'pending'
-                          ? 'bg-amber-100 text-amber-700'
-                          : sub.id === 'fatigue'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}>
-                      {sub.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Barra de pesquisa */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder={
-                activeTab === 'validations'
-                  ? 'Pesquisar por máquina ou operador...'
-                  : 'Pesquisar...'
-              }
+              placeholder="Pesquisar por ferramenta, operador ou obra..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -571,35 +561,32 @@ const SessoesView = () => {
           </div>
         </div>
 
-        {/* Conteúdo da tab */}
         <div className="p-4 sm:p-6">
-
-          {/* Tab: Ativas */}
           {activeTab === 'active' && (
             displayedSessions.length === 0
-              ? <EmptyState icon={Play} title="Sem sessões ativas" description="Não existem equipamentos em utilização neste momento." />
+              ? <EmptyState icon={Play} title="Sem sessões ativas" description="Não existem ferramentas em utilização neste momento." />
               : <div className="space-y-4">
-                  {displayedSessions.map(s => (
+                  {displayedSessions.map(session => (
                     <ActiveSessionCard
-                      key={s.id}
-                      session={s}
-                      machine={machines.find(m => m.id === s.machineId)}
-                      operator={operators.find(o => o.id === s.cardId)}
+                      key={session.id}
+                      session={session}
+                      tool={findTool(tools, session)}
+                      operator={findOperator(operators, session)}
                     />
                   ))}
                 </div>
           )}
 
-          {/* Tab: Histórico */}
           {activeTab === 'history' && (
             displayedSessions.length === 0
-              ? <EmptyState icon={Clock} title="Sem sessões" description="Não foram encontradas sessões com os filtros actuais." />
+              ? <EmptyState icon={Clock} title="Sem sessões" description="Não foram encontradas sessões com os filtros atuais." />
               : (
                 <Table>
                   <Table.Head>
                     <Table.Row>
-                      <Table.Header>Equipamento</Table.Header>
+                      <Table.Header>Ferramenta</Table.Header>
                       <Table.Header>Operador</Table.Header>
+                      <Table.Header>Obra</Table.Header>
                       <Table.Header>Data</Table.Header>
                       <Table.Header align="right">Início</Table.Header>
                       <Table.Header align="right">Fim</Table.Header>
@@ -608,34 +595,33 @@ const SessoesView = () => {
                     </Table.Row>
                   </Table.Head>
                   <Table.Body>
-                    {displayedSessions.map(s => {
-                      const machine = machines.find(m => m.id === s.machineId);
-                      const operator = operators.find(o => o.id === s.cardId);
-                      const startTime = s.startTime?.toDate?.() || new Date(s.startTime);
-                      const endTime = s.endTime?.toDate?.() || new Date(s.endTime);
+                    {displayedSessions.map(session => {
+                      const tool = findTool(tools, session);
+                      const operator = findOperator(operators, session);
+                      const startTime = getSessionStart(session);
+                      const endTime = getSessionEnd(session);
                       return (
-                        <Table.Row key={s.id}>
+                        <Table.Row key={session.id}>
                           <Table.Cell>
                             <div className="flex items-center gap-2">
-                              <Truck className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                              <span className="font-medium">{machine?.name || s.machineId}</span>
+                              <Wrench className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                              <span className="font-medium">{getToolName(tool, session)}</span>
                             </div>
                           </Table.Cell>
-                          <Table.Cell>{operator?.name || s.cardId}</Table.Cell>
-                          <Table.Cell>{startTime.toLocaleDateString('pt-PT')}</Table.Cell>
+                          <Table.Cell>{getOperatorName(operator, session)}</Table.Cell>
+                          <Table.Cell>{session.obraName || session.obraId || '-'}</Table.Cell>
+                          <Table.Cell>{startTime ? startTime.toLocaleDateString('pt-PT') : '-'}</Table.Cell>
                           <Table.Cell align="right">
-                            {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                            {startTime ? startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '-'}
                           </Table.Cell>
                           <Table.Cell align="right">
-                            {endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                            {endTime ? endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '-'}
                           </Table.Cell>
                           <Table.Cell align="right">
-                            <span className={`font-medium ${s.durationHours >= 5 ? 'text-amber-600' : ''}`}>
-                              {s.durationHours?.toFixed(1)}h
-                            </span>
+                            <span className="font-medium">{formatDuration(session)}</span>
                           </Table.Cell>
                           <Table.Cell align="center">
-                            <StatusBadge status={s.validationStatus || s.status} />
+                            <StatusBadge status={session.validationStatus || session.status} />
                           </Table.Cell>
                         </Table.Row>
                       );
@@ -645,36 +631,21 @@ const SessoesView = () => {
               )
           )}
 
-          {/* Tab: Validações */}
           {activeTab === 'validations' && (
             displayedSessions.length === 0 ? (
               <EmptyState
-                icon={
-                  validationSubTab === 'pending' ? CheckCircle :
-                  validationSubTab === 'fatigue' ? AlertTriangle :
-                  Calendar
-                }
-                title={
-                  validationSubTab === 'pending' ? 'Sem validações pendentes' :
-                  validationSubTab === 'fatigue' ? 'Sem anomalias registadas' :
-                  'Sem sessões validadas'
-                }
-                description={
-                  validationSubTab === 'pending'
-                    ? 'Todas as sessões foram validadas e os dados estão corretos.'
-                    : validationSubTab === 'fatigue'
-                      ? 'Nenhuma sessão excedeu 5 horas contínuas.'
-                      : 'O histórico de validações aparecerá aqui.'
-                }
+                icon={CheckCircle}
+                title="Sem validações pendentes"
+                description="Não existem ferramentas OPEN com devolução atrasada."
               />
             ) : (
               <div className="space-y-3">
-                {displayedSessions.map(s => (
+                {displayedSessions.map(session => (
                   <ValidationSessionCard
-                    key={s.id}
-                    session={s}
-                    machine={machines.find(m => m.id === s.machineId)}
-                    operator={operators.find(o => o.id === s.cardId)}
+                    key={session.id}
+                    session={session}
+                    tool={findTool(tools, session)}
+                    operator={findOperator(operators, session)}
                     onSelect={setValidatingSession}
                     canValidate={canValidate}
                   />
@@ -685,7 +656,6 @@ const SessoesView = () => {
         </div>
       </Card>
 
-      {/* Modal de Validação */}
       <Modal
         isOpen={!!validatingSession}
         onClose={() => setValidatingSession(null)}
@@ -695,8 +665,8 @@ const SessoesView = () => {
       >
         <ValidationModal
           session={validatingSession}
-          machine={machines.find(m => m.id === validatingSession?.machineId)}
-          operator={operators.find(o => o.id === validatingSession?.cardId)}
+          tool={findTool(tools, validatingSession)}
+          operator={findOperator(operators, validatingSession)}
           onValidate={handleValidate}
           onClose={() => setValidatingSession(null)}
         />

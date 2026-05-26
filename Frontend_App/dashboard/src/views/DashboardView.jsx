@@ -136,31 +136,37 @@ const DateFilters = () => {
 // Card de Sessão Ativa
 const ActiveSessionCard = ({ session, machine, operator }) => {
   const startTime = parseFirestoreTimestamp(session.startTime);
-  const isLong = Date.now() - startTime.getTime() >= 5 * 60 * 60 * 1000;
+  // Pivot 2026-05: tool_sessions usam dias como threshold (overdue ≥ 7d) em vez de horas (fatigue ≥ 5h).
+  const daysOpen = (Date.now() - startTime.getTime()) / 86400000;
+  const isOverdue = daysOpen >= 7;
+
+  // Tolerante a sessions (legacy) e tool_sessions (novo).
+  const resourceName = session.toolName || machine?.name || session.machineId;
+  const operatorName = session.operatorName || operator?.name || session.cardId || session.operatorId;
 
   return (
-    <div className={`flex items-center gap-4 p-4 rounded-xl border-2 ${isLong ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
+    <div className={`flex items-center gap-4 p-4 rounded-xl border-2 ${isOverdue ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
       }`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isLong ? 'bg-amber-500' : 'bg-emerald-500'
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isOverdue ? 'bg-amber-500' : 'bg-emerald-500'
         }`}>
         <Play className="w-6 h-6 text-white" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-slate-900 dark:text-white truncate">
-          {machine?.name || session.machineId}
+          {resourceName}
         </p>
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           <User className="w-3.5 h-3.5" />
-          <span className="truncate">{operator?.name || session.cardId}</span>
+          <span className="truncate">{operatorName}</span>
         </div>
       </div>
       <div className="text-right">
         <LiveTimer
           startTime={startTime}
           tickMs={1000}
-          className={`text-2xl ${isLong ? 'text-amber-600' : 'text-emerald-600'}`}
+          className={`text-2xl ${isOverdue ? 'text-amber-600' : 'text-emerald-600'}`}
         />
-        <p className="text-xs text-slate-500 dark:text-slate-400">em curso</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{isOverdue ? 'overdue' : 'em curso'}</p>
       </div>
     </div>
   );
@@ -940,78 +946,79 @@ const WorkFocusPanel = ({ machines, avarias }) => {
 // ============================================================
 
 const DashboardView = () => {
-  const { machines, operators, sessions, getFilteredSessions, getKPIs, loading, systemSettings } = useStore();
+  // Pivot 2026-05: dados primários vêm de tools/toolSessions. Machines/sessions ficam
+  // disponíveis para o painel Procore (legacy) e para os WorkFocus/Maintenance widgets.
+  const {
+    machines, operators, sessions, systemSettings, loading,
+    tools, toolSessions, getToolsInUse, getOverdueTools, getTopToolsByUsage, getToolKPIs,
+    dateFilter, customRange,
+  } = useStore();
   const { avarias } = useAvariasStore();
   const { isMobile } = useDeviceType();
-  const filteredSessions = getFilteredSessions();
-  const kpis = getKPIs();
 
-  // Sessões ativas
-  const activeSessions = useMemo(() =>
-    sessions.filter(s => s.status === 'OPEN').slice(0, 4),
-    [sessions]);
+  // Calcular dateRange a partir do filtro global (mesmo formato esperado pelos selectors)
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const end = new Date(now); end.setHours(23, 59, 59, 999);
+    const start = new Date(now); start.setHours(0, 0, 0, 0);
+    if (dateFilter === 'today') return { start, end };
+    if (dateFilter === 'week') { start.setDate(start.getDate() - 6); return { start, end }; }
+    if (dateFilter === 'month') { start.setDate(start.getDate() - 29); return { start, end }; }
+    if (dateFilter === 'custom' && customRange?.start && customRange?.end) {
+      return { start: new Date(customRange.start), end: new Date(customRange.end) };
+    }
+    start.setDate(start.getDate() - 29);
+    return { start, end };
+  }, [dateFilter, customRange]);
 
-  // Dados para gráficos
+  // KPIs do modelo tools — alimenta os cards principais e secundários
+  const toolKpis = useMemo(() => getToolKPIs(null, dateRange), [getToolKPIs, dateRange, toolSessions, tools]);
+
+  // Sessões activas (até 4) — usa selector pivot
+  const activeSessions = useMemo(() => getToolsInUse().slice(0, 4), [getToolsInUse, toolSessions]);
+
+  // Chart "Movimentos por dia" — substitui o legacy "Atividade Semanal" (horas + combustível)
+  // Para small tools faz sentido contar checkouts/devoluções, não horas de operação.
   const chartData = useMemo(() => {
-    if (!filteredSessions.length) {
-      return [
-        { name: 'Seg', horas: 45, combustivel: 120, co2: 320 },
-        { name: 'Ter', horas: 52, combustivel: 140, co2: 375 },
-        { name: 'Qua', horas: 48, combustivel: 130, co2: 348 },
-        { name: 'Qui', horas: 61, combustivel: 165, co2: 442 },
-        { name: 'Sex', horas: 55, combustivel: 148, co2: 396 },
-        { name: 'Sáb', horas: 25, combustivel: 68, co2: 182 },
-        { name: 'Dom', horas: 12, combustivel: 32, co2: 86 },
-      ];
+    const start = dateRange.start;
+    const end = dateRange.end;
+    const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+
+    // Inicializar buckets por dia
+    const buckets = {};
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i);
+      const key = d.toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit' });
+      buckets[key] = { name: key, checkouts: 0, devolucoes: 0 };
     }
 
-    const grouped = {};
-    filteredSessions.forEach(session => {
-      if (session.startTime && session.durationHours) {
-        const date = parseFirestoreTimestamp(session.startTime);
-        const day = date.toLocaleDateString('pt-PT', { weekday: 'short' });
-        if (!grouped[day]) grouped[day] = { horas: 0, combustivel: 0, co2: 0 };
-        grouped[day].horas += session.durationHours || 0;
-        const machine = machines.find(m => m.id === session.machineId);
-        if (machine) {
-          const consumption = (machine.consumptionRate || 0) * (session.durationHours || 0);
-          grouped[day].combustivel += consumption;
-          grouped[day].co2 += consumption * (systemSettings?.co2FactorPerLitre || 2.68);
-        }
-      }
+    toolSessions.forEach(s => {
+      if (!s.startTime) return;
+      const d = s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
+      if (d < start || d > end) return;
+      const key = d.toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit' });
+      if (!buckets[key]) return;
+      buckets[key].checkouts += 1;
+      if (s.status === 'CLOSED') buckets[key].devolucoes += 1;
     });
 
-    return Object.entries(grouped).map(([name, data]) => ({
-      name,
-      horas: Math.round(data.horas),
-      combustivel: Math.round(data.combustivel),
-      co2: Math.round(data.co2),
-    }));
-  }, [filteredSessions, machines]);
+    return Object.values(buckets);
+  }, [toolSessions, dateRange]);
 
-  // Dados utilização — top 5 máquinas por horas trabalhadas no período
-  // value = horas trabalhadas / capacidade disponível no período selecionado × 100
+  // Top ferramentas por número de checkouts — substitui "Top 5 máquinas por horas"
   const utilizationData = useMemo(() => {
-    if (!machines.length) return [];
+    return getTopToolsByUsage(dateRange, 5).map(t => ({
+      name: t.toolName,
+      hours: t.count,                 // reaproveita o campo `hours` para evitar mudar muito o JSX abaixo
+      value: Math.min(100, t.count * 10), // escala visual para a barra
+      status: 'active',
+    }));
+  }, [getTopToolsByUsage, dateRange, toolSessions]);
 
-    const maxHours = kpis.capacityPerMachine || 176;
+  // Overdue — ferramentas com sessão OPEN > threshold (config em systemSettings)
+  const overdueList = useMemo(() => getOverdueTools(), [getOverdueTools, toolSessions, systemSettings]);
 
-    return machines
-      .map(machine => {
-        const machineSessions = filteredSessions.filter(s => s.machineId === machine.id && s.status === 'CLOSED');
-        const hours = machineSessions.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-        return {
-          name: machine.name || machine.id,
-          hours: Math.round(hours * 10) / 10,
-          value: Math.min(100, Math.round((hours / maxHours) * 100)),
-          status: machine.status?.toLowerCase() || 'idle',
-        };
-      })
-      .sort((a, b) => b.hours - a.hours)
-      .slice(0, 5);
-  }, [machines, filteredSessions, kpis.capacityPerMachine]);
-
-  // Alertas manutenção
+  // Alertas manutenção (legacy — heavy machines, mantém para compat enquanto o user quiser manter o módulo)
   const maintenanceAlerts = machines.filter(m => {
     const interval = m.maintenanceInterval || systemSettings?.defaultMaintenanceInterval || 150;
     const threshold = interval * 0.8;
@@ -1035,12 +1042,14 @@ const DashboardView = () => {
   }
 
   // Field Mode (mobile) — layout completamente diferente
+  // toolKpis tem o mesmo formato semântico que o legacy kpis (números agregados),
+  // mas com novos campos (activeNow, overdueCount, totalCheckouts, utilizationPct).
   if (isMobile) {
     return (
       <MobileDashboard
-        kpis={kpis}
+        kpis={toolKpis}
         activeSessions={activeSessions}
-        machines={machines}
+        machines={tools}
         operators={operators}
         maintenanceAlerts={maintenanceAlerts}
         chartData={chartData}
@@ -1060,43 +1069,40 @@ const DashboardView = () => {
         <DateFilters />
       </div>
 
-      {/* KPIs Principais - Gradient Cards */}
+      {/* KPIs Principais - 4 must-have do pivot (Hilti/Milwaukee/AlignOps benchmarks) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Activity}
-          title="Horas Trabalhadas"
-          value={kpis.totalHours}
-          unit="h"
-          color="primary"
+          title="Em Uso Agora"
+          value={toolKpis.activeNow}
+          unit=""
+          color={toolKpis.activeNow > 0 ? 'emerald' : 'slate'}
           variant="gradient"
-          trend={12}
           className="animate-fade-in stagger-1"
         />
         <StatCard
-          icon={Truck}
+          icon={TrendingUp}
           title="Taxa de Utilização"
-          value={kpis.utilizationRate}
+          value={toolKpis.utilizationPct}
           unit="%"
-          color="emerald"
+          color="primary"
           variant="gradient"
-          trend={5}
           className="animate-fade-in stagger-2"
         />
         <StatCard
-          icon={Fuel}
-          title="Combustível"
-          value={kpis.totalFuel}
-          unit="L"
-          color="amber"
+          icon={AlertTriangle}
+          title="Overdue"
+          value={toolKpis.overdueCount}
+          unit=""
+          color={toolKpis.overdueCount > 0 ? 'red' : 'emerald'}
           variant="gradient"
-          trend={-3}
           className="animate-fade-in stagger-3"
         />
         <StatCard
-          icon={Leaf}
-          title="Emissões CO₂"
-          value={kpis.totalCO2}
-          unit="kg"
+          icon={Clock}
+          title="Tempo Médio Fora"
+          value={toolKpis.avgDurationHours}
+          unit="h"
           color="slate"
           variant="gradient"
           className="animate-fade-in stagger-4"
@@ -1148,33 +1154,31 @@ const DashboardView = () => {
       {/* Work Focus — IA Preditiva */}
       <WorkFocusPanel machines={machines} avarias={avarias} />
 
-      {/* KPIs Secundários */}
+      {/* KPIs Secundários — pivot tools */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          icon={Play}
-          title="Sessões Ativas"
-          value={kpis.activeSessions}
-          color={kpis.activeSessions > 0 ? 'emerald' : 'slate'}
-        />
-        <StatCard
           icon={Wrench}
-          title="Alertas"
-          value={maintenanceAlerts.length}
-          color={maintenanceAlerts.length > 0 ? 'red' : 'emerald'}
+          title="Total Ferramentas"
+          value={toolKpis.totalTools}
+          color="primary"
         />
         <StatCard
-          icon={TrendingUp}
-          title="MTBF"
-          value={kpis.mtbf ?? '—'}
-          unit={kpis.mtbf != null ? 'h' : ''}
+          icon={Play}
+          title="Checkouts (período)"
+          value={toolKpis.totalCheckouts}
+          color={toolKpis.totalCheckouts > 0 ? 'emerald' : 'slate'}
+        />
+        <StatCard
+          icon={User}
+          title="Trabalhadores"
+          value={toolKpis.uniqueOperators}
           color="violet"
         />
         <StatCard
-          icon={Zap}
-          title="Eficiência"
-          value={100 - kpis.downtime}
-          unit="%"
-          color={kpis.downtime < 20 ? 'emerald' : 'amber'}
+          icon={Wrench}
+          title="Manutenção (legacy)"
+          value={maintenanceAlerts.length}
+          color={maintenanceAlerts.length > 0 ? 'amber' : 'slate'}
         />
       </div>
 
@@ -1183,22 +1187,22 @@ const DashboardView = () => {
 
       {/* Gráficos e Sessões */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Gráfico Principal - Atividade */}
+        {/* Gráfico Principal — Movimentos por dia */}
         <div className="lg:col-span-2">
           <Card className="h-full hover-enterprise">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Atividade Semanal</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Horas trabalhadas e consumo de combustível</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Movimentos por dia</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Checkouts e devoluções de ferramentas</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-primary-500" />
-                  <span className="text-sm text-slate-600">Horas</span>
+                  <span className="text-sm text-slate-600">Checkouts</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-sm text-slate-600">Combustível</span>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-sm text-slate-600">Devoluções</span>
                 </div>
               </div>
             </div>
@@ -1208,8 +1212,8 @@ const DashboardView = () => {
                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="horas" fill="#005EB8" name="Horas" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="combustivel" fill="#f59e0b" name="Combustível (L)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="checkouts" fill="#005EB8" name="Checkouts" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="devolucoes" fill="#10b981" name="Devoluções" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -1237,8 +1241,8 @@ const DashboardView = () => {
                 <ActiveSessionCard
                   key={session.id}
                   session={session}
-                  machine={machines.find(m => m.id === session.machineId)}
-                  operator={operators.find(o => o.id === session.cardId)}
+                  machine={session.tool || tools.find(t => t.id === session.toolId)}
+                  operator={operators.find(o => o.id === session.operatorId || o.cardId === session.operatorId)}
                 />
               ))
             )}
@@ -1248,67 +1252,82 @@ const DashboardView = () => {
 
       {/* Segunda linha de gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Emissões CO2 */}
+        {/* Overdue Alert Card — KPI 4 crítico (loss prevention) */}
         <Card className="hover-enterprise">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Emissões CO₂</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Tendência semanal</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Devoluções Atrasadas</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Ferramentas com sessão aberta &gt; {systemSettings?.toolOverdueDays || 7} dias
+              </p>
             </div>
-            <Badge variant="success" className="flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5" />
-              -3% vs anterior
+            <Badge variant={overdueList.length > 0 ? 'danger' : 'success'} className="flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {overdueList.length}
             </Badge>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorCO2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="co2" stroke="#10b981" strokeWidth={3} fill="url(#colorCO2)" name="CO₂ (kg)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {overdueList.length === 0 ? (
+            <div className="py-12 text-center">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Wrench className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-slate-500 dark:text-slate-400">Sem ferramentas atrasadas</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {overdueList.slice(0, 6).map(s => {
+                const start = s.startTime?.toDate?.() || new Date(s.startTime);
+                const days = Math.floor((Date.now() - start.getTime()) / 86400000);
+                return (
+                  <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                    <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900 dark:text-white truncate">{s.toolName || s.toolId}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{s.operatorName} · {s.obraName || 'sem obra'}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold text-red-600 dark:text-red-400 tabular-nums">{days}d</p>
+                      <p className="text-xs text-slate-500">em aberto</p>
+                    </div>
+                  </div>
+                );
+              })}
+              {overdueList.length > 6 && (
+                <p className="text-xs text-center text-slate-500 dark:text-slate-400 pt-2">
+                  + {overdueList.length - 6} ferramentas com devolução atrasada
+                </p>
+              )}
+            </div>
+          )}
         </Card>
 
-        {/* Utilização por Equipamento */}
+        {/* Top Ferramentas — substitui Utilização por Equipamento */}
         <Card className="hover-enterprise">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Utilização por Equipamento</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Top Ferramentas</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Top 5 mais utilizados · base {kpis.capacityPerMachine}h disponíveis
+                Mais utilizadas no período · por número de checkouts
               </p>
             </div>
           </div>
           {utilizationData.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-              Sem equipamentos para mostrar
+              Sem ferramentas para mostrar
             </div>
           ) : (
             <div className="space-y-4">
               {utilizationData.map((item, index) => (
                 <div key={item.name} className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.status === 'active' ? 'bg-emerald-100' :
-                      item.status === 'maintenance' ? 'bg-red-100' : 'bg-slate-100 dark:bg-slate-700/50'
-                    }`}>
-                    <Truck className={`w-5 h-5 ${item.status === 'active' ? 'text-emerald-600' :
-                        item.status === 'maintenance' ? 'text-red-600' : 'text-slate-500 dark:text-slate-400'
-                      }`} />
+                  <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                    <Wrench className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{item.name}</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">{item.hours}h</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">{item.value}%</span>
-                      </div>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">{item.hours}</span>
                     </div>
                     <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                       <div

@@ -9,8 +9,7 @@ import {
   SESSION_ANOMALY_THRESHOLD_H,
   resolveTimestamp,
   formatDuration,
-  detectSessionAnomalies,
-  detectHardAnomalies,
+  detectToolSessionAnomalies,
 } from '../../utils/sessionHelpers';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -27,12 +26,16 @@ const ANOMALY_LABEL = {
   FATIGUE:     `Duração ≥ ${SESSION_ANOMALY_THRESHOLD_H}h`,
   AUTO_CLOSE:  'Fecho automático',
   CORRECTED:   'Corrigida manualmente',
+  TOOL_OVERDUE: 'Ferramenta em atraso',
+  TOOL_PRESUMED_LOST: 'Ferramenta presumivelmente perdida',
 };
 const ANOMALY_COLOR = {
   NO_OPERATOR: 'text-amber-600 dark:text-amber-400',
   FATIGUE:     'text-amber-600 dark:text-amber-400',
   AUTO_CLOSE:  'text-red-600 dark:text-red-400',
   CORRECTED:   'text-sky-600 dark:text-sky-400',
+  TOOL_OVERDUE: 'text-amber-600 dark:text-amber-400',
+  TOOL_PRESUMED_LOST: 'text-red-600 dark:text-red-400',
 };
 
 const FILTER_STATUS = [
@@ -44,8 +47,8 @@ const FILTER_STATUS = [
 // Borda esquerda consoante gravidade das anomalias
 function getBorderStyle(anomalies) {
   if (!anomalies?.length) return {};
-  if (anomalies.includes('AUTO_CLOSE'))                          return { borderLeft: '3px solid #f87171' };
-  if (anomalies.includes('NO_OPERATOR') || anomalies.includes('FATIGUE')) return { borderLeft: '3px solid #fbbf24' };
+  if (anomalies.includes('AUTO_CLOSE') || anomalies.includes('TOOL_PRESUMED_LOST')) return { borderLeft: '3px solid #f87171' };
+  if (anomalies.includes('NO_OPERATOR') || anomalies.includes('FATIGUE') || anomalies.includes('TOOL_OVERDUE')) return { borderLeft: '3px solid #fbbf24' };
   if (anomalies.includes('CORRECTED'))                           return { borderLeft: '3px solid #38bdf8' };
   return {};
 }
@@ -90,19 +93,19 @@ const SummaryHeader = ({ summary, onClickAnomalies }) => {
 // ─── FILTER BAR ───────────────────────────────────────────────────────────────
 
 const FilterBar = ({
-  machines, filterMachine, setFilterMachine,
+  tools, filterTool, setFilterTool,
   filterStatus, setFilterStatus,
   onlyAnomalies, setOnlyAnomalies,
   onExport, total,
 }) => (
   <div className="px-4 md:px-5 pb-3 flex flex-col sm:flex-row gap-2 sm:items-center flex-wrap">
     <select
-      value={filterMachine}
-      onChange={e => setFilterMachine(e.target.value)}
+      value={filterTool}
+      onChange={e => setFilterTool(e.target.value)}
       className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
     >
-      <option value="all">Todas as máquinas</option>
-      {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+      <option value="all">Todas as ferramentas</option>
+      {tools.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
     </select>
 
     <div className="flex gap-1.5 flex-wrap">
@@ -190,8 +193,8 @@ const SessionRow = ({ session, onClick }) => {
       onClick={onClick}
     >
       <td className="px-4 py-2.5">
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{session.machine.name}</p>
-        <p className="text-xs text-slate-400">{session.machine.type || session.machine.category || '—'}</p>
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{session.tool.name}</p>
+        <p className="text-xs text-slate-400">{session.tool.type || session.tool.category || '—'}</p>
       </td>
       <td className="px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300">
         {session.operator?.name || <span className="text-amber-500 text-xs">Desconhecido</span>}
@@ -243,7 +246,7 @@ const SessionCard = ({ session, onClick }) => {
     >
       <div className="flex items-start justify-between mb-2">
         <div className="min-w-0">
-          <p className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">{session.machine.name}</p>
+          <p className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">{session.tool.name}</p>
           <p className="text-xs text-slate-400 truncate">
             {session.operator?.name || <span className="text-amber-500">Desconhecido</span>}
           </p>
@@ -278,7 +281,7 @@ const SessionCard = ({ session, onClick }) => {
 const SessionDrawer = ({ session, setActiveView, onClose }) => {
   const co2Factor = 2.68;
   const estimatedCO2 = session.durationHours
-    ? (session.machine.consumptionRate || 0) * session.durationHours * co2Factor
+    ? (session.tool.consumptionRate || 0) * session.durationHours * co2Factor
     : null;
 
   return (
@@ -292,7 +295,7 @@ const SessionDrawer = ({ session, setActiveView, onClose }) => {
         <div className="flex items-start justify-between p-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-semibold text-slate-900 dark:text-white">{session.machine.name}</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{session.tool.name}</h2>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[session.status] || STATUS_STYLE.CLOSED}`}>
                 {STATUS_LABEL[session.status] || session.status}
               </span>
@@ -410,40 +413,48 @@ const SessionDrawer = ({ session, setActiveView, onClose }) => {
 
 // ─── MAIN VIEW ────────────────────────────────────────────────────────────────
 
-const SessoesObraView = ({ obraId, dateRange, obraMachines }) => {
-  const { getSessionsByObraId, sessions, machines, operators, setActiveView } = useStore();
+const SessoesObraView = ({ obraId, dateRange }) => {
+  const { getToolSessionsByObraId, toolSessions, tools, operators, setActiveView } = useStore();
 
-  const [filterMachine,   setFilterMachine]   = useState('all');
+  const [filterTool,      setFilterTool]      = useState('all');
   const [filterStatus,    setFilterStatus]    = useState('all');
   const [onlyAnomalies,   setOnlyAnomalies]   = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [collapsedDays,   setCollapsedDays]   = useState({});
 
-  // obraSessions: filtered by obraId via machine membership at query time.
-  // NOTE (localhost vs deploy): in deploy with real fleet movement, a machine may
-  // have changed obraId since a session was created — those historical sessions
-  // will appear/disappear based on current machine.obraId, not the session's own
-  // location snapshot. This is a known data limitation; no fix attempted here.
   const obraSessions = useMemo(
-    () => getSessionsByObraId(obraId, dateRange),
-    [obraId, dateRange, sessions, machines]
+    () => getToolSessionsByObraId(obraId, dateRange),
+    [obraId, dateRange, toolSessions, tools]
   );
+
+  const obraTools = useMemo(() => {
+    const sessionToolIds = new Set(obraSessions.map(s => s.toolId).filter(Boolean));
+    const listedTools = tools.filter(t => t.currentObraId === obraId || sessionToolIds.has(t.id));
+    const listedToolIds = new Set(listedTools.map(t => t.id));
+    const missingSessionTools = [];
+    obraSessions.forEach(s => {
+      if (!s.toolId || listedToolIds.has(s.toolId)) return;
+      listedToolIds.add(s.toolId);
+      missingSessionTools.push({ id: s.toolId, name: s.toolName || s.toolId, type: s.toolType || '—' });
+    });
+    return [...listedTools, ...missingSessionTools];
+  }, [obraId, obraSessions, tools]);
 
   const enrichedSessions = useMemo(() => {
     return obraSessions.map(s => {
-      // Resolve machine — fall back to stub if machine not found (e.g. deleted or moved)
-      const machine  = obraMachines.find(m => m.id === s.machineId)
-        || { id: s.machineId, name: s.machineId, type: '—', consumptionRate: 0 };
+      const tool = tools.find(t => t.id === s.toolId)
+        || { id: s.toolId, name: s.toolName || s.toolId, type: s.toolType || '—', consumptionRate: 0 };
       // Resolve operator — try both cardId and id fields (RFID vs manual sessions)
-      const operator = operators.find(o => o.cardId === s.operatorId || o.id === s.operatorId) || null;
-      const anomalies     = detectSessionAnomalies(s);
-      const hardAnomalies = detectHardAnomalies(s);
+      const operator = operators.find(o => o.cardId === s.operatorId || o.id === s.operatorId)
+        || (s.operatorName ? { id: s.operatorId, name: s.operatorName } : null);
+      const anomalies = detectToolSessionAnomalies(s);
+      const hardAnomalies = anomalies;
       // Guard: endTime is null for OPEN sessions — never pass to Date() without check
       const startDate = resolveTimestamp(s.startTime) || new Date(0);
       const endDate   = s.endTime ? resolveTimestamp(s.endTime) : null;
-      return { ...s, machine, operator, anomalies, hardAnomalies, startDate, endDate };
+      return { ...s, tool, operator, anomalies, hardAnomalies, startDate, endDate };
     });
-  }, [obraSessions, obraMachines, operators]);
+  }, [obraSessions, tools, operators]);
 
   const summary = useMemo(() => {
     const closed = enrichedSessions.filter(s => s.status === 'CLOSED');
@@ -458,11 +469,11 @@ const SessoesObraView = ({ obraId, dateRange, obraMachines }) => {
 
   const filtered = useMemo(() => {
     let list = enrichedSessions;
-    if (filterMachine !== 'all') list = list.filter(s => s.machineId === filterMachine);
+    if (filterTool !== 'all')    list = list.filter(s => s.toolId === filterTool);
     if (filterStatus  !== 'all') list = list.filter(s => s.status === filterStatus);
     if (onlyAnomalies)           list = list.filter(s => s.hardAnomalies.length > 0);
     return [...list].sort((a, b) => b.startDate - a.startDate);
-  }, [enrichedSessions, filterMachine, filterStatus, onlyAnomalies]);
+  }, [enrichedSessions, filterTool, filterStatus, onlyAnomalies]);
 
   // Group by calendar day (YYYY-MM-DD key), sorted newest-first
   const grouped = useMemo(() => {
@@ -479,15 +490,14 @@ const SessoesObraView = ({ obraId, dateRange, obraMachines }) => {
 
   const handleExport = () => {
     const exportable = filtered.filter(s => s.status === 'CLOSED');
-    const headers = ['Máquina', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Custo(€)', 'Anomalias'];
+    const headers = ['Ferramenta', 'Operador', 'Data', 'Início', 'Fim', 'Duração(h)', 'Anomalias'];
     const rows = exportable.map(s => [
-      s.machine.name,
+      s.tool.name,
       s.operator?.name || '—',
       s.startDate.toLocaleDateString('pt-PT'),
       s.startDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
       s.endDate ? s.endDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '—',
       (s.durationHours || 0).toFixed(2),
-      (s.costs?.total || 0).toFixed(2),
       s.anomalies.join('|') || '—',
     ]);
     const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
@@ -500,11 +510,11 @@ const SessoesObraView = ({ obraId, dateRange, obraMachines }) => {
     URL.revokeObjectURL(url);
   };
 
-  if (obraMachines.length === 0) {
+  if (obraTools.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <Activity className="w-12 h-12 mb-4 opacity-30" />
-        <p className="font-medium text-slate-500">Sem máquinas nesta obra</p>
+        <p className="font-medium text-slate-500">Sem ferramentas nesta obra</p>
       </div>
     );
   }
@@ -514,8 +524,8 @@ const SessoesObraView = ({ obraId, dateRange, obraMachines }) => {
       <SummaryHeader summary={summary} onClickAnomalies={() => setOnlyAnomalies(true)} />
 
       <FilterBar
-        machines={obraMachines}
-        filterMachine={filterMachine}     setFilterMachine={setFilterMachine}
+        tools={obraTools}
+        filterTool={filterTool}           setFilterTool={setFilterTool}
         filterStatus={filterStatus}       setFilterStatus={setFilterStatus}
         onlyAnomalies={onlyAnomalies}     setOnlyAnomalies={setOnlyAnomalies}
         onExport={handleExport}           total={filtered.length}
@@ -533,7 +543,7 @@ const SessoesObraView = ({ obraId, dateRange, obraMachines }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    {['Máquina', 'Operador', 'Início', 'Fim', 'Duração', 'Estado', 'Custo', ''].map((h, i) => (
+                    {['Ferramenta', 'Operador', 'Início', 'Fim', 'Duração', 'Estado', 'Custo', ''].map((h, i) => (
                       <th
                         key={i}
                         className={`px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide ${i >= 6 ? 'text-right' : 'text-left'}`}

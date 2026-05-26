@@ -39,8 +39,10 @@ const sanitizeData = (data) => {
 
 const useStore = create((set, get) => ({
   // Estado
-  sessions: [],
-  machines: [],
+  sessions: [],         // legacy — heavy machines RFID sessions (a remover gradualmente)
+  machines: [],         // legacy — heavy machines (a remover gradualmente)
+  tools: [],            // novo — small tools NFC (modelo activo pós-pivot 2026-05)
+  toolSessions: [],     // novo — checkout/checkin NFC das ferramentas
   operators: [],
   obras: [],
   maintenanceRecords: [],
@@ -56,6 +58,8 @@ const useStore = create((set, get) => ({
     fuelPricePerLitre: 1.89,
     co2FactorPerLitre: 2.68,
     defaultMaintenanceInterval: 150,
+    toolOverdueDays: 7,   // pivot — dias antes de disparar TOOL_OVERDUE
+    toolLostDays: 30,     // pivot — dias antes de TOOL_PRESUMED_LOST
   },
   maintenanceSchedules: [],
   loading: true,
@@ -102,6 +106,28 @@ const useStore = create((set, get) => ({
         const visible = (data || []).filter(m => !String(m.name || '').startsWith('[REMOVIDO]'));
         set({ machines: visible, loading: false });
       })
+    );
+
+    // ============================================
+    // TOOLS + TOOL_SESSIONS — pivot 2026-05 (small tools NFC)
+    // ============================================
+    // Coexistem com sessions/machines durante a migração. Procore continua
+    // a sincronizar sessions/machines em background. Views novas consomem
+    // tools/toolSessions; fluxo NFC do ToolTagPage escreve em tool_sessions.
+    const createToolsListener = createCollectionListener(db, `${basePath}/tools`, {
+      onError: (msg, error) => console.debug('[tools] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createToolsListener((data) => set({ tools: data || [] }))
+    );
+
+    const createToolSessionsListener = createCollectionListener(db, `${basePath}/tool_sessions`, {
+      orderByField: 'startTime',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.debug('[tool_sessions] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createToolSessionsListener((data) => set({ toolSessions: data || [] }))
     );
 
     // Operators listener
@@ -180,6 +206,8 @@ const useStore = create((set, get) => ({
               fuelPricePerLitre: docData.fuelPricePerLitre ?? 1.89,
               co2FactorPerLitre: docData.co2FactorPerLitre ?? 2.68,
               defaultMaintenanceInterval: docData.defaultMaintenanceInterval ?? 150,
+              toolOverdueDays: docData.toolOverdueDays ?? 7,
+              toolLostDays: docData.toolLostDays ?? 30,
             },
           });
         }
@@ -1310,6 +1338,147 @@ const useStore = create((set, get) => ({
         totalHours: Math.round(totalHours * 10) / 10,
       };
     }).sort((a, b) => b.totalHours - a.totalHours);
+  },
+
+  // ========================================
+  // SELECTORS PIVOT — TOOLS / TOOL_SESSIONS
+  // ========================================
+  // Helpers internos
+  _resolveToolSessionStart: (s) => {
+    if (!s?.startTime) return null;
+    return s.startTime.toDate ? s.startTime.toDate() : new Date(s.startTime);
+  },
+
+  // Ferramentas atribuídas a uma obra (currentObraId)
+  getToolsByObraId: (obraId) => {
+    const { tools } = get();
+    if (!obraId) return [];
+    return tools.filter(t => t.currentObraId === obraId);
+  },
+
+  // Tool sessions filtradas por obraId + período opcional
+  getToolSessionsByObraId: (obraId, dateRange) => {
+    const { toolSessions } = get();
+    if (!obraId) return [];
+    const filtered = toolSessions.filter(s => s.obraId === obraId);
+    if (!dateRange) return filtered;
+    const { start, end } = dateRange;
+    return filtered.filter(s => {
+      const d = get()._resolveToolSessionStart(s);
+      return d && d >= start && d <= end;
+    });
+  },
+
+  // KPI 1 (must-have) — ferramentas em uso AGORA (sessões OPEN)
+  // Devolve array de tool_sessions OPEN enriquecidas com tool info se disponível.
+  getToolsInUse: () => {
+    const { toolSessions, tools } = get();
+    const toolsById = new Map(tools.map(t => [t.id, t]));
+    return toolSessions
+      .filter(s => s.status === 'OPEN')
+      .map(s => ({ ...s, tool: toolsById.get(s.toolId) || null }));
+  },
+
+  // KPI 4 (must-have) — devoluções atrasadas (overdue)
+  // threshold em dias; default 7. Aceita override de systemSettings.toolOverdueDays.
+  getOverdueTools: (thresholdDays) => {
+    const { toolSessions, systemSettings } = get();
+    const threshold = thresholdDays
+      ?? systemSettings?.toolOverdueDays
+      ?? 7;
+    const cutoff = Date.now() - threshold * 86400000;
+    return toolSessions
+      .filter(s => s.status === 'OPEN')
+      .filter(s => {
+        const start = get()._resolveToolSessionStart(s);
+        return start && start.getTime() <= cutoff;
+      });
+  },
+
+  // KPI 2 (must-have) — taxa de utilização da frota num período
+  // % de ferramentas com pelo menos 1 sessão CLOSED no período / total de ferramentas
+  getToolUtilizationRate: (dateRange) => {
+    const { tools, toolSessions } = get();
+    if (!tools.length) return 0;
+    let pool = toolSessions.filter(s => s.status === 'CLOSED');
+    if (dateRange) {
+      const { start, end } = dateRange;
+      pool = pool.filter(s => {
+        const d = get()._resolveToolSessionStart(s);
+        return d && d >= start && d <= end;
+      });
+    }
+    const usedToolIds = new Set(pool.map(s => s.toolId));
+    return Math.round((usedToolIds.size / tools.length) * 100);
+  },
+
+  // KPI 5 (must-have) — top N ferramentas por número de checkouts num período
+  getTopToolsByUsage: (dateRange, limit = 10) => {
+    const { tools, toolSessions } = get();
+    const toolsById = new Map(tools.map(t => [t.id, t]));
+    let pool = toolSessions;
+    if (dateRange) {
+      const { start, end } = dateRange;
+      pool = pool.filter(s => {
+        const d = get()._resolveToolSessionStart(s);
+        return d && d >= start && d <= end;
+      });
+    }
+    const counts = new Map();
+    pool.forEach(s => counts.set(s.toolId, (counts.get(s.toolId) || 0) + 1));
+    return [...counts.entries()]
+      .map(([toolId, count]) => ({
+        toolId,
+        toolName: toolsById.get(toolId)?.name || toolId,
+        toolType: toolsById.get(toolId)?.type || null,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+  },
+
+  // KPI agregado — usado pelo DashboardView e ObraMenuLayout (Fase 3)
+  // Equivalente a getObraKPIs mas para o modelo tools.
+  // Se obraId for falsy, calcula globalmente.
+  getToolKPIs: (obraId, dateRange) => {
+    const { tools, toolSessions } = get();
+    const scopedTools = obraId
+      ? tools.filter(t => t.currentObraId === obraId)
+      : tools;
+    let scopedSessions = obraId
+      ? toolSessions.filter(s => s.obraId === obraId)
+      : toolSessions;
+    if (dateRange) {
+      const { start, end } = dateRange;
+      scopedSessions = scopedSessions.filter(s => {
+        const d = get()._resolveToolSessionStart(s);
+        return d && d >= start && d <= end;
+      });
+    }
+    const closed = scopedSessions.filter(s => s.status === 'CLOSED');
+    const open = scopedSessions.filter(s => s.status === 'OPEN');
+
+    const totalCheckouts = scopedSessions.length;
+    const activeNow = open.length;
+    const overdueCount = get().getOverdueTools().filter(s => !obraId || s.obraId === obraId).length;
+    const uniqueOperators = new Set(scopedSessions.map(s => s.operatorId).filter(Boolean)).size;
+    const totalDurationHours = closed.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+    const avgDurationHours = closed.length ? totalDurationHours / closed.length : 0;
+    const usedToolIds = new Set(closed.map(s => s.toolId));
+    const utilizationPct = scopedTools.length
+      ? Math.round((usedToolIds.size / scopedTools.length) * 100)
+      : 0;
+
+    return {
+      totalTools:        scopedTools.length,
+      activeNow,
+      overdueCount,
+      totalCheckouts,
+      uniqueOperators,
+      totalDurationHours: Math.round(totalDurationHours * 10) / 10,
+      avgDurationHours:   Math.round(avgDurationHours * 10) / 10,
+      utilizationPct,
+    };
   },
 }));
 

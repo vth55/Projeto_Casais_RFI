@@ -6,6 +6,7 @@ import {
 } from 'firebase/firestore';
 import { LogOut, LogIn, Package, MapPin, User, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { getCurrentPosition } from '../utils/geolocation';
 
 const BASE = `artifacts/${projectId}/public/data`;
 
@@ -113,6 +114,7 @@ export default function ToolTagPage() {
     setState(S.PROCESSING);
     try {
       if (!openSession) {
+        const location = await getCurrentPosition();
         // Check-out
         await addDoc(collection(db, `${BASE}/tool_sessions`), {
           toolId: tool.id,
@@ -134,9 +136,11 @@ export default function ToolTagPage() {
           durationHours: null,
           procoreSynced: false,
           sapSynced: false,
+          location: location || null,
         });
         setResult({ action: 'checkout', toolName: tool.name });
       } else {
+        const location = await getCurrentPosition();
         // Check-in
         const now = new Date();
         const start = openSession.startTime?.toDate?.() ?? now;
@@ -145,6 +149,7 @@ export default function ToolTagPage() {
           status: 'CLOSED',
           endTime: serverTimestamp(),
           durationHours,
+          endLocation: location || null,
         });
         setResult({ action: 'checkin', toolName: tool.name, durationHours });
       }

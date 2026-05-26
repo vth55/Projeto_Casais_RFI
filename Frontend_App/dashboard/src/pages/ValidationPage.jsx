@@ -13,6 +13,8 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { db, projectId } from '../config/firebase';
 import {
   Clock,
   Truck,
@@ -25,8 +27,13 @@ import {
   Edit3,
   Save,
   Loader2,
+  Wrench,
 } from 'lucide-react';
 import useAlertsStore, { ALERT_TYPES, ALERT_STATUS } from '../store/useAlertsStore';
+
+const BASE = `artifacts/${projectId}/public/data`;
+const TOOL_ALERT_TYPES = ['TOOL_OVERDUE', 'TOOL_PRESUMED_LOST'];
+const getAlertType = (alert) => alert?.anomalyType || alert?.type;
 
 // Formatar data para input datetime-local
 const formatDateTimeLocal = (timestamp) => {
@@ -56,6 +63,18 @@ const formatDuration = (hours) => {
   return `${h}h ${m}m`;
 };
 
+const timestampToDate = (timestamp) => {
+  if (!timestamp) return null;
+  return timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+};
+
+const getOpenDays = (startTime) => {
+  const start = timestampToDate(startTime);
+  if (!start || Number.isNaN(start.getTime())) return '-';
+  const days = Math.max(0, Math.ceil((Date.now() - start.getTime()) / 86_400_000));
+  return `${days} ${days === 1 ? 'dia' : 'dias'}`;
+};
+
 const ValidationPage = ({ token }) => {
   const { alerts, alertsLoaded, getAlertByToken, validateAlert, initializeAlertsListener } = useAlertsStore();
   const [loading, setLoading] = useState(true);
@@ -63,6 +82,7 @@ const ValidationPage = ({ token }) => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [toolSession, setToolSession] = useState(null);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -82,6 +102,9 @@ const ValidationPage = ({ token }) => {
     return getAlertByToken(token);
   }, [alerts, token, getAlertByToken]);
 
+  const alertType = getAlertType(alert);
+  const isToolAlert = TOOL_ALERT_TYPES.includes(alertType);
+
   // Quando o alerta é carregado, preencher o formulário
   useEffect(() => {
     if (alert) {
@@ -90,7 +113,9 @@ const ValidationPage = ({ token }) => {
         correctedEndTime: formatDateTimeLocal(alert.originalEndTime),
         notes: '',
       });
-      setLoading(false);
+      if (!TOOL_ALERT_TYPES.includes(getAlertType(alert)) || alert.status !== ALERT_STATUS.PENDING) {
+        setLoading(false);
+      }
     } else if (alertsLoaded) {
       // Firestore respondeu mas token não encontrado
       setError('Link de validação inválido ou expirado.');
@@ -98,8 +123,37 @@ const ValidationPage = ({ token }) => {
     }
   }, [alert, alertsLoaded]);
 
+  useEffect(() => {
+    if (!alert || !TOOL_ALERT_TYPES.includes(getAlertType(alert)) || alert.status !== ALERT_STATUS.PENDING) return;
+
+    const loadToolSession = async () => {
+      if (!alert.sessionId) {
+        setError('Alerta sem sessao de ferramenta associada.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const snap = await getDoc(doc(db, `${BASE}/tool_sessions`, alert.sessionId));
+        if (!snap.exists()) {
+          setError('Sessao de ferramenta nao encontrada.');
+          setLoading(false);
+          return;
+        }
+        setToolSession({ id: snap.id, ...snap.data() });
+        setLoading(false);
+      } catch (err) {
+        console.error('Erro ao carregar sessao de ferramenta:', err);
+        setError('Erro ao carregar sessao de ferramenta. Por favor tente novamente.');
+        setLoading(false);
+      }
+    };
+
+    loadToolSession();
+  }, [alert]);
+
   // Verificar se é alerta de auto-close (obrigatório alterar)
-  const isAutoClose = alert?.type === ALERT_TYPES.AUTO_CLOSE;
+  const isAutoClose = getAlertType(alert) === ALERT_TYPES.AUTO_CLOSE;
 
   // Verificar se houve alteração
   const hasChanges = useMemo(() => {
@@ -207,6 +261,81 @@ const ValidationPage = ({ token }) => {
     setSubmitting(false);
   };
 
+  const handleToolAction = async (action) => {
+    if (!alert || !toolSession) return;
+    if (action === 'lost' && !window.confirm('Confirmar que esta ferramenta foi perdida?')) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const validatedBy = toolSession.operatorName || alert.operatorName || 'operator-validation';
+
+      if (action === 'in_use') {
+        await updateDoc(doc(db, `${BASE}/alerts`, alert.id), {
+          status: 'confirmed_in_use',
+          resolution: 'confirmed_in_use',
+          lastConfirmedAt: serverTimestamp(),
+          resolvedAt: serverTimestamp(),
+          validatedAt: serverTimestamp(),
+          validatedBy,
+        });
+      } else if (action === 'returned') {
+        const now = new Date();
+        const start = timestampToDate(toolSession.startTime) || now;
+        const durationHours = Math.max(0, Math.round(((now - start) / 3_600_000) * 100) / 100);
+
+        const batch = writeBatch(db);
+        batch.update(doc(db, `${BASE}/tool_sessions`, toolSession.id), {
+          status: 'CLOSED',
+          endTime: serverTimestamp(),
+          durationHours,
+          closedBy: 'operator-validation',
+        });
+        batch.update(doc(db, `${BASE}/alerts`, alert.id), {
+          status: ALERT_STATUS.RESOLVED,
+          resolution: 'returned_now',
+          resolvedAt: serverTimestamp(),
+          validatedAt: serverTimestamp(),
+          validatedBy,
+        });
+        await batch.commit();
+      } else if (action === 'lost') {
+        const toolId = toolSession.toolId || alert.toolId;
+        if (!toolId) {
+          setError('Nao foi possivel identificar a ferramenta para marcar como perdida.');
+          setSubmitting(false);
+          return;
+        }
+
+        const batch = writeBatch(db);
+        batch.update(doc(db, `${BASE}/tool_sessions`, toolSession.id), {
+          status: 'LOST',
+          lostAt: serverTimestamp(),
+        });
+        batch.update(doc(db, `${BASE}/tools`, toolId), {
+          status: 'lost',
+          lostAt: serverTimestamp(),
+        });
+        batch.update(doc(db, `${BASE}/alerts`, alert.id), {
+          status: ALERT_STATUS.RESOLVED,
+          resolution: 'lost',
+          resolvedAt: serverTimestamp(),
+          validatedAt: serverTimestamp(),
+          validatedBy,
+        });
+        await batch.commit();
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error('Erro ao validar alerta de ferramenta:', err);
+      setError(err.message || 'Erro ao validar ferramenta. Por favor tente novamente.');
+    }
+
+    setSubmitting(false);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -251,7 +380,7 @@ const ValidationPage = ({ token }) => {
           <h1 className="text-xl font-bold text-slate-900 mb-2">Sessão Resolvida</h1>
           <p className="text-slate-600">
             Esta sessão já foi {resolutionLabel} em{' '}
-            {formatDateTime(alert.validatedAt)}.
+            {formatDateTime(alert.validatedAt || alert.resolvedAt)}.
           </p>
           <p className="text-sm text-slate-500 mt-4">Pode fechar esta página.</p>
         </div>
@@ -261,6 +390,17 @@ const ValidationPage = ({ token }) => {
 
   // Success state
   if (submitted) {
+    const successTitle = isToolAlert
+      ? 'Ferramenta Validada'
+      : hasChanges
+      ? 'Sessão Corrigida'
+      : 'Sessão Validada';
+    const successMessage = isToolAlert
+      ? 'A situação da ferramenta foi registada com sucesso. Obrigado!'
+      : hasChanges
+      ? 'Os horários foram corrigidos com sucesso. Obrigado!'
+      : 'Os horários foram confirmados. Obrigado!';
+
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
@@ -268,14 +408,121 @@ const ValidationPage = ({ token }) => {
             <CheckCircle className="w-8 h-8 text-emerald-600" />
           </div>
           <h1 className="text-xl font-bold text-slate-900 mb-2">
-            {hasChanges ? 'Sessão Corrigida' : 'Sessão Validada'}
+            {successTitle}
           </h1>
           <p className="text-slate-600">
-            {hasChanges
-              ? 'Os horários foram corrigidos com sucesso. Obrigado!'
-              : 'Os horários foram confirmados. Obrigado!'}
+            {successMessage}
           </p>
           <p className="text-sm text-slate-500 mt-4">Pode fechar esta página.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isToolAlert) {
+    const title = alertType === 'TOOL_OVERDUE'
+      ? 'Ferramenta com devolução atrasada'
+      : 'Ferramenta presumivelmente perdida';
+
+    return (
+      <div className="min-h-screen bg-slate-100 py-8 px-4">
+        <div className="max-w-lg mx-auto">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-full text-sm font-medium mb-4">
+              <span className="font-bold">CASAIS</span>
+              <span className="opacity-75">Fleet Intelligence</span>
+            </div>
+            <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Wrench className="w-8 h-8 text-amber-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+            <p className="text-slate-600 mt-1">Confirme o estado atual desta ferramenta.</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+              <h2 className="font-semibold text-slate-900">Informações da Ferramenta</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Wrench className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Ferramenta</p>
+                  <p className="font-medium text-slate-900">{toolSession?.toolName || alert.toolName || '-'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Obra</p>
+                  <p className="font-medium text-slate-900">{toolSession?.obraName || alert.obraName || 'Sem obra atribuída'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Tempo em aberto</p>
+                  <p className="font-medium text-slate-900">{getOpenDays(toolSession?.startTime)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <User className="w-5 h-5 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Operador de checkout</p>
+                  <p className="font-medium text-slate-900">{toolSession?.operatorName || alert.operatorName || '-'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+              <XCircle className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <button
+              onClick={() => handleToolAction('in_use')}
+              disabled={submitting}
+              className="w-full py-4 rounded-xl font-semibold text-white text-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-400 flex items-center justify-center gap-2"
+            >
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+              Ainda em uso
+            </button>
+            <button
+              onClick={() => handleToolAction('returned')}
+              disabled={submitting}
+              className="w-full py-4 rounded-xl font-semibold text-white text-lg bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 flex items-center justify-center gap-2"
+            >
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              Devolvida agora
+            </button>
+            <button
+              onClick={() => handleToolAction('lost')}
+              disabled={submitting}
+              className="w-full py-4 rounded-xl font-semibold text-white text-lg bg-red-500 hover:bg-red-600 disabled:bg-slate-400 flex items-center justify-center gap-2"
+            >
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <AlertTriangle className="w-5 h-5" />}
+              Perdida
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-slate-500 mt-6">
+            CASAIS Fleet Intelligence - Sistema de Gestão de Frotas
+          </p>
         </div>
       </div>
     );

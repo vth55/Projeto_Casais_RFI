@@ -1,178 +1,145 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  Truck, Wrench, Clock, Search, X, ChevronRight,
-  Leaf, Euro, Activity, Calendar, User, AlertTriangle,
+  Activity,
+  AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Search,
+  User,
+  Wrench,
+  X,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
-import { calculateRAGStatus } from '../../utils/chartDataHelpers';
-import { MAINTENANCE_ALERT_PCT, MAINTENANCE_OVERDUE_PCT } from '../../utils/sessionHelpers';
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-// Normalise status values (Procore syncs IDLE/ACTIVE uppercase; PWA uses ativo/inativo)
-function normalizeStatus(raw) {
-  if (!raw) return 'inativo';
-  switch (raw.toLowerCase()) {
-    case 'ativo':
-    case 'active':
-    case 'activo':   return 'ativo';
-    case 'manutencao':
-    case 'maintenance':
-    case 'em manutencao': return 'manutencao';
-    case 'transit':
-    case 'transito': return 'transit';
-    default:         return 'inativo'; // idle, IDLE, inativo, unknown
-  }
-}
-
-const STATUS_LABEL = {
-  ativo:      'Activo',
-  inativo:    'Inactivo',
-  manutencao: 'Manutenção',
-  transit:    'Trânsito',
-};
-
-const STATUS_COLOR = {
-  ativo:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  inativo:    'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
-  manutencao: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  transit:    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-};
-
-const RAG_BAR = { green: 'bg-emerald-500', amber: 'bg-amber-400', red: 'bg-red-500' };
-const RAG_TEXT = {
-  green: 'text-emerald-600 dark:text-emerald-400',
-  amber: 'text-amber-600 dark:text-amber-400',
-  red: 'text-red-600 dark:text-red-400',
-};
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_OVERDUE_DAYS = 7;
 
 const FILTER_OPTIONS = [
-  { value: 'all',       label: 'Todos' },
-  { value: 'ativo',     label: 'Activos' },
-  { value: 'inativo',   label: 'Inactivos' },
-  { value: 'manutencao',label: 'Manutenção' },
-  { value: 'alert',     label: 'Alerta' },
+  { value: 'all', label: 'Todos' },
+  { value: 'in_use', label: 'Em uso' },
+  { value: 'returned', label: 'Devolvidas' },
+  { value: 'overdue', label: 'Overdue' },
 ];
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
-function getMaintenanceRag(partialHours, threshold) {
-  if (!threshold || threshold <= 0) return null;
-  const pct = (partialHours || 0) / threshold;
-  if (pct >= MAINTENANCE_OVERDUE_PCT) return 'red';
-  if (pct >= MAINTENANCE_ALERT_PCT)   return 'amber';
-  return 'green';
-}
-
-function periodDaysFromRange(dateRange) {
-  if (!dateRange?.start || !dateRange?.end) return 30;
-  return Math.max(1, Math.ceil((dateRange.end - dateRange.start) / 86400000) + 1);
-}
-
-function formatTs(ts) {
-  if (!ts) return '—';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
-}
-
-// ─── UTILIZATION BAR ─────────────────────────────────────────────────────────
-
-const UtilizationBar = ({ hours, availableHours, compact }) => {
-  const pct = availableHours > 0 ? Math.min(100, Math.round((hours / availableHours) * 100)) : 0;
-  const rag = calculateRAGStatus(pct, { green: 50, amber: 20 });
-
-  if (compact) {
-    return (
-      <div className="flex items-center gap-1.5 min-w-0">
-        <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden flex-1" style={{ minWidth: 48 }}>
-          <div className={`h-full rounded-full ${RAG_BAR[rag]}`} style={{ width: `${pct}%` }} />
-        </div>
-        <span className={`text-xs font-medium tabular-nums shrink-0 ${RAG_TEXT[rag]}`}>{pct}%</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-        <span>Utilização</span>
-        <span className={`font-medium ${RAG_TEXT[rag]}`}>{pct}%</span>
-      </div>
-      <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${RAG_BAR[rag]}`} style={{ width: `${pct}%` }} />
-      </div>
-      <p className="text-xs text-slate-400">{hours.toFixed(1)}h / {availableHours}h disponíveis</p>
-    </div>
-  );
+const TOOL_STATE_LABEL = {
+  available: 'Disponivel',
+  in_use: 'Em uso',
+  returned: 'Devolvida',
+  overdue: 'Overdue',
 };
 
-// ─── MAINTENANCE CHIP / BAR ───────────────────────────────────────────────────
-
-const MaintenanceBar = ({ partialHours, threshold, compact }) => {
-  const rag = getMaintenanceRag(partialHours, threshold);
-  if (!rag) return null;
-
-  const pct = Math.min(100, Math.round(((partialHours || 0) / threshold) * 100));
-  const remaining = Math.max(0, threshold - (partialHours || 0));
-
-  if (compact) {
-    return (
-      <div className={`flex items-center gap-1 text-xs font-medium ${RAG_TEXT[rag]}`}>
-        <Wrench className="w-3 h-3 shrink-0" />
-        <span>{Math.round(partialHours || 0)}h / {threshold}h</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-        <span className="flex items-center gap-1"><Wrench className="w-3 h-3" /> Manutenção</span>
-        <span className={`font-medium ${RAG_TEXT[rag]}`}>{pct}% usado</span>
-      </div>
-      <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${RAG_BAR[rag]}`} style={{ width: `${pct}%` }} />
-      </div>
-      {rag !== 'green' && (
-        <p className={`text-xs ${RAG_TEXT[rag]}`}>
-          {rag === 'red' ? 'Manutenção necessária' : `${Math.round(remaining)}h até manutenção`}
-        </p>
-      )}
-    </div>
-  );
+const TOOL_STATE_COLOR = {
+  available: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  in_use: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  returned: 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300',
+  overdue: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
-// ─── FLEET HEADER ─────────────────────────────────────────────────────────────
+function resolveTimestamp(value) {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate();
+  return new Date(value);
+}
 
-const FleetHeader = ({ machines, machineStatsList }) => {
-  const total      = machines.length;
-  const active     = machines.filter(m => normalizeStatus(m.status) === 'ativo').length;
-  const inMaint    = machines.filter(m => normalizeStatus(m.status) === 'manutencao').length;
-  const overdue    = machines.filter(m => getMaintenanceRag(m.partialHours, m.maintenanceThreshold) === 'red').length;
-  const totalHours = machineStatsList.reduce((s, ms) => s + ms.hours, 0);
+function formatDate(value) {
+  const date = resolveTimestamp(value);
+  if (!date || Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+}
 
-  const maintColor = inMaint > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400';
-  const maintBg    = inMaint > 0 ? 'bg-red-50 dark:bg-red-900/20'   : 'bg-slate-100 dark:bg-slate-700';
+function formatDateTime(value) {
+  const date = resolveTimestamp(value);
+  if (!date || Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('pt-PT', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
+function isOverdueSession(session, thresholdDays) {
+  if (session?.status !== 'OPEN') return false;
+  const start = resolveTimestamp(session.startTime);
+  return !!start && (Date.now() - start.getTime()) >= thresholdDays * DAY_MS;
+}
+
+function getToolState(stats) {
+  if (stats.overdueCount > 0) return 'overdue';
+  if (stats.openCount > 0) return 'in_use';
+  if (stats.closedCount > 0) return 'returned';
+  return 'available';
+}
+
+function getInventoryLabel(tool) {
+  return tool.assetTag
+    || tool.inventoryCode
+    || tool.nfcTagId
+    || tool.serialNumber
+    || tool.code
+    || tool.id;
+}
+
+function getToolSubtitle(tool) {
+  return tool.type || tool.category || tool.brand || '—';
+}
+
+function getOperatorName(operators, session) {
+  if (session?.operatorName) return session.operatorName;
+  if (!session?.operatorId) return '—';
+  const operator = (operators || []).find(
+    (item) => item.cardId === session.operatorId || item.id === session.operatorId,
+  );
+  return operator?.name || session.operatorId.slice(0, 10);
+}
+
+const InventoryHeader = ({ summary }) => {
   const tiles = [
-    { label: 'Total frota',      value: total,   icon: Truck,    color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-900/20' },
-    { label: 'Activas',          value: active,  icon: Activity, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-    { label: 'Em manutenção',    value: inMaint, icon: Wrench,   color: maintColor,                               bg: maintBg,
-      description: overdue > 0 ? `${overdue} com intervenção vencida` : null },
-    { label: 'Horas no período', value: `${totalHours.toFixed(1)}h`, icon: Clock, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-900/20' },
+    {
+      label: 'Total',
+      value: summary.totalTools,
+      icon: Wrench,
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-50 dark:bg-primary-900/20',
+    },
+    {
+      label: 'Em uso agora',
+      value: summary.openSessions,
+      icon: Activity,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    },
+    {
+      label: 'Devolvidas',
+      value: summary.closedSessions,
+      icon: CheckCircle2,
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-50 dark:bg-primary-900/20',
+    },
+    {
+      label: 'Overdue',
+      value: summary.overdueSessions,
+      icon: AlertTriangle,
+      color: summary.overdueSessions > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400',
+      bg: summary.overdueSessions > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-slate-100 dark:bg-slate-700',
+    },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 md:p-5">
-      {tiles.map(({ label, value, icon: Icon, color, bg, description }) => (
-        <div key={label} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-3">
+      {tiles.map(({ label, value, icon: Icon, color, bg }) => (
+        <div
+          key={label}
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-3"
+        >
           <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
             <Icon className={`w-4 h-4 ${color}`} />
           </div>
           <div className="min-w-0">
             <p className={`font-bold text-lg leading-tight ${color}`}>{value}</p>
             <p className="text-xs text-slate-400 truncate">{label}</p>
-            {description && <p className="text-xs text-red-500 dark:text-red-400 truncate mt-0.5">{description}</p>}
           </div>
         </div>
       ))}
@@ -180,90 +147,98 @@ const FleetHeader = ({ machines, machineStatsList }) => {
   );
 };
 
-// ─── MACHINE ROW (desktop table) ──────────────────────────────────────────────
+const ToolRow = ({ stats, operators, onClick }) => {
+  const state = getToolState(stats);
+  const lastOperator = stats.latestSession ? getOperatorName(operators, stats.latestSession) : '—';
 
-const MachineRow = ({ ms, availableHours, onClick }) => (
-  <tr
-    className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
-    onClick={onClick}
-  >
-    <td className="px-4 py-3">
-      <p className="font-medium text-sm text-slate-800 dark:text-slate-100">{ms.machine.name}</p>
-      <p className="text-xs text-slate-400">{ms.machine.type || ms.machine.category || '—'}</p>
-    </td>
-    <td className="px-4 py-3">
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[normalizeStatus(ms.machine.status)]}`}>
-        {STATUS_LABEL[normalizeStatus(ms.machine.status)]}
-      </span>
-    </td>
-    <td className="px-4 py-3 w-44">
-      <UtilizationBar hours={ms.hours} availableHours={availableHours} compact />
-    </td>
-    <td className="px-4 py-3 text-sm tabular-nums text-slate-700 dark:text-slate-200">
-      {ms.hours.toFixed(1)}h
-    </td>
-    <td className="px-4 py-3">
-      <MaintenanceBar partialHours={ms.machine.partialHours} threshold={ms.machine.maintenanceThreshold} compact />
-    </td>
-    <td className="px-4 py-3 text-xs text-right text-slate-400 tabular-nums">{ms.sessions}</td>
-    <td className="px-4 py-3 text-right">
-      <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
-    </td>
-  </tr>
-);
-
-// ─── MACHINE CARD (mobile) ────────────────────────────────────────────────────
-
-const MachineListCard = ({ ms, availableHours, onClick }) => (
-  <div
-    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-    onClick={onClick}
-  >
-    <div className="flex items-start justify-between mb-3">
-      <div>
-        <p className="font-semibold text-slate-900 dark:text-white">{ms.machine.name}</p>
-        <p className="text-xs text-slate-400">{ms.machine.type || ms.machine.category || '—'}</p>
-      </div>
-      <div className="flex items-center gap-2 ml-2 shrink-0">
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[normalizeStatus(ms.machine.status)]}`}>
-          {STATUS_LABEL[normalizeStatus(ms.machine.status)]}
+  return (
+    <tr
+      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+      onClick={onClick}
+    >
+      <td className="px-4 py-3">
+        <p className="font-medium text-sm text-slate-800 dark:text-slate-100">{stats.tool.name}</p>
+        <p className="text-xs text-slate-400">{getToolSubtitle(stats.tool)}</p>
+      </td>
+      <td className="px-4 py-3">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TOOL_STATE_COLOR[state]}`}>
+          {TOOL_STATE_LABEL[state]}
         </span>
-        <ChevronRight className="w-4 h-4 text-slate-300" />
+      </td>
+      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+        <span className="font-medium">Checkouts (período):</span> {stats.checkouts}
+      </td>
+      <td className="px-4 py-3 text-sm tabular-nums text-slate-700 dark:text-slate-200">
+        {formatDate(stats.latestSession?.startTime)}
+      </td>
+      <td className="px-4 py-3 text-sm tabular-nums text-slate-700 dark:text-slate-200">
+        {formatDate(stats.latestReturn?.endTime)}
+      </td>
+      <td className="px-4 py-3 text-sm text-right text-slate-500 dark:text-slate-300 truncate max-w-32">
+        {lastOperator}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
+      </td>
+    </tr>
+  );
+};
+
+const ToolListCard = ({ stats, operators, onClick }) => {
+  const state = getToolState(stats);
+  const lastOperator = stats.latestSession ? getOperatorName(operators, stats.latestSession) : '—';
+
+  return (
+    <div
+      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-slate-900 dark:text-white">{stats.tool.name}</p>
+          <p className="text-xs text-slate-400 truncate">{getToolSubtitle(stats.tool)}</p>
+          <p className="text-xs text-slate-400 truncate mt-1">Inventário: {getInventoryLabel(stats.tool)}</p>
+        </div>
+        <div className="flex items-center gap-2 ml-2 shrink-0">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TOOL_STATE_COLOR[state]}`}>
+            {TOOL_STATE_LABEL[state]}
+          </span>
+          <ChevronRight className="w-4 h-4 text-slate-300" />
+        </div>
+      </div>
+
+      <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+        <p><span className="font-medium">Checkouts (período):</span> {stats.checkouts}</p>
+        <p><span className="font-medium">Último checkout:</span> {formatDateTime(stats.latestSession?.startTime)}</p>
+        <p><span className="font-medium">Última devolução:</span> {formatDateTime(stats.latestReturn?.endTime)}</p>
+      </div>
+
+      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-500">
+        <span className="flex items-center gap-1 min-w-0 truncate">
+          <User className="w-3 h-3 shrink-0" />
+          {lastOperator}
+        </span>
+        <span className="flex items-center gap-1">
+          <Activity className="w-3 h-3" />
+          {stats.openCount} em uso
+        </span>
       </div>
     </div>
+  );
+};
 
-    <div className="space-y-2">
-      <UtilizationBar hours={ms.hours} availableHours={availableHours} />
-      <MaintenanceBar partialHours={ms.machine.partialHours} threshold={ms.machine.maintenanceThreshold} compact />
-    </div>
+const ToolDrawer = ({ stats, operators, overdueDays, onClose }) => {
+  const state = getToolState(stats);
 
-    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-500">
-      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{ms.hours.toFixed(1)}h</span>
-      <span className="flex items-center gap-1"><Activity className="w-3 h-3" />{ms.sessions} sessões</span>
-      {ms.cost > 0 && <span className="flex items-center gap-1"><Euro className="w-3 h-3" />{Math.round(ms.cost)}€</span>}
-    </div>
-  </div>
-);
-
-// ─── MACHINE DRAWER ───────────────────────────────────────────────────────────
-
-const MachineDrawer = ({ machine, ms, obraSessions, operators, onClose }) => {
-  const getOperatorName = (opId) => {
-    if (!opId) return '—';
-    const op = operators.find(o => o.cardId === opId || o.id === opId);
-    return op?.name || opId.slice(0, 10);
-  };
-
-  const recentSessions = useMemo(() =>
-    obraSessions
-      .filter(s => s.machineId === machine.id)
+  const recentHistory = useMemo(
+    () => [...stats.sessions]
       .sort((a, b) => {
-        const da = a.startTime?.toDate ? a.startTime.toDate() : new Date(a.startTime || 0);
-        const db = b.startTime?.toDate ? b.startTime.toDate() : new Date(b.startTime || 0);
-        return db - da;
+        const left = resolveTimestamp(a.startTime)?.getTime() || 0;
+        const right = resolveTimestamp(b.startTime)?.getTime() || 0;
+        return right - left;
       })
-      .slice(0, 5),
-    [machine.id, obraSessions]
+      .slice(0, 10),
+    [stats.sessions],
   );
 
   return (
@@ -271,18 +246,18 @@ const MachineDrawer = ({ machine, ms, obraSessions, operators, onClose }) => {
       <div className="flex-1 bg-black/30" />
       <div
         className="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl flex flex-col overflow-hidden"
-        onClick={e => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-start justify-between p-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <h2 className="font-semibold text-slate-900 dark:text-white">{machine.name}</h2>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[normalizeStatus(machine.status)]}`}>
-                {STATUS_LABEL[normalizeStatus(machine.status)]}
+              <h2 className="font-semibold text-slate-900 dark:text-white truncate">{stats.tool.name}</h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${TOOL_STATE_COLOR[state]}`}>
+                {TOOL_STATE_LABEL[state]}
               </span>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{machine.type || machine.category || '—'}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{getToolSubtitle(stats.tool)}</p>
+            <p className="text-xs text-slate-400 mt-1">Inventário: {getInventoryLabel(stats.tool)}</p>
           </div>
           <button
             onClick={onClose}
@@ -292,227 +267,277 @@ const MachineDrawer = ({ machine, ms, obraSessions, operators, onClose }) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* KPI row */}
-          <div className="grid grid-cols-3 gap-px bg-slate-200 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-700">
-            {[
-              { value: `${ms.hours.toFixed(1)}h`, label: 'horas', icon: Clock },
-              { value: `${Math.round(ms.cost)}€`,  label: 'custo',  icon: Euro },
-              { value: `${Math.round(ms.co2)} kg`, label: 'CO₂',   icon: Leaf },
-            ].map(({ value, label, icon: Icon }) => (
-              <div key={label} className="bg-white dark:bg-slate-800 py-3 text-center">
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{value}</p>
-                <p className="text-xs text-slate-500 flex items-center justify-center gap-1 mt-0.5">
-                  <Icon className="w-3 h-3" />{label}
-                </p>
-              </div>
-            ))}
+        <div className="grid grid-cols-4 gap-px bg-slate-200 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-700">
+          {[
+            { value: stats.checkouts, label: 'checkouts', icon: Activity },
+            { value: stats.openCount, label: 'em uso', icon: Clock },
+            { value: stats.closedCount, label: 'devolvidas', icon: CheckCircle2 },
+            { value: stats.overdueCount, label: 'overdue', icon: AlertTriangle },
+          ].map(({ value, label, icon: Icon }) => (
+            <div key={label} className="bg-white dark:bg-slate-800 py-3 text-center">
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{value}</p>
+              <p className="text-xs text-slate-500 flex items-center justify-center gap-1 mt-0.5">
+                <Icon className="w-3 h-3" />
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Histórico de checkouts
+            </h3>
+            <span className="text-xs text-slate-400">Últimos 10</span>
           </div>
 
-          {/* Maintenance */}
-          {getMaintenanceRag(machine.partialHours, machine.maintenanceThreshold) && (
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <MaintenanceBar partialHours={machine.partialHours} threshold={machine.maintenanceThreshold} />
+          {recentHistory.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">Sem checkouts no período</p>
+          ) : (
+            <div className="space-y-0 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
+              {recentHistory.map((session, index) => {
+                const overdue = isOverdueSession(session, overdueDays);
+                const badgeClass = overdue
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : session.status === 'OPEN'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300';
+
+                const badgeLabel = overdue
+                  ? 'Overdue'
+                  : session.status === 'OPEN'
+                    ? 'Em uso'
+                    : 'Devolvida';
+
+                return (
+                  <div
+                    key={session.id || `${stats.tool.id}-${index}`}
+                    className="px-3 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-slate-400 tabular-nums">
+                            {formatDateTime(session.startTime)}
+                          </span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${badgeClass}`}>
+                            {badgeLabel}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 truncate">
+                          <User className="w-3 h-3 shrink-0" />
+                          {getOperatorName(operators, session)}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-slate-400">Devolução</p>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 tabular-nums">
+                          {session.status === 'OPEN' ? 'Em aberto' : formatDateTime(session.endTime)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
-
-          {/* Sessions */}
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                <Activity className="w-4 h-4" /> Sessões no período
-              </h3>
-              <span className="text-xs text-slate-400">{ms.sessions} total</span>
-            </div>
-
-            {recentSessions.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-6">Sem sessões no período</p>
-            ) : (
-              <div className="space-y-0 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
-                {recentSessions.map((s, i) => (
-                  <div
-                    key={s.id || i}
-                    className="flex items-center justify-between px-3 py-2.5 text-sm border-b border-slate-100 dark:border-slate-700 last:border-0"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs text-slate-400 shrink-0 tabular-nums">{formatTs(s.startTime)}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${s.status === 'OPEN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-                        {s.status === 'OPEN' ? '● Em curso' : 'Fechada'}
-                      </span>
-                      <span className="text-xs text-slate-500 truncate flex items-center gap-1">
-                        <User className="w-3 h-3 shrink-0" />
-                        {getOperatorName(s.operatorId)}
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 tabular-nums shrink-0 ml-2">
-                      {s.status === 'OPEN' ? '—' : `${(s.durationHours || 0).toFixed(1)}h`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Heatmap stub — adiado */}
-            <button
-              disabled
-              title="Em breve"
-              className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm text-slate-400 border border-dashed border-slate-200 dark:border-slate-600 rounded-xl cursor-not-allowed"
-            >
-              <Calendar className="w-4 h-4" />
-              Heatmap de actividade — Em breve
-            </button>
-          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// ─── MAIN VIEW ────────────────────────────────────────────────────────────────
+const EquipamentosObraView = ({ obraId, dateRange, obraMachines: _obraMachines }) => {
+  const {
+    getToolsByObraId,
+    getToolSessionsByObraId,
+    tools,
+    toolSessions,
+    operators,
+    systemSettings,
+  } = useStore();
 
-const EquipamentosObraView = ({ obraId, dateRange, obraMachines }) => {
-  const { getSessionsByObraId, sessions, machines, systemSettings, operators } = useStore();
+  const [selectedTool, setSelectedTool] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [search, setSearch] = useState('');
 
-  const [selectedMachine, setSelectedMachine] = useState(null);
-  const [filterStatus, setFilterStatus]       = useState('all');
-  const [search, setSearch]                   = useState('');
+  const overdueDays = systemSettings?.toolOverdueDays ?? DEFAULT_OVERDUE_DAYS;
+
+  const obraTools = useMemo(
+    () => getToolsByObraId(obraId),
+    [getToolsByObraId, obraId, tools],
+  );
 
   const obraSessions = useMemo(
-    () => getSessionsByObraId(obraId, dateRange),
-    [obraId, dateRange, sessions, machines]
+    () => getToolSessionsByObraId(obraId, dateRange),
+    [getToolSessionsByObraId, obraId, dateRange, toolSessions, tools],
   );
 
-  const machineStatsList = useMemo(() => {
-    const co2Factor = systemSettings?.co2FactorPerLitre || 2.68;
-    return obraMachines.map(m => {
-      const ms      = obraSessions.filter(s => s.machineId === m.id);
-      const closed  = ms.filter(s => s.status === 'CLOSED');
-      const hours   = closed.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-      const cost    = closed.reduce((sum, s) => sum + (s.costs?.total || 0), 0);
-      const co2     = (m.consumptionRate || 0) * hours * co2Factor;
-      return {
-        machine:  m,
-        hours:    Math.round(hours * 10) / 10,
-        cost:     Math.round(cost),
-        co2:      Math.round(co2),
-        sessions: ms.length,
-      };
-    }).sort((a, b) => b.hours - a.hours);
-  }, [obraMachines, obraSessions, systemSettings]);
+  const toolStatsList = useMemo(
+    () => obraTools
+      .map((tool) => {
+        const sessions = obraSessions.filter((session) => session.toolId === tool.id);
+        const openSessions = sessions.filter((session) => session.status === 'OPEN');
+        const closedSessions = sessions.filter((session) => session.status === 'CLOSED');
+        const overdueSessions = openSessions.filter((session) => isOverdueSession(session, overdueDays));
+        const latestSession = [...sessions].sort((a, b) => {
+          const left = resolveTimestamp(a.startTime)?.getTime() || 0;
+          const right = resolveTimestamp(b.startTime)?.getTime() || 0;
+          return right - left;
+        })[0] || null;
+        const latestReturn = [...closedSessions].sort((a, b) => {
+          const left = resolveTimestamp(a.endTime)?.getTime() || 0;
+          const right = resolveTimestamp(b.endTime)?.getTime() || 0;
+          return right - left;
+        })[0] || null;
 
-  const availableHours = useMemo(() => periodDaysFromRange(dateRange) * 8, [dateRange]);
+        return {
+          tool,
+          sessions,
+          checkouts: sessions.length,
+          openCount: openSessions.length,
+          closedCount: closedSessions.length,
+          overdueCount: overdueSessions.length,
+          latestSession,
+          latestReturn,
+        };
+      })
+      .sort((a, b) => {
+        if (b.checkouts !== a.checkouts) return b.checkouts - a.checkouts;
+        const left = resolveTimestamp(a.latestSession?.startTime)?.getTime() || 0;
+        const right = resolveTimestamp(b.latestSession?.startTime)?.getTime() || 0;
+        return right - left;
+      }),
+    [obraTools, obraSessions, overdueDays],
+  );
+
+  const summary = useMemo(() => ({
+    totalTools: obraTools.length,
+    openSessions: obraSessions.filter((session) => session.status === 'OPEN').length,
+    closedSessions: obraSessions.filter((session) => session.status === 'CLOSED').length,
+    overdueSessions: obraSessions.filter((session) => isOverdueSession(session, overdueDays)).length,
+  }), [obraTools.length, obraSessions, overdueDays]);
 
   const filtered = useMemo(() => {
-    let list = machineStatsList;
-    if (filterStatus === 'alert') {
-      list = list.filter(ms => getMaintenanceRag(ms.machine.partialHours, ms.machine.maintenanceThreshold) === 'red');
-    } else if (filterStatus !== 'all') {
-      list = list.filter(ms => normalizeStatus(ms.machine.status) === filterStatus);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(ms =>
-        ms.machine.name?.toLowerCase().includes(q) ||
-        ms.machine.type?.toLowerCase().includes(q) ||
-        ms.machine.category?.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [machineStatsList, filterStatus, search]);
+    let list = toolStatsList;
 
-  const selectedMs = useMemo(
-    () => machineStatsList.find(ms => ms.machine.id === selectedMachine?.id) || null,
-    [selectedMachine, machineStatsList]
+    if (filterStatus === 'in_use') {
+      list = list.filter((stats) => stats.openCount > 0);
+    } else if (filterStatus === 'returned') {
+      list = list.filter((stats) => stats.closedCount > 0);
+    } else if (filterStatus === 'overdue') {
+      list = list.filter((stats) => stats.overdueCount > 0);
+    }
+
+    if (search.trim()) {
+      const query = search.toLowerCase();
+      list = list.filter((stats) => {
+        const haystack = [
+          stats.tool.name,
+          getToolSubtitle(stats.tool),
+          getInventoryLabel(stats.tool),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
+    return list;
+  }, [filterStatus, search, toolStatsList]);
+
+  const selectedStats = useMemo(
+    () => toolStatsList.find((stats) => stats.tool.id === selectedTool?.id) || null,
+    [selectedTool, toolStatsList],
   );
 
-  if (obraMachines.length === 0) {
+  if (obraTools.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-        <Truck className="w-12 h-12 mb-4 opacity-30" />
-        <p className="font-medium text-slate-500">Sem máquinas nesta obra</p>
-        <p className="text-sm mt-1">Atribui máquinas à obra para ver dados aqui</p>
+        <Wrench className="w-12 h-12 mb-4 opacity-30" />
+        <p className="font-medium text-slate-500">Sem ferramentas nesta obra</p>
+        <p className="text-sm mt-1">Atribui ferramentas à obra para ver dados aqui</p>
       </div>
     );
   }
 
   return (
     <div>
-      <FleetHeader machines={obraMachines} machineStatsList={machineStatsList} />
+      <InventoryHeader summary={summary} />
 
-      {/* Filter bar */}
       <div className="px-4 md:px-5 pb-3 flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Pesquisar máquina…"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Pesquisar ferramenta…"
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {FILTER_OPTIONS.map(opt => (
+          {FILTER_OPTIONS.map((option) => (
             <button
-              key={opt.value}
-              onClick={() => setFilterStatus(opt.value)}
+              key={option.value}
+              onClick={() => setFilterStatus(option.value)}
               className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
-                filterStatus === opt.value
+                filterStatus === option.value
                   ? 'bg-primary-600 text-white'
                   : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-primary-400'
               }`}
             >
-              {opt.label}
-              {opt.value === 'alert' && machineStatsList.filter(ms => getMaintenanceRag(ms.machine.partialHours, ms.machine.maintenanceThreshold) === 'red').length > 0 && (
-                <span className="ml-1 px-1 rounded bg-red-500 text-white text-[10px]">
-                  {machineStatsList.filter(ms => getMaintenanceRag(ms.machine.partialHours, ms.machine.maintenanceThreshold) === 'red').length}
-                </span>
-              )}
+              {option.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Machine list */}
       <div className="px-4 md:px-5 pb-6">
         {filtered.length === 0 ? (
           <div className="text-center py-10 text-sm text-slate-400">
-            Sem máquinas com os filtros actuais
+            Sem ferramentas com os filtros atuais
           </div>
         ) : (
           <>
-            {/* Table — lg+ */}
             <div className="hidden lg:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    {['Máquina', 'Estado', 'Utilização', 'Horas', 'Manutenção', 'Sessões', ''].map((h, i) => (
-                      <th key={i} className={`px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide ${i >= 5 ? 'text-right' : 'text-left'}`}>
-                        {h}
+                    {['Ferramenta', 'Estado', 'Uso', 'Último checkout', 'Última devolução', 'Operador', ''].map((header, index) => (
+                      <th
+                        key={header}
+                        className={`px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide ${
+                          index >= 5 ? 'text-right' : 'text-left'
+                        }`}
+                      >
+                        {header}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {filtered.map(ms => (
-                    <MachineRow
-                      key={ms.machine.id}
-                      ms={ms}
-                      availableHours={availableHours}
-                      onClick={() => setSelectedMachine(ms.machine)}
+                  {filtered.map((stats) => (
+                    <ToolRow
+                      key={stats.tool.id}
+                      stats={stats}
+                      operators={operators}
+                      onClick={() => setSelectedTool(stats.tool)}
                     />
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Cards — < lg */}
             <div className="lg:hidden space-y-3">
-              {filtered.map(ms => (
-                <MachineListCard
-                  key={ms.machine.id}
-                  ms={ms}
-                  availableHours={availableHours}
-                  onClick={() => setSelectedMachine(ms.machine)}
+              {filtered.map((stats) => (
+                <ToolListCard
+                  key={stats.tool.id}
+                  stats={stats}
+                  operators={operators}
+                  onClick={() => setSelectedTool(stats.tool)}
                 />
               ))}
             </div>
@@ -520,14 +545,12 @@ const EquipamentosObraView = ({ obraId, dateRange, obraMachines }) => {
         )}
       </div>
 
-      {/* Drawer */}
-      {selectedMachine && selectedMs && (
-        <MachineDrawer
-          machine={selectedMachine}
-          ms={selectedMs}
-          obraSessions={obraSessions}
+      {selectedTool && selectedStats && (
+        <ToolDrawer
+          stats={selectedStats}
           operators={operators}
-          onClose={() => setSelectedMachine(null)}
+          overdueDays={overdueDays}
+          onClose={() => setSelectedTool(null)}
         />
       )}
     </div>

@@ -9,7 +9,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Smartphone, Play, Clock, AlertTriangle, CheckCircle, Truck, QrCode, User } from 'lucide-react';
+import { Smartphone, Play, Clock, AlertTriangle, CheckCircle, Truck, User } from 'lucide-react';
 import useStore from '../../store/useStore';
 import { parseFirestoreTimestamp } from '../../utils/dateUtils';
 import useAuthStore from '../../store/useAuthStore';
@@ -17,26 +17,55 @@ import { Card, Badge } from '../../components/ui';
 import LiveTimer from '../../components/ui/LiveTimer';
 
 const DashboardOperador = () => {
-  const { sessions, machines, operators } = useStore();
+  const { toolSessions, tools } = useStore();
   const currentUser = useAuthStore(s => s.currentUser);
-  const myCardId = currentUser?.cardId;
+  const currentOperatorId = currentUser?.id || currentUser?.uid;
+  const operatorSessions = useMemo(
+    () => currentOperatorId ? toolSessions.filter(s => s.operatorId === currentOperatorId) : [],
+    [toolSessions, currentOperatorId]
+  );
 
-  // Sessões abertas do operador logado (filtradas pelo cardId RFID/NFC)
+  // Sessões abertas do operador autenticado.
   const activeSessions = useMemo(
-    () => sessions.filter(s => s.status === 'OPEN' && (!myCardId || s.cardId === myCardId)),
-    [sessions, myCardId]
+    () => operatorSessions.filter(s => s.status === 'OPEN'),
+    [operatorSessions]
   );
   const recentSessions = useMemo(() => 
-    sessions
-      .filter(s => s.status === 'CLOSED' && (!myCardId || s.cardId === myCardId))
+    operatorSessions
+      .filter(s => s.status === 'CLOSED')
       .sort((a, b) => {
         const dateA = parseFirestoreTimestamp(a.endTime);
         const dateB = parseFirestoreTimestamp(b.endTime);
         return dateB - dateA;
       })
       .slice(0, 5),
-    [sessions, myCardId]
+    [operatorSessions]
   );
+
+  const stats = useMemo(() => {
+    const closedSessions = operatorSessions.filter(s => s.status === 'CLOSED');
+    const totalDuration = closedSessions.reduce((sum, s) => sum + (Number(s.durationHours) || 0), 0);
+    const avgDuration = closedSessions.length ? totalDuration / closedSessions.length : 0;
+
+    return {
+      totalCheckouts: operatorSessions.length,
+      openSessions: activeSessions.length,
+      avgDuration,
+    };
+  }, [operatorSessions, activeSessions.length]);
+
+  const getToolName = (session) => {
+    const tool = tools.find(t => t.id === session.toolId);
+    return typeof tool?.name === 'object' ? tool?.name?.name : (tool?.name || session.toolName || session.toolId);
+  };
+
+  const formatHours = (hours) => `${(Number(hours) || 0).toFixed(1)}h`;
+
+  const statCards = [
+    { label: 'Checkouts', value: stats.totalCheckouts },
+    { label: 'Em mãos', value: stats.openSessions },
+    { label: 'Tempo médio', value: formatHours(stats.avgDuration) },
+  ];
 
   const openMobileHub = () => {
     window.location.hash = '/mobile-hub';
@@ -85,12 +114,21 @@ const DashboardOperador = () => {
           </div>
           <div className="text-center">
             <p className="font-bold text-red-700 dark:text-red-300">Reportar Avaria</p>
-            <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">Problema na máquina</p>
+            <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">Problema na ferramenta</p>
           </div>
         </button>
       </div>
 
-      {/* Sessão ativa */}
+      {/* Estatísticas do operador */}
+      <div className="grid grid-cols-3 gap-3">
+        {statCards.map(stat => (
+          <Card key={stat.label} className="p-3 text-center">
+            <p className="text-xl font-bold text-slate-900 dark:text-white tabular-nums">{stat.value}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{stat.label}</p>
+          </Card>
+        ))}
+      </div>
+
       {activeSessions.length > 0 && (
         <Card className="border-l-4 border-l-emerald-500">
           <div className="flex items-center gap-2 mb-3">
@@ -99,7 +137,7 @@ const DashboardOperador = () => {
             <Badge variant="success" size="sm">Em curso</Badge>
           </div>
           {activeSessions.slice(0, 2).map(session => {
-            const machine = machines.find(m => m.id === session.machineId);
+            const toolName = getToolName(session);
             const startTime = parseFirestoreTimestamp(session.startTime);
 
             return (
@@ -110,7 +148,7 @@ const DashboardOperador = () => {
                   </div>
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white text-sm">
-                      {typeof machine?.name === 'object' ? machine?.name?.name : (machine?.name || session.machineId)}
+                      {toolName}
                     </p>
                     <p className="text-xs text-slate-500">
                       Início: {startTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
@@ -149,7 +187,7 @@ const DashboardOperador = () => {
         ) : (
           <div className="space-y-2">
             {recentSessions.map(session => {
-              const machine = machines.find(m => m.id === session.machineId);
+              const toolName = getToolName(session);
               const startTime = parseFirestoreTimestamp(session.startTime);
               
               return (
@@ -158,7 +196,7 @@ const DashboardOperador = () => {
                     <CheckCircle className="w-4 h-4 text-slate-400" />
                     <div>
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                        {typeof machine?.name === 'object' ? machine?.name?.name : (machine?.name || session.machineId)}
+                        {toolName}
                       </p>
                       <p className="text-[10px] text-slate-400">
                         {startTime.toLocaleDateString('pt-PT')}
@@ -166,7 +204,7 @@ const DashboardOperador = () => {
                     </div>
                   </div>
                   <span className="text-sm font-medium text-slate-600 dark:text-slate-300 tabular-nums">
-                    {session.durationHours?.toFixed(1) || '—'}h
+                    {session.durationHours != null ? formatHours(session.durationHours) : '—'}
                   </span>
                 </div>
               );
