@@ -33,7 +33,7 @@ const navigation = [
     submenu: [
       { id: 'manutencao-alertas',   label: 'Alertas' },
       { id: 'manutencao-historico', label: 'Histórico' },
-      { id: 'manutencao-avarias',   label: 'Avarias' },
+      { id: 'manutencao-avarias',   label: 'Danos' },
     ],
   },
   { id: 'financeiro',  label: 'Financeiro',    icon: Wallet,

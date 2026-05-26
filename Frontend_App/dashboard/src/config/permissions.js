@@ -15,12 +15,13 @@ export const PERMISSIONS = {
   OBRAS_EDIT: 'obras:edit',
   OBRAS_DELETE: 'obras:delete',
 
-  // Equipamentos/Máquinas
-  MACHINES_VIEW: 'machines:view',
-  MACHINES_CREATE: 'machines:create',
-  MACHINES_EDIT: 'machines:edit',
-  MACHINES_DELETE: 'machines:delete',
-  MACHINES_MOVE: 'machines:move', // Mudar localização
+  // Ferramentas (pivot 2026-05 — substituí MACHINES_* por TOOLS_*)
+  // Os valores de string foram mantidos 'tools:...' para separar claramente do modelo legacy.
+  TOOLS_VIEW: 'tools:view',
+  TOOLS_CREATE: 'tools:create',
+  TOOLS_EDIT: 'tools:edit',
+  TOOLS_DELETE: 'tools:delete',
+  TOOLS_MOVE: 'tools:move', // Transferir ferramenta entre obra/armazém
 
   // Operadores
   OPERATORS_VIEW: 'operators:view',
@@ -29,10 +30,21 @@ export const PERMISSIONS = {
   OPERATORS_DELETE: 'operators:delete',
   OPERATORS_ASSIGN_ROLE: 'operators:assign_role',
 
-  // Sessões
-  SESSIONS_VIEW: 'sessions:view',
-  SESSIONS_VIEW_ALL: 'sessions:view_all', // Ver todas as obras
-  SESSIONS_EXPORT: 'sessions:export',
+  // Tool Sessions (checkout/checkin NFC)
+  TOOL_SESSIONS_VIEW: 'tool_sessions:view',
+  TOOL_SESSIONS_VIEW_ALL: 'tool_sessions:view_all', // Ver todas as obras
+  TOOL_SESSIONS_EXPORT: 'tool_sessions:export',
+
+  // Aliases legacy — mantidos para não quebrar checks que usam MACHINES_* ou SESSIONS_*
+  // Mapeiam para as permissões novas. Remover quando já não existirem consumidores.
+  MACHINES_VIEW: 'tools:view',
+  MACHINES_CREATE: 'tools:create',
+  MACHINES_EDIT: 'tools:edit',
+  MACHINES_DELETE: 'tools:delete',
+  MACHINES_MOVE: 'tools:move',
+  SESSIONS_VIEW: 'tool_sessions:view',
+  SESSIONS_VIEW_ALL: 'tool_sessions:view_all',
+  SESSIONS_EXPORT: 'tool_sessions:export',
 
   // Manutenção
   MAINTENANCE_VIEW: 'maintenance:view',
@@ -80,8 +92,8 @@ export const PERMISSIONS = {
  * Níveis hierárquicos de acesso ao PWA (menor = mais privilégios)
  *
  * NOTA IMPORTANTE:
- * Os operadores de máquinas NÃO acedem ao PWA desktop.
- * Eles usam o Mobile Hub (scan RFID/NFC) e reportam avarias.
+ * Os operadores de ferramentas NÃO acedem ao PWA desktop.
+ * Eles usam o Mobile Hub (scan NFC) e reportam avarias/danos.
  * O PWA desktop é usado por gestores, supervisores, técnicos e IT.
  */
 export const ROLE_LEVELS = {
@@ -89,7 +101,7 @@ export const ROLE_LEVELS = {
   IT: 0,           // Acesso total + DevTools, integrações, logs
   GESTOR: 1,       // Gestores de área (frota, financeiro, sustentabilidade)
   SUPERVISOR: 2,   // Encarregados / Supervisores de obra / Técnicos manutenção
-  OPERADOR: 3,     // Operador de campo (Mobile Hub, reportar avarias, validar anomalias)
+  OPERADOR: 3,     // Operador de campo (Mobile Hub, scan NFC ferramentas, reportar danos, validar anomalias)
 };
 
 // Perfis de acesso predefinidos
@@ -110,7 +122,7 @@ export const DEFAULT_ROLES = {
   gestor_frota: {
     id: 'gestor_frota',
     name: 'Gestor de Frota',
-    description: 'Gestão completa de equipamentos, obras e operadores',
+    description: 'Gestão completa de ferramentas, obras e operadores',
     color: 'blue',
     icon: 'Truck',
     level: ROLE_LEVELS.GESTOR,
@@ -120,17 +132,17 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.OBRAS_VIEW,
       PERMISSIONS.OBRAS_CREATE,
       PERMISSIONS.OBRAS_EDIT,
-      PERMISSIONS.MACHINES_VIEW,
-      PERMISSIONS.MACHINES_CREATE,
-      PERMISSIONS.MACHINES_EDIT,
-      PERMISSIONS.MACHINES_MOVE,
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOLS_CREATE,
+      PERMISSIONS.TOOLS_EDIT,
+      PERMISSIONS.TOOLS_MOVE,
       PERMISSIONS.OPERATORS_VIEW,
       PERMISSIONS.OPERATORS_CREATE,
       PERMISSIONS.OPERATORS_EDIT,
-      PERMISSIONS.OPERATORS_ASSIGN_ROLE, // Pode atribuir perfis a operadores
-      PERMISSIONS.SESSIONS_VIEW,
-      PERMISSIONS.SESSIONS_VIEW_ALL,
-      PERMISSIONS.SESSIONS_EXPORT,
+      PERMISSIONS.OPERATORS_ASSIGN_ROLE,
+      PERMISSIONS.TOOL_SESSIONS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
+      PERMISSIONS.TOOL_SESSIONS_EXPORT,
       PERMISSIONS.MAINTENANCE_VIEW,
       PERMISSIONS.MAINTENANCE_CREATE,
       PERMISSIONS.MAINTENANCE_EDIT,
@@ -144,7 +156,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.AUDIT_VIEW,
       PERMISSIONS.SETTINGS_VIEW,
       PERMISSIONS.SETTINGS_GENERAL,
-      PERMISSIONS.SETTINGS_ROLES, // Pode gerir perfis (de níveis inferiores)
+      PERMISSIONS.SETTINGS_ROLES,
     ],
     isSystem: true,
     canCreateRolesBelow: true,
@@ -160,9 +172,9 @@ export const DEFAULT_ROLES = {
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.OBRAS_VIEW,
-      PERMISSIONS.MACHINES_VIEW,
-      PERMISSIONS.SESSIONS_VIEW,
-      PERMISSIONS.SESSIONS_VIEW_ALL,
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
       PERMISSIONS.FINANCIAL_VIEW,
       PERMISSIONS.FINANCIAL_TARIFFS,
       PERMISSIONS.FINANCIAL_COSTS,
@@ -174,7 +186,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.SETTINGS_GENERAL,
     ],
     isSystem: true,
-    canCreateRolesBelow: false, // Focado em finanças, não gere pessoas
+    canCreateRolesBelow: false,
   },
 
   gestor_sustentabilidade: {
@@ -187,9 +199,9 @@ export const DEFAULT_ROLES = {
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.OBRAS_VIEW,
-      PERMISSIONS.MACHINES_VIEW,
-      PERMISSIONS.SESSIONS_VIEW,
-      PERMISSIONS.SESSIONS_VIEW_ALL,
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
       PERMISSIONS.ANALYTICS_VIEW,
       PERMISSIONS.ESG_VIEW,
       PERMISSIONS.ESG_REPORTS,
@@ -197,38 +209,39 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.REPORTS_VIEW,
       PERMISSIONS.REPORTS_GENERATE,
       PERMISSIONS.SETTINGS_VIEW,
-      PERMISSIONS.SETTINGS_GENERAL,    // Validar/ajustar fator CO₂ para relatórios ESG
+      PERMISSIONS.SETTINGS_GENERAL,
     ],
     isSystem: true,
-    canCreateRolesBelow: false, // Focado em ESG, não gere pessoas
+    canCreateRolesBelow: false,
   },
 
   encarregado_obra: {
     id: 'encarregado_obra',
     name: 'Encarregado de Obra',
-    description: 'Gestão da sua obra e operadores associados',
+    description: 'Gestão da sua obra, ferramentas e operadores associados',
     color: 'amber',
     icon: 'HardHat',
     level: ROLE_LEVELS.SUPERVISOR,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.OBRAS_VIEW, // Só a sua obra (filtrado por assignedObraId)
-      PERMISSIONS.MACHINES_VIEW,
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOLS_MOVE, // Transferir ferramentas entre obras na sua jurisdição
       PERMISSIONS.OPERATORS_VIEW,
-      PERMISSIONS.OPERATORS_CREATE, // Pode criar operadores na sua obra
+      PERMISSIONS.OPERATORS_CREATE,
       PERMISSIONS.OPERATORS_EDIT,
-      PERMISSIONS.OPERATORS_ASSIGN_ROLE, // Pode atribuir perfis (só de nível inferior)
-      PERMISSIONS.SESSIONS_VIEW,
+      PERMISSIONS.OPERATORS_ASSIGN_ROLE,
+      PERMISSIONS.TOOL_SESSIONS_VIEW,
       PERMISSIONS.MAINTENANCE_VIEW,
       PERMISSIONS.MAINTENANCE_CREATE,
-      PERMISSIONS.MAINTENANCE_SCHEDULE, // Coordena paragens de máquinas na sua obra
+      PERMISSIONS.MAINTENANCE_SCHEDULE,
       PERMISSIONS.QUALITY_VIEW,
       PERMISSIONS.SETTINGS_VIEW,
-      PERMISSIONS.SETTINGS_ROLES, // Pode criar perfis customizados para sua equipa
+      PERMISSIONS.SETTINGS_ROLES,
     ],
     isSystem: true,
-    restrictedToOwnObra: true, // Flag especial - só vê a sua obra
-    canCreateRolesBelow: true, // Pode criar perfis de operadores customizados
+    restrictedToOwnObra: true,
+    canCreateRolesBelow: true,
   },
 
   // === NOVOS PERFIS (Abril 2026) ===
@@ -252,50 +265,50 @@ export const DEFAULT_ROLES = {
   tecnico_manutencao: {
     id: 'tecnico_manutencao',
     name: 'Técnico de Manutenção',
-    description: 'Gestão de manutenções, avarias e saúde dos equipamentos',
+    description: 'Gestão de manutenções, danos e saúde das ferramentas',
     color: 'orange',
     icon: 'Wrench',
     level: ROLE_LEVELS.SUPERVISOR,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
-      PERMISSIONS.MACHINES_VIEW,
-      PERMISSIONS.MACHINES_EDIT,        // Pode atualizar estado da máquina
-      PERMISSIONS.SESSIONS_VIEW,
-      PERMISSIONS.SESSIONS_VIEW_ALL,
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOLS_EDIT,           // Pode atualizar estado da ferramenta
+      PERMISSIONS.TOOL_SESSIONS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
       PERMISSIONS.MAINTENANCE_VIEW,
       PERMISSIONS.MAINTENANCE_CREATE,   // Registar intervenções
       PERMISSIONS.MAINTENANCE_EDIT,     // Atualizar manutenções
-      PERMISSIONS.MAINTENANCE_SCHEDULE, // Agendar manutenções futuras
+      PERMISSIONS.MAINTENANCE_SCHEDULE,
       PERMISSIONS.QUALITY_VIEW,
       PERMISSIONS.QUALITY_VALIDATE,
       PERMISSIONS.SETTINGS_VIEW,
-      PERMISSIONS.SETTINGS_GENERAL,    // Definir intervalos e custos das máquinas
+      PERMISSIONS.SETTINGS_GENERAL,    // Definir thresholds de ferramentas
     ],
     isSystem: true,
-    restrictedToOwnObra: false, // Técnico vai a várias obras
+    restrictedToOwnObra: false,
     canCreateRolesBelow: false,
-    // Dashboard: painel de saúde de equipamentos, avarias abertas, preventivas
+    // Dashboard: painel de saúde das ferramentas, danos abertos, preventivas
     defaultDashboard: 'manutencao',
   },
 
   operador: {
     id: 'operador',
     name: 'Operador de Campo',
-    description: 'Mobile Hub, scan RFID/NFC, reportar avarias e validar sessões próprias',
+    description: 'Mobile Hub, scan NFC de ferramentas, reportar danos e validar sessões próprias',
     color: 'teal',
     icon: 'Smartphone',
     level: ROLE_LEVELS.OPERADOR,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
-      PERMISSIONS.MACHINES_VIEW,
-      PERMISSIONS.SESSIONS_VIEW,         // Só as suas (filtrado)
-      PERMISSIONS.MAINTENANCE_VIEW,      // Ver estado e calendário da máquina que opera
-      PERMISSIONS.QUALITY_VALIDATE,      // Validar anomalias próprias
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW,   // Só as suas (filtrado)
+      PERMISSIONS.MAINTENANCE_VIEW,     // Ver estado das ferramentas que usa
+      PERMISSIONS.QUALITY_VALIDATE,     // Validar anomalias próprias
     ],
     isSystem: true,
     restrictedToOwnObra: true,
     canCreateRolesBelow: false,
-    // Dashboard: Mobile Hub (scan, "minha máquina", reportar avaria)
+    // Dashboard: Mobile Hub (scan NFC, "minhas ferramentas", reportar dano)
     defaultDashboard: 'operador',
   },
 };
@@ -304,12 +317,11 @@ export const DEFAULT_ROLES = {
 export const MENU_PERMISSIONS = {
   dashboard: [PERMISSIONS.DASHBOARD_VIEW],
   obras: [PERMISSIONS.OBRAS_VIEW],
-  maquinas: [PERMISSIONS.MACHINES_VIEW],
+  maquinas: [PERMISSIONS.TOOLS_VIEW],      // menu id mantido 'maquinas' para compatibilidade de routing
   operadores: [PERMISSIONS.OPERATORS_VIEW],
-  sessoes: [PERMISSIONS.SESSIONS_VIEW],
-  // A tab Validações dentro de Sessões requer QUALITY_VIEW ou SESSIONS_VIEW_ALL
-  // O operador (QUALITY_VALIDATE mas sem QUALITY_VIEW) NÃO vê a tab de validações
-  'sessoes-validacoes': [PERMISSIONS.QUALITY_VIEW, PERMISSIONS.SESSIONS_VIEW_ALL],
+  sessoes: [PERMISSIONS.TOOL_SESSIONS_VIEW],
+  // A tab Validações dentro de Sessões requer QUALITY_VIEW ou TOOL_SESSIONS_VIEW_ALL
+  'sessoes-validacoes': [PERMISSIONS.QUALITY_VIEW, PERMISSIONS.TOOL_SESSIONS_VIEW_ALL],
   manutencao: [PERMISSIONS.MAINTENANCE_VIEW],
   financeiro: [PERMISSIONS.FINANCIAL_VIEW],
   analises: [PERMISSIONS.ANALYTICS_VIEW],
@@ -436,14 +448,14 @@ export const PERMISSION_CATEGORIES = {
       { id: PERMISSIONS.OBRAS_DELETE, label: 'Eliminar Obras' },
     ],
   },
-  machines: {
-    label: 'Equipamentos',
+  tools: {
+    label: 'Ferramentas',
     permissions: [
-      { id: PERMISSIONS.MACHINES_VIEW, label: 'Ver Equipamentos' },
-      { id: PERMISSIONS.MACHINES_CREATE, label: 'Criar Equipamentos' },
-      { id: PERMISSIONS.MACHINES_EDIT, label: 'Editar Equipamentos' },
-      { id: PERMISSIONS.MACHINES_DELETE, label: 'Eliminar Equipamentos' },
-      { id: PERMISSIONS.MACHINES_MOVE, label: 'Mudar Localização' },
+      { id: PERMISSIONS.TOOLS_VIEW, label: 'Ver Ferramentas' },
+      { id: PERMISSIONS.TOOLS_CREATE, label: 'Criar Ferramentas' },
+      { id: PERMISSIONS.TOOLS_EDIT, label: 'Editar Ferramentas' },
+      { id: PERMISSIONS.TOOLS_DELETE, label: 'Eliminar Ferramentas' },
+      { id: PERMISSIONS.TOOLS_MOVE, label: 'Transferir Localização' },
     ],
   },
   operators: {
@@ -456,12 +468,12 @@ export const PERMISSION_CATEGORIES = {
       { id: PERMISSIONS.OPERATORS_ASSIGN_ROLE, label: 'Atribuir Perfil' },
     ],
   },
-  sessions: {
-    label: 'Sessões',
+  tool_sessions: {
+    label: 'Sessões de Ferramentas',
     permissions: [
-      { id: PERMISSIONS.SESSIONS_VIEW, label: 'Ver Sessões' },
-      { id: PERMISSIONS.SESSIONS_VIEW_ALL, label: 'Ver Todas as Obras' },
-      { id: PERMISSIONS.SESSIONS_EXPORT, label: 'Exportar Sessões' },
+      { id: PERMISSIONS.TOOL_SESSIONS_VIEW, label: 'Ver Sessões' },
+      { id: PERMISSIONS.TOOL_SESSIONS_VIEW_ALL, label: 'Ver Todas as Obras' },
+      { id: PERMISSIONS.TOOL_SESSIONS_EXPORT, label: 'Exportar Sessões' },
     ],
   },
   maintenance: {
