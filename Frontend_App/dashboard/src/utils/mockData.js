@@ -17,21 +17,21 @@ const storageLocations = [
 ];
 
 const toolFixtures = [
-  ['tool_martelo_001', 'Martelo Pneumatico #1', 'Martelo Pneumatico', 'MARTELO_001', 18],
-  ['tool_martelo_002', 'Martelo Pneumatico #2', 'Martelo Pneumatico', 'MARTELO_002', 18],
-  ['tool_rebarbadora_230', 'Rebarbadora 230mm', 'Rebarbadora', 'REBARB_230', 8],
-  ['tool_perfurador_sds', 'Perfurador SDS Max', 'Perfurador', 'SDS_MAX_001', 12],
-  ['tool_parafusadora_ind', 'Parafusadora Industrial', 'Parafusadora', 'PARAF_IND_001', 6],
-  ['tool_serra_circular', 'Serra Circular', 'Serra', 'SERRA_CIRC_001', 7],
-  ['tool_lixadora', 'Lixadora Orbital', 'Lixadora', 'LIXADORA_001', 5],
-  ['tool_pistola_pregos', 'Pistola de Pregos', 'Pistola de Pregos', 'PIST_PREGOS_001', 9],
-  ['tool_betoneira_peq', 'Betoneira Pequena', 'Betoneira', 'BETONEIRA_PEQ_001', 14],
-  ['tool_vibrador_betao', 'Vibrador de Betao', 'Vibrador de Betao', 'VIB_BETAO_001', 11],
-  ['tool_gerador_portatil', 'Gerador Portatil 5kVA', 'Gerador', 'GERADOR_5KVA_001', 16],
-  ['tool_compactador', 'Compactador Placa', 'Compactador', 'COMPACT_PLACA_001', 20],
-  ['tool_laser_nivel', 'Laser Nivelador', 'Laser Nivelador', 'LASER_NIVEL_001', 10],
-  ['tool_cortadora_azulejo', 'Cortadora de Azulejo', 'Cortadora', 'CORT_AZULEJO_001', 6],
-  ['tool_bomba_submersivel', 'Bomba Submersivel', 'Bomba', 'BOMBA_SUB_001', 13],
+  ['tool_martelo_001', 'Martelo Pneumatico #1', 'Martelo Pneumatico', 'MARTELO_001', 18, 1000],
+  ['tool_martelo_002', 'Martelo Pneumatico #2', 'Martelo Pneumatico', 'MARTELO_002', 18, 1000],
+  ['tool_rebarbadora_230', 'Rebarbadora 230mm', 'Rebarbadora', 'REBARB_230', 8, 220],
+  ['tool_perfurador_sds', 'Perfurador SDS Max', 'Perfurador', 'SDS_MAX_001', 12, 380],
+  ['tool_parafusadora_ind', 'Parafusadora Industrial', 'Parafusadora', 'PARAF_IND_001', 6, 320],
+  ['tool_serra_circular', 'Serra Circular', 'Serra', 'SERRA_CIRC_001', 7, 280],
+  ['tool_lixadora', 'Lixadora Orbital', 'Lixadora', 'LIXADORA_001', 5, 180],
+  ['tool_pistola_pregos', 'Pistola de Pregos', 'Pistola de Pregos', 'PIST_PREGOS_001', 9, 250],
+  ['tool_betoneira_peq', 'Betoneira Pequena', 'Betoneira', 'BETONEIRA_PEQ_001', 14, 650],
+  ['tool_vibrador_betao', 'Vibrador de Betao', 'Vibrador de Betao', 'VIB_BETAO_001', 11, 750],
+  ['tool_gerador_portatil', 'Gerador Portatil 5kVA', 'Gerador', 'GERADOR_5KVA_001', 16, 1300],
+  ['tool_compactador', 'Compactador Placa', 'Compactador', 'COMPACT_PLACA_001', 20, 1100],
+  ['tool_laser_nivel', 'Laser Nivelador', 'Laser Nivelador', 'LASER_NIVEL_001', 10, 450],
+  ['tool_cortadora_azulejo', 'Cortadora de Azulejo', 'Cortadora', 'CORT_AZULEJO_001', 6, 380],
+  ['tool_bomba_submersivel', 'Bomba Submersivel', 'Bomba', 'BOMBA_SUB_001', 13, 280],
 ];
 
 export const createMockObras = async () => {
@@ -75,7 +75,7 @@ export const createMockObras = async () => {
  */
 export const createMockTools = async () => {
   const now = Timestamp.now();
-  const tools = toolFixtures.map(([id, name, type, nfcTagId, hourlyCost], index) => {
+  const tools = toolFixtures.map(([id, name, type, nfcTagId, hourlyCost, replacementCost], index) => {
     const obra = obras[index % obras.length];
     return {
       id,
@@ -87,6 +87,7 @@ export const createMockTools = async () => {
       currentObraName: obra.name,
       status: index % 5 === 0 ? 'MAINTENANCE' : 'AVAILABLE',
       hourlyCost,
+      replacementCost,
       procoreSynced: false,
       sapSynced: false,
       createdAt: now,
