@@ -33,12 +33,17 @@ export default function ToolTagPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) { setState(S.NEEDS_LOGIN); return; }
+    if (!isAuthenticated || !currentUser?.uid) { setState(S.NEEDS_LOGIN); return; }
     if (!tagId) { setState(S.TOOL_NOT_FOUND); return; }
     loadTool();
-  }, [authLoading, isAuthenticated, tagId]);
+  }, [authLoading, isAuthenticated, currentUser?.uid, tagId]);
 
   async function loadTool() {
+    // Guardas defensivas — sem estes campos definidos, Firestore where() crasha
+    if (!tagId) { setState(S.TOOL_NOT_FOUND); return; }
+    const uid = currentUser?.uid;
+    if (!uid) { setState(S.NEEDS_LOGIN); return; }
+
     setState(S.LOADING);
     try {
       const q = query(
@@ -56,7 +61,7 @@ export default function ToolTagPage() {
       const sessQ = query(
         collection(db, `${BASE}/tool_sessions`),
         where('toolId', '==', toolData.id),
-        where('operatorId', '==', currentUser.uid),
+        where('operatorId', '==', uid),
         where('status', '==', 'OPEN'),
         orderBy('startTime', 'desc'),
         limit(1),
@@ -66,9 +71,9 @@ export default function ToolTagPage() {
       setOpenSession(sess);
       setState(sess ? S.CONFIRM_CHECKIN : S.CONFIRM_CHECKOUT);
     } catch (err) {
-      console.error(err);
+      console.error('ToolTagPage loadTool error:', err);
       setState(S.ERROR);
-      setResult(err.message);
+      setResult(err.message || String(err));
     }
   }
 
@@ -87,6 +92,8 @@ export default function ToolTagPage() {
 
   async function confirm() {
     if (state === S.PROCESSING || state === S.SUCCESS) return;
+    const uid = currentUser?.uid;
+    if (!uid || !tool) { setState(S.ERROR); setResult('Sessão expirada — refaz login'); return; }
     setState(S.PROCESSING);
     try {
       if (!openSession) {
@@ -96,12 +103,12 @@ export default function ToolTagPage() {
           toolName: tool.name,
           toolType: tool.type || null,
           nfcTagId: tool.nfcTagId,
-          operatorId: currentUser.uid,
-          operatorName: currentUser.name || currentUser.displayName || currentUser.email,
+          operatorId: uid,
+          operatorName: currentUser.name || currentUser.displayName || currentUser.email || uid,
           // SAP fields
           sapOrigin: tool.storageLocation || 'Armazém',
           sapDestination: tool.currentObraName || null,
-          sapWorker: currentUser.uid,
+          sapWorker: uid,
           // Procore
           obraId: tool.currentObraId || null,
           obraName: tool.currentObraName || null,

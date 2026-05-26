@@ -11,6 +11,9 @@ import useAuthStore from './store/useAuthStore';
 import useAvariasStore from './store/useAvariasStore';
 import useNfcStore from './store/useNfcStore';
 import NfcOverlay from './components/NfcOverlay';
+// Capacitor: import estático para o listener appUrlOpen estar pronto antes de qualquer warm start
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 
 // Loading fallback para lazy components
 const ViewLoader = () => (
@@ -139,37 +142,35 @@ export default function App() {
     initTheme();
   }, [initTheme]);
 
-  // Capacitor: quando o APK é aberto via tag NFC, recebe o URL aqui
+  // Capacitor: quando o APK é aberto via tag NFC, recebe o URL aqui.
+  // Imports estáticos para o listener ficar pronto antes de qualquer warm start.
   useEffect(() => {
-    let listener;
-    (async () => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const handleUrl = (url) => {
+      if (!url) return;
       try {
-        const { Capacitor } = await import('@capacitor/core');
-        if (!Capacitor.isNativePlatform()) return;
-        const { App } = await import('@capacitor/app');
+        const u = new URL(url);
+        if (u.pathname.startsWith('/t/')) {
+          window.history.replaceState(null, '', u.pathname);
+          setIsToolTag(true);
+        }
+      } catch (_) { /* ignore */ }
+    };
 
-        const handleUrl = (url) => {
-          if (!url) return;
-          try {
-            const u = new URL(url);
-            if (u.pathname.startsWith('/t/')) {
-              window.history.replaceState(null, '', u.pathname);
-              setIsToolTag(true);
-            }
-          } catch (_) { /* ignore */ }
-        };
+    // 1) Cold start: APK aberto via deep link → URL vem por getLaunchUrl
+    CapacitorApp.getLaunchUrl().then(launch => {
+      if (launch?.url) handleUrl(launch.url);
+    }).catch(() => { /* ignore */ });
 
-        // 1) Cold start: APK aberto via deep link → URL vem por getLaunchUrl
-        try {
-          const launch = await App.getLaunchUrl();
-          if (launch?.url) handleUrl(launch.url);
-        } catch (_) { /* ignore */ }
+    // 2) Warm start: APK já estava aberto → URL vem por evento appUrlOpen.
+    // Listener registado de forma síncrona (sem await imports) para não perder o evento.
+    let handle;
+    CapacitorApp.addListener('appUrlOpen', ({ url }) => handleUrl(url))
+      .then(h => { handle = h; })
+      .catch(() => { /* ignore */ });
 
-        // 2) Warm: APK já estava aberto → URL vem por evento appUrlOpen
-        listener = await App.addListener('appUrlOpen', ({ url }) => handleUrl(url));
-      } catch (_) { /* not on Capacitor — ignore */ }
-    })();
-    return () => { listener?.remove?.(); };
+    return () => { handle?.remove?.(); };
   }, []);
 
   // NFC global: arranca na primeira interacção do utilizador autenticado (exige gesto)
