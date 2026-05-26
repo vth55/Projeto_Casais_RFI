@@ -799,27 +799,37 @@ const AppearanceSection = () => {
 };
 
 // ============================================================
-// OPERATIONAL SETTINGS SECTION — Parâmetros de Operação
+// OPERATIONAL SETTINGS SECTION — Parâmetros de Equipamentos
 // ============================================================
 const OperationalSettingsSection = () => {
   const { systemSettings, updateSystemSettings } = useStore();
+  const [legacyOpen, setLegacyOpen] = useState(false);
+
+  // Equipamentos (primário)
   const [form, setForm] = useState({
+    toolOverdueDays: '',
+    toolLostDays: '',
+    dormantToolDays: '',
+    defaultReplacementCost: '',
+    toolReportRequiresPhoto: false,
+    // Legacy (só persistidos quando o utilizador abre e guarda)
     fuelPricePerLitre: '',
     co2FactorPerLitre: '',
     defaultMaintenanceInterval: '',
-    toolOverdueDays: '',
-    toolLostDays: '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setForm({
+      toolOverdueDays: String(systemSettings.toolOverdueDays ?? 7),
+      toolLostDays: String(systemSettings.toolLostDays ?? 30),
+      dormantToolDays: String(systemSettings.dormantToolDays ?? 30),
+      defaultReplacementCost: String(systemSettings.defaultReplacementCost ?? 0),
+      toolReportRequiresPhoto: Boolean(systemSettings.toolReportRequiresPhoto ?? false),
       fuelPricePerLitre: String(systemSettings.fuelPricePerLitre ?? ''),
       co2FactorPerLitre: String(systemSettings.co2FactorPerLitre ?? ''),
       defaultMaintenanceInterval: String(systemSettings.defaultMaintenanceInterval ?? ''),
-      toolOverdueDays: String(systemSettings.toolOverdueDays ?? 7),
-      toolLostDays: String(systemSettings.toolLostDays ?? 30),
     });
   }, [systemSettings]);
 
@@ -827,11 +837,15 @@ const OperationalSettingsSection = () => {
     setSaving(true);
     try {
       await updateSystemSettings({
+        toolOverdueDays: parseInt(form.toolOverdueDays, 10) || 7,
+        toolLostDays: parseInt(form.toolLostDays, 10) || 30,
+        dormantToolDays: Math.max(7, Math.min(365, parseInt(form.dormantToolDays, 10) || 30)),
+        defaultReplacementCost: Math.max(0, parseFloat(form.defaultReplacementCost) || 0),
+        toolReportRequiresPhoto: Boolean(form.toolReportRequiresPhoto),
+        // Legacy — preservar valores existentes
         fuelPricePerLitre: parseFloat(form.fuelPricePerLitre) || 1.89,
         co2FactorPerLitre: parseFloat(form.co2FactorPerLitre) || 2.68,
         defaultMaintenanceInterval: parseInt(form.defaultMaintenanceInterval, 10) || 150,
-        toolOverdueDays: parseInt(form.toolOverdueDays, 10) || 7,
-        toolLostDays: parseInt(form.toolLostDays, 10) || 30,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -841,17 +855,37 @@ const OperationalSettingsSection = () => {
   };
 
   const hasChanges =
+    String(systemSettings.toolOverdueDays ?? 7) !== form.toolOverdueDays ||
+    String(systemSettings.toolLostDays ?? 30) !== form.toolLostDays ||
+    String(systemSettings.dormantToolDays ?? 30) !== form.dormantToolDays ||
+    String(systemSettings.defaultReplacementCost ?? 0) !== form.defaultReplacementCost ||
+    Boolean(systemSettings.toolReportRequiresPhoto ?? false) !== form.toolReportRequiresPhoto ||
     String(systemSettings.fuelPricePerLitre) !== form.fuelPricePerLitre ||
     String(systemSettings.co2FactorPerLitre) !== form.co2FactorPerLitre ||
-    String(systemSettings.defaultMaintenanceInterval) !== form.defaultMaintenanceInterval ||
-    String(systemSettings.toolOverdueDays ?? 7) !== form.toolOverdueDays ||
-    String(systemSettings.toolLostDays ?? 30) !== form.toolLostDays;
+    String(systemSettings.defaultMaintenanceInterval) !== form.defaultMaintenanceInterval;
+
+  // Helper para campo numérico
+  const NumField = ({ label, hint, value, onChange, min, max, step = 1 }) => (
+    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+      <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
+      {hint && <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
+      <input
+        type="number"
+        step={step}
+        min={min}
+        max={max}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      />
+    </div>
+  );
 
   return (
     <ConfigSection
       icon={BarChart3}
-      title="Parâmetros de Operação"
-      description="Valores globais usados nos cálculos de custo, emissões e manutenção. Máquinas individuais podem ter overrides."
+      title="Configuração de Equipamentos"
+      description="Thresholds e valores por defeito para o ciclo de vida dos equipamentos NFC."
       action={
         <Button
           size="sm"
@@ -865,77 +899,16 @@ const OperationalSettingsSection = () => {
         </Button>
       }
     >
+      {/* ── Thresholds de tempo ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Fuel className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Preço Diesel</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">€/litro</p>
-            </div>
-          </div>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.fuelPricePerLitre}
-            onChange={e => setForm({ ...form, fuelPricePerLitre: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-        </div>
-
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Fator CO₂</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">kg CO₂/litro diesel</p>
-            </div>
-          </div>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.co2FactorPerLitre}
-            onChange={e => setForm({ ...form, co2FactorPerLitre: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-        </div>
-
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Intervalo Manutenção</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Horas por defeito</p>
-            </div>
-          </div>
-          <input
-            type="number"
-            step="1"
-            min="1"
-            value={form.defaultMaintenanceInterval}
-            onChange={e => setForm({ ...form, defaultMaintenanceInterval: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
               <Clock className="w-4 h-4 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Ferramenta overdue (dias)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Atraso de devolução</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Devolução atrasada (dias)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Alerta TOOL_OVERDUE</p>
             </div>
           </div>
           <input
@@ -948,7 +921,7 @@ const OperationalSettingsSection = () => {
             className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Após estes dias sem devolução, dispara alerta TOOL_OVERDUE
+            Dias sem devolução antes de disparar avaria de atraso
           </p>
         </div>
 
@@ -958,8 +931,8 @@ const OperationalSettingsSection = () => {
               <AlertTriangle className="w-4 h-4 text-red-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Ferramenta presumed lost (dias)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Escalação de perda</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Equipamento dado como perdido (dias)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Escalação TOOL_PRESUMED_LOST</p>
             </div>
           </div>
           <input
@@ -972,14 +945,152 @@ const OperationalSettingsSection = () => {
             className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Após estes dias, escala para TOOL_PRESUMED_LOST
+            Dias até escalar para presumível perda
+          </p>
+        </div>
+
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-slate-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Equipamento dormente (dias sem uso)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Candidato a redistribuição</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="1"
+            min="7"
+            max="365"
+            value={form.dormantToolDays}
+            onChange={e => setForm({ ...form, dormantToolDays: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Equipamento sem checkout há N dias → sinalizar para redistribuir
           </p>
         </div>
       </div>
 
-      <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-        Estes valores servem de base global. Para personalizar por máquina, edite a ficha individual em Equipamentos.
-      </p>
+      {/* ── Valor e opções de reporte ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Valor de substituição por defeito (€)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Usado quando ferramenta não tem valor individual</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={form.defaultReplacementCost}
+            onChange={e => setForm({ ...form, defaultReplacementCost: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Exigir foto no reporte de avaria</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Quando ativo, o operador é obrigado a anexar pelo menos uma foto ao reportar uma avaria
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm(prev => ({ ...prev, toolReportRequiresPhoto: !prev.toolReportRequiresPhoto }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 flex-shrink-0 mt-0.5 ${
+                form.toolReportRequiresPhoto ? 'bg-[#005EB8]' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+              aria-label="Exigir foto"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                  form.toolReportRequiresPhoto ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Secção Legacy (colapsada por defeito) ── */}
+      <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setLegacyOpen(o => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700/60 transition-colors text-left"
+        >
+          <div className="flex items-center gap-2">
+            <Fuel className="w-4 h-4 text-slate-400" />
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+              Parâmetros Legacy — Máquinas Pesadas
+            </span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+              Procore / SAP
+            </span>
+          </div>
+          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${legacyOpen ? 'rotate-90' : ''}`} />
+        </button>
+
+        {legacyOpen && (
+          <div className="px-4 pb-4 pt-3 space-y-3 bg-slate-50 dark:bg-slate-800/30">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Estes valores são usados apenas pelo Procore exporter e pelo modelo de máquinas pesadas (legacy).
+              Não afectam o fluxo NFC de equipamentos.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+                  <Fuel className="w-3.5 h-3.5 text-amber-500" /> Preço Diesel (€/L)
+                </p>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.fuelPricePerLitre}
+                  onChange={e => setForm({ ...form, fuelPricePerLitre: e.target.value })}
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+                  <Leaf className="w-3.5 h-3.5 text-emerald-500" /> CO₂/litro diesel (kg)
+                </p>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.co2FactorPerLitre}
+                  onChange={e => setForm({ ...form, co2FactorPerLitre: e.target.value })}
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+                  <Wrench className="w-3.5 h-3.5 text-blue-500" /> Intervalo manutenção (horas)
+                </p>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={form.defaultMaintenanceInterval}
+                  onChange={e => setForm({ ...form, defaultMaintenanceInterval: e.target.value })}
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </ConfigSection>
   );
 };
@@ -1241,6 +1352,44 @@ const RfidLocationCardsSection = () => {
   );
 };
 
+// Secção Legacy colapsada — Reset machines/sessions (mantido para Procore exporter)
+const LegacyDbSection = ({ onClear, loading }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700/60 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Truck className="w-4 h-4 text-slate-400" />
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Legacy — Máquinas Pesadas</span>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Procore</span>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-3 bg-slate-50 dark:bg-slate-800/30 space-y-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Dados do modelo de máquinas pesadas (machines, sessions). Usados apenas pelo Procore exporter.
+            NÃO eliminar se existirem sessões pendentes de exportação.
+          </p>
+          <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Limpar dados legacy</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">machines, sessions, tariffs, maintenance</p>
+            </div>
+            <Button variant="danger" size="sm" icon={Trash2} onClick={onClear} loading={loading}>
+              Limpar
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // View principal
 const ConfiguracoesView = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -1287,29 +1436,52 @@ const ConfiguracoesView = () => {
     setLoading(true);
     try {
       const result = await createAllMockData();
-      setMessage({ type: 'success', text: `Dados criados: ${result.machines} máquinas, ${result.operators} operadores, ${result.sessions} sessões` });
+      const summary = result.success
+        ? `Equipamentos: ${result.tools ?? 0} | Operadores: ${result.operators ?? 0} | Sessões: ${result.toolSessions ?? 0} | Obras: ${result.obras ?? 0}`
+        : (result.error ?? 'Erro desconhecido');
+      setMessage({ type: result.success ? 'success' : 'error', text: `Reset equipamentos mock — ${summary}` });
     } catch {
-      setMessage({ type: 'error', text: 'Erro ao criar dados mock' });
+      setMessage({ type: 'error', text: 'Erro ao criar dados mock de equipamentos' });
+    }
+    setLoading(false);
+    setTimeout(() => setMessage(null), 6000);
+  };
+
+  const handleClearToolsData = async () => {
+    if (!confirm('Eliminar dados de equipamentos (tools, tool_sessions, tool_alerts)? Esta ação não pode ser revertida.')) return;
+    setLoading(true);
+    try {
+      const basePath = `artifacts/${projectId}/public/data`;
+      const cols = ['tools', 'tool_sessions', 'tool_alerts', 'tool_maintenance', 'tool_movements', 'operators', 'obras'];
+      for (const col of cols) {
+        const snapshot = await getDocs(collection(db, `${basePath}/${col}`));
+        await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, `${basePath}/${col}`, d.id))));
+      }
+      setMessage({ type: 'success', text: 'Dados de equipamentos eliminados' });
+    } catch {
+      setMessage({ type: 'error', text: 'Erro ao eliminar dados de equipamentos' });
     }
     setLoading(false);
     setTimeout(() => setMessage(null), 5000);
   };
 
-  const handleClearData = async () => {
-    if (!confirm('Eliminar TODOS os dados? Esta ação não pode ser revertida.')) return;
+  // LEGACY — limpar colecções machines/sessions (mantido para Procore exporter)
+  const handleClearLegacyData = async () => {
+    if (!confirm('[LEGACY] Eliminar dados de máquinas pesadas (machines, sessions)? Esta ação não pode ser revertida.')) return;
     setLoading(true);
     try {
       const basePath = `artifacts/${projectId}/public/data`;
-      const collections = ['machines', 'operators', 'sessions', 'tariffs', 'maintenance', 'obras'];
-      for (const col of collections) {
+      const cols = ['machines', 'sessions', 'tariffs', 'maintenance'];
+      for (const col of cols) {
         const snapshot = await getDocs(collection(db, `${basePath}/${col}`));
         await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, `${basePath}/${col}`, d.id))));
       }
-      setMessage({ type: 'success', text: 'Todos os dados foram eliminados' });
+      setMessage({ type: 'success', text: '[Legacy] Dados de máquinas pesadas eliminados' });
     } catch {
-      setMessage({ type: 'error', text: 'Erro ao eliminar dados' });
+      setMessage({ type: 'error', text: 'Erro ao eliminar dados legacy' });
     }
     setLoading(false);
+    setTimeout(() => setMessage(null), 5000);
   };
 
   const handleEditRole = (role) => {
@@ -1761,24 +1933,32 @@ const ConfiguracoesView = () => {
         return (
           <ConfigSection icon={Database} title="Base de Dados" description="Gestão de dados do sistema">
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              {/* Equipamentos — primário */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">Criar Dados Demo</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Criar dados de exemplo para testes</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Reset equipamentos mock</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Criar/repor dados de exemplo: tools, tool_sessions, operadores, obras
+                  </p>
                 </div>
                 <Button size="sm" icon={RefreshCw} onClick={handleCreateMockData} loading={loading}>
                   Criar
                 </Button>
               </div>
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-800/30">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Limpar Base de Dados</p>
-                  <p className="text-xs text-red-600">Eliminar todos os dados do sistema</p>
+                  <p className="text-sm font-medium text-red-700 dark:text-red-400">Limpar dados de equipamentos</p>
+                  <p className="text-xs text-red-600 dark:text-red-500">
+                    Eliminar tools, tool_sessions, tool_alerts, operadores, obras
+                  </p>
                 </div>
-                <Button variant="danger" size="sm" icon={Trash2} onClick={handleClearData} loading={loading}>
+                <Button variant="danger" size="sm" icon={Trash2} onClick={handleClearToolsData} loading={loading}>
                   Limpar
                 </Button>
               </div>
+
+              {/* Legacy — colapsado */}
+              <LegacyDbSection onClear={handleClearLegacyData} loading={loading} />
             </div>
           </ConfigSection>
         );
