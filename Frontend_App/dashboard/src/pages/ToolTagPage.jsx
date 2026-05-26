@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { db, projectId } from '../config/firebase';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, doc,
-  serverTimestamp, limit, orderBy, getDoc,
+  serverTimestamp, limit, getDoc,
 } from 'firebase/firestore';
 import { LogOut, LogIn, Package, MapPin, User, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -63,7 +63,6 @@ export default function ToolTagPage() {
         where('toolId', '==', toolData.id),
         where('operatorId', '==', uid),
         where('status', '==', 'OPEN'),
-        orderBy('startTime', 'desc'),
         limit(1),
       );
       const sessSnap = await getDocs(sessQ);
