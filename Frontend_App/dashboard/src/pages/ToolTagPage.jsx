@@ -33,15 +33,15 @@ export default function ToolTagPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated || !currentUser?.uid) { setState(S.NEEDS_LOGIN); return; }
+    if (!isAuthenticated || !(currentUser?.id || currentUser?.uid)) { setState(S.NEEDS_LOGIN); return; }
     if (!tagId) { setState(S.TOOL_NOT_FOUND); return; }
     loadTool();
-  }, [authLoading, isAuthenticated, currentUser?.uid, tagId]);
+  }, [authLoading, isAuthenticated, (currentUser?.id || currentUser?.uid), tagId]);
 
   async function loadTool() {
     // Guardas defensivas — sem estes campos definidos, Firestore where() crasha
     if (!tagId) { setState(S.TOOL_NOT_FOUND); return; }
-    const uid = currentUser?.uid;
+    const uid = (currentUser?.id || currentUser?.uid);
     if (!uid) { setState(S.NEEDS_LOGIN); return; }
 
     setState(S.LOADING);
@@ -92,7 +92,7 @@ export default function ToolTagPage() {
 
   async function confirm() {
     if (state === S.PROCESSING || state === S.SUCCESS) return;
-    const uid = currentUser?.uid;
+    const uid = (currentUser?.id || currentUser?.uid);
     if (!uid || !tool) { setState(S.ERROR); setResult('Sessão expirada — refaz login'); return; }
     setState(S.PROCESSING);
     try {

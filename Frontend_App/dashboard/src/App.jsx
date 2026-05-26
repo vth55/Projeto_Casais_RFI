@@ -170,7 +170,16 @@ export default function App() {
       .then(h => { handle = h; })
       .catch(() => { /* ignore */ });
 
-    return () => { handle?.remove?.(); };
+    // 3) Fallback warm start: MainActivity.java (override nativo) injecta um evento
+    // 'nfcUrl' no WebView quando recebe onNewIntent. Cobre casos em que o bridge
+    // do Capacitor não dispara appUrlOpen (ex: NDEF_DISCOVERED).
+    const onNfcUrl = (e) => handleUrl(e.detail);
+    window.addEventListener('nfcUrl', onNfcUrl);
+
+    return () => {
+      handle?.remove?.();
+      window.removeEventListener('nfcUrl', onNfcUrl);
+    };
   }, []);
 
   // NFC global: arranca na primeira interacção do utilizador autenticado (exige gesto)
