@@ -5,9 +5,9 @@ import usePWAInstall from '../../hooks/usePWAInstall';
 import useOnlineStatus from '../../hooks/useOnlineStatus';
 
 const viewTitles = {
-  dashboard: { title: 'Dashboard', description: 'Visão geral do sistema' },
+  dashboard: { title: 'Visão Geral', description: 'Métricas e análises do sistema' },
   maquinas: { title: 'Equipamentos', description: 'Gestão de equipamentos' },
-  'maquinas-lista': { title: 'Lista de Equipamentos', description: 'Todos os equipamentos registados' },
+  'maquinas-lista': { title: 'Equipamentos', description: 'Inventário, estado e última leitura NFC' },
   'maquinas-categorias': { title: 'Categorias', description: 'Categorias de equipamentos' },
   'maquinas-localizacoes': { title: 'Localizações', description: 'Localização dos equipamentos' },
   operadores: { title: 'Operadores', description: 'Gestão de operadores' },
@@ -17,6 +17,7 @@ const viewTitles = {
   'obras-planeadas': { title: 'Obras Planeadas', description: 'Obras em planeamento' },
   'obras-concluidas': { title: 'Obras Concluídas', description: 'Obras finalizadas' },
   'obras-mapa': { title: 'Mapa de Obras', description: 'Localização geográfica das obras' },
+  mapa: { title: 'Onde estão', description: 'Mapa por obra baseado na última leitura NFC' },
   sessoes: { title: 'Sessões', description: 'Histórico de sessões' },
   'sessoes-ativas': { title: 'Sessões Ativas', description: 'Sessões em curso' },
   'sessoes-historico': { title: 'Histórico de Sessões', description: 'Todas as sessões' },

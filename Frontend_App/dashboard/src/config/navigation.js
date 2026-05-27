@@ -6,7 +6,6 @@
 
 import {
   Map,
-  LayoutDashboard,
   Truck,
   Users,
   ClipboardList,
@@ -27,18 +26,34 @@ import {
 
 export const navigationStructure = [
   {
-    id: 'mapa',
-    label: 'Mapa',
-    icon: Map,
-    path: '/mapa',
-    description: 'Vista geografica principal da operacao',
-  },
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
+    id: 'maquinas',
+    label: 'Equipamentos',
+    icon: Truck,
     path: '/',
-    description: 'Visao geral e metricas principais',
+    description: 'Inventario e gestao de equipamentos NFC',
+    submenu: [
+      {
+        id: 'maquinas-lista',
+        label: 'Inventario',
+        icon: List,
+        path: '/',
+        description: 'Todos os equipamentos',
+      },
+      {
+        id: 'maquinas-categorias',
+        label: 'Por Tipo',
+        icon: Building2,
+        path: '/equipamentos/categorias',
+        description: 'Por tipo de equipamento',
+      },
+      {
+        id: 'maquinas-localizacoes',
+        label: 'Localizacoes',
+        icon: MapPin,
+        path: '/mapa',
+        description: 'Ultima leitura por obra ou armazem',
+      },
+    ],
   },
   {
     id: 'obras',
@@ -78,34 +93,11 @@ export const navigationStructure = [
     ],
   },
   {
-    id: 'maquinas',
-    label: 'Equipamentos',
-    icon: Truck,
-    path: '/maquinas',
-    description: 'Inventario e gestao de equipamentos NFC',
-    submenu: [
-      {
-        id: 'maquinas-lista',
-        label: 'Inventario',
-        icon: List,
-        path: '/maquinas',
-        description: 'Todos os equipamentos',
-      },
-      {
-        id: 'maquinas-categorias',
-        label: 'Por Tipo',
-        icon: Building2,
-        path: '/maquinas/categorias',
-        description: 'Por tipo de equipamento',
-      },
-      {
-        id: 'maquinas-localizacoes',
-        label: 'Localizacoes',
-        icon: MapPin,
-        path: '/maquinas/localizacoes',
-        description: 'Por obra ou armazem',
-      },
-    ],
+    id: 'mapa',
+    label: 'Onde estao',
+    icon: Map,
+    path: '/mapa',
+    description: 'Ultima leitura NFC por obra. Nao e localizacao real-time.',
   },
   {
     id: 'sessoes',

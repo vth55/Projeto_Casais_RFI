@@ -11,18 +11,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc,
-  serverTimestamp, where,
+  serverTimestamp, orderBy,
 } from 'firebase/firestore';
 import { db, projectId } from '../config/firebase';
 import {
   Wrench, Plus, Search, Edit2, Trash2, Nfc, Tag, Copy, Check,
-  Building2, Package, AlertCircle, LogOut, LogIn, Radio, Loader2,
+  Building2, Package, AlertCircle, LogOut, Radio, Loader2, Clock,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 
 const BASE = `artifacts/${projectId}/public/data`;
 const TOOLS_PATH = `${BASE}/tools`;
 const SESSIONS_PATH = `${BASE}/tool_sessions`;
+const STALE_READ_DAYS = 7;
 
 const TOOL_TYPES = [
   'Martelo Pneumático',
@@ -34,6 +35,29 @@ const TOOL_TYPES = [
   'Soldadora',
   'Outro',
 ];
+
+function toDate(value) {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate();
+  return new Date(value);
+}
+
+function formatRelative(value) {
+  const date = toDate(value);
+  if (!date || Number.isNaN(date.getTime())) return 'sem leitura';
+  const diff = Date.now() - date.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days >= 1) return `há ${days}d`;
+  const hours = Math.floor(diff / 3600000);
+  if (hours >= 1) return `há ${hours}h`;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes >= 1) return `há ${minutes}min`;
+  return 'agora';
+}
+
+function getSessionReadTime(session) {
+  return session?.endTime || session?.startTime || session?.createdAt || null;
+}
 
 // ──────────────────────────────────────────────
 // Modal: criar / editar equipamento
@@ -232,8 +256,15 @@ async function writeUrlToNfcTag(url) {
 // ──────────────────────────────────────────────
 // Card de equipamento
 // ──────────────────────────────────────────────
-function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl, onProgramTag, programming }) {
+function ToolCard({ tool, openSession, latestSession, onEdit, onDelete, onCopyUrl, onProgramTag, programming }) {
   const isInUse = !!openSession;
+  const lastReadAt = getSessionReadTime(latestSession);
+  const lastReadLocation = latestSession?.obraName
+    || latestSession?.currentObraName
+    || tool.currentObraName
+    || tool.storageLocation
+    || 'localização desconhecida';
+  const lastReadOperator = latestSession?.operatorName || latestSession?.operatorId || 'operador desconhecido';
 
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-2xl border ${
@@ -306,6 +337,13 @@ function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl, onProgramTag
             <span className="text-slate-600 dark:text-slate-300">{tool.currentObraName}</span>
           </div>
         )}
+        <div className="flex items-start gap-2 text-xs">
+          <Clock className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+          <span className="text-slate-600 dark:text-slate-300">
+            Última leitura NFC — {formatRelative(lastReadAt)}
+            {latestSession ? ` em ${lastReadLocation} por ${lastReadOperator}` : ''}
+          </span>
+        </div>
       </div>
 
       {isInUse && (
@@ -331,9 +369,11 @@ function ToolCard({ tool, openSession, onEdit, onDelete, onCopyUrl, onProgramTag
 export default function EquipamentosView() {
   const [tools, setTools] = useState([]);
   const [openSessions, setOpenSessions] = useState({});
+  const [latestSessions, setLatestSessions] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [editing, setEditing] = useState(null);  // null | {} | tool obj
   const [copied, setCopied] = useState(null);
   const [programming, setProgramming] = useState(null);  // tool.id em execução
@@ -349,16 +389,19 @@ export default function EquipamentosView() {
     return unsub;
   }, []);
 
-  // Listener: sessões abertas
+  // Listener: leituras NFC. A localização é última leitura conhecida, não GPS real-time.
   useEffect(() => {
-    const q = query(collection(db, SESSIONS_PATH), where('status', '==', 'OPEN'));
+    const q = query(collection(db, SESSIONS_PATH), orderBy('startTime', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const map = {};
+      const open = {};
+      const latest = {};
       snap.docs.forEach(d => {
-        const data = d.data();
-        map[data.toolId] = { id: d.id, ...data };
+        const session = { id: d.id, ...d.data() };
+        if (session.toolId && !latest[session.toolId]) latest[session.toolId] = session;
+        if (session.status === 'OPEN') open[session.toolId] = session;
       });
-      setOpenSessions(map);
+      setOpenSessions(open);
+      setLatestSessions(latest);
     });
     return unsub;
   }, []);
@@ -367,18 +410,29 @@ export default function EquipamentosView() {
     const s = search.toLowerCase().trim();
     return tools.filter(t => {
       if (filterType !== 'all' && t.type !== filterType) return false;
+      const latest = latestSessions[t.id];
+      const lastReadAt = toDate(getSessionReadTime(latest));
+      const isStale = !lastReadAt || Date.now() - lastReadAt.getTime() > STALE_READ_DAYS * 86400000;
+      if (statusFilter === 'in-use' && !openSessions[t.id]) return false;
+      if (statusFilter === 'available' && openSessions[t.id]) return false;
+      if (statusFilter === 'stale' && !isStale) return false;
       if (!s) return true;
       return (t.name || '').toLowerCase().includes(s)
           || (t.nfcTagId || '').toLowerCase().includes(s)
           || (t.type || '').toLowerCase().includes(s);
     });
-  }, [tools, search, filterType]);
+  }, [tools, search, filterType, statusFilter, openSessions, latestSessions]);
 
   const stats = useMemo(() => ({
     total: tools.length,
     inUse: Object.keys(openSessions).length,
     available: tools.length - Object.keys(openSessions).length,
-  }), [tools, openSessions]);
+    stale: tools.filter((tool) => {
+      const latest = latestSessions[tool.id];
+      const lastReadAt = toDate(getSessionReadTime(latest));
+      return !lastReadAt || Date.now() - lastReadAt.getTime() > STALE_READ_DAYS * 86400000;
+    }).length,
+  }), [tools, openSessions, latestSessions]);
 
   async function handleDelete(tool) {
     if (!confirm(`Eliminar "${tool.name}"?`)) return;
@@ -434,7 +488,7 @@ export default function EquipamentosView() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
           <p className="text-xs text-slate-500 uppercase tracking-wider">Total</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{stats.total}</p>
@@ -446,6 +500,10 @@ export default function EquipamentosView() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
           <p className="text-xs text-slate-500 uppercase tracking-wider">Disponíveis</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{stats.available}</p>
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-amber-200 dark:border-amber-700 p-4">
+          <p className="text-xs text-amber-600 uppercase tracking-wider font-medium">Sem leitura &gt; {STALE_READ_DAYS}d</p>
+          <p className="text-2xl font-black text-amber-600 mt-0.5">{stats.stale}</p>
         </div>
       </div>
 
@@ -468,6 +526,16 @@ export default function EquipamentosView() {
         >
           <option value="all">Todos os tipos</option>
           {TOOL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="all">Todos os estados</option>
+          <option value="in-use">Em uso</option>
+          <option value="available">Disponíveis</option>
+          <option value="stale">Sem leitura &gt; {STALE_READ_DAYS} dias</option>
         </select>
       </div>
 
@@ -508,6 +576,7 @@ export default function EquipamentosView() {
               key={tool.id}
               tool={tool}
               openSession={openSessions[tool.id]}
+              latestSession={latestSessions[tool.id]}
               onEdit={() => setEditing(tool)}
               onDelete={() => handleDelete(tool)}
               onCopyUrl={() => handleCopyUrl(tool)}

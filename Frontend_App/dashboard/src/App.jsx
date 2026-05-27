@@ -115,7 +115,9 @@ export default function App() {
 
     // Sincronizar URL com activeView no carregamento inicial (deep links)
     const PATH_TO_VIEW = {
-      '/': 'mapa',
+      '/': 'maquinas-lista',
+      '/equipamentos': 'maquinas-lista',
+      '/dashboard': 'dashboard',
       '/obras': 'obras-todas',
       '/sessoes': 'sessoes-historico',
       '/sessoes/ativas': 'sessoes-ativas',

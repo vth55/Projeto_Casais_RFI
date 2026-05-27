@@ -123,7 +123,13 @@ export default function MapaObrasView() {
   }, [obrasWithCoords, tools, toolSessions, setActiveView]);
 
   return (
-    <div className="h-full w-full min-h-[calc(100vh-64px)] overflow-hidden">
+    <div className="relative h-full w-full min-h-[calc(100vh-64px)] overflow-hidden">
+      <div className="absolute left-4 right-4 top-20 z-[500] max-w-xl rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+        <p className="text-sm font-bold text-slate-900 dark:text-white">Onde estão</p>
+        <p className="text-xs text-slate-600 dark:text-slate-300">
+          Mapa por obra com base na última leitura NFC. Não é localização real-time dos equipamentos.
+        </p>
+      </div>
       <div
         ref={mapNodeRef}
         className="h-full w-full min-h-[calc(100vh-64px)]"

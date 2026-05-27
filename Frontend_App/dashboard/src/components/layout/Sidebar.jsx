@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Map, LayoutDashboard, Package, Users, Clock, Wrench, BarChart3,
+  Map, Package, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
   Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc,
 } from 'lucide-react';
@@ -9,8 +9,7 @@ import useAuthStore from '../../store/useAuthStore';
 import useNfcStore from '../../store/useNfcStore';
 
 const navigation = [
-  { id: 'mapa',        label: 'Mapa',          icon: Map },
-  { id: 'dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
+  { id: 'maquinas',    label: 'Equipamentos',   icon: Package },
   { id: 'obras',       label: 'Obras',          icon: Building2,
     submenu: [
       { id: 'obras-todas',      label: 'Todas' },
@@ -19,7 +18,7 @@ const navigation = [
       { id: 'obras-concluidas', label: 'Concluídas' },
     ],
   },
-  { id: 'maquinas',    label: 'Equipamentos',   icon: Package },
+  { id: 'mapa',        label: 'Onde estão',     icon: Map },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
     submenu: [
       { id: 'sessoes-ativas',     label: 'Sessões Ativas' },

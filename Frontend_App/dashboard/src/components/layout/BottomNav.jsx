@@ -1,7 +1,6 @@
 import React, { useState, memo } from 'react';
 import {
   Map,
-  LayoutDashboard,
   Package,
   Clock,
   Wrench,
@@ -21,17 +20,16 @@ import useAuthStore from '../../store/useAuthStore';
 
 // Os 4 tabs principais + "Mais"
 const PRIMARY_TABS = [
-  { id: 'mapa',         label: 'Mapa',      icon: Map },
   { id: 'maquinas',     label: 'Equip.',    icon: Package },
   { id: 'sessoes-ativas', label: 'Sessões', icon: Clock },
   { id: 'manutencao-alertas', label: 'Alertas', icon: Wrench },
+  { id: 'obras',       label: 'Obras',      icon: Building2 },
 ];
 
 // Itens no sheet "Mais"
 const MORE_ITEMS = [
-  { id: 'dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
-  { id: 'obras',       label: 'Obras',         icon: Building2 },
-  { id: 'estaleiro',   label: 'Estaleiro',      icon: Warehouse },
+  { id: 'mapa',        label: 'Onde estão',    icon: Map },
+  { id: 'estaleiro',   label: 'Armazém',      icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'financeiro-custos', label: 'Financeiro', icon: Wallet },
   { id: 'sessoes-validacoes', label: 'Validações',  icon: CheckCircle },
@@ -49,7 +47,7 @@ const BottomNav = memo(() => {
   const maintenanceAlerts = tools.filter(t => ['MAINTENANCE', 'DAMAGED', 'LOST'].includes((t.status || '').toUpperCase())).length;
 
   const isTabActive = (id) => {
-    if (id === 'dashboard' || id === 'mapa') return activeView === id;
+    if (id === 'mapa') return activeView === id;
     return activeView === id || activeView.startsWith(id.split('-')[0] + '-') || activeView === id.split('-')[0];
   };
 
