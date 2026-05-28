@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ============================================
+    // Helpers
+    // ============================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid))
+          .data.systemRole in ['admin', 'gestor'];
+    }
+    function isOperator() {
+      return isAuthenticated();
+    }
+
+    // ============================================
+    // Artefactos públicos (modelo casais-rfid)
+    // ============================================
+    match /artifacts/casais-rfid/public/data/{document=**} {
+      // Leitura: qualquer authenticated
+      allow read: if isAuthenticated();
+    }
+
+    // ============================================
+    // Colecções primárias do pivot (escritas controladas)
+    // ============================================
+    match /artifacts/casais-rfid/public/data/equipment_models/{modelId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/tools/{toolId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/tool_sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      // Operador pode criar a sua própria sessão e fechá-la
+      allow create: if isAuthenticated() &&
+        request.resource.data.operatorId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        (resource.data.operatorId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/tool_alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated(); // qualquer auth pode criar alerta
+      allow update: if isAuthenticated(); // todos podem actualizar (audit log append)
+      allow delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/tool_maintenance/{recordId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() ||
+        (isAuthenticated() && request.auth.uid == resource.data.reportedBy);
+      allow delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/tool_movements/{movementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ============================================
+    // Colecções secundárias
+    // ============================================
+    match /artifacts/casais-rfid/public/data/obras/{obraId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/operators/{operatorId} {
+      allow read: if isAuthenticated();
+      allow update: if isAdmin() || request.auth.uid == operatorId;
+      allow create, delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/settings/{document} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // Users (perfil systemRole)
+    // ============================================
+    match /artifacts/casais-rfid/public/data/users/{userId} {
+      allow read: if isAuthenticated();
+      allow update: if isAdmin() || request.auth.uid == userId;
+      allow create, delete: if isAdmin();
+    }
+
+    // ============================================
+    // Procore legacy (mantidas)
+    // ============================================
+    match /artifacts/casais-rfid/public/data/sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/machines/{machineId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/alerts/{alertId} {
+      // Acesso via token público (validação por email)
+      allow read: if true;
+      allow update: if true; // token-gated no backend
+      allow create, delete: if isAdmin();
+    }
+  }
+}
