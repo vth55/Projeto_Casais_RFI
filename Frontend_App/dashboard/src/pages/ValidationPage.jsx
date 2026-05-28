@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { addDoc, arrayUnion, collection, doc, getDoc, getDocs, limit, query, serverTimestamp, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, getDocs, limit, query, collection, where } from 'firebase/firestore';
 import { db, projectId } from '../config/firebase';
 import {
   Clock,
@@ -29,6 +29,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import useAlertsStore, { ALERT_TYPES, ALERT_STATUS } from '../store/useAlertsStore';
+import useStore from '../store/useStore';
 
 const BASE = `artifacts/${projectId}/public/data`;
 const TOOL_ALERT_TYPES = ['TOOL_OVERDUE', 'TOOL_PRESUMED_LOST', 'NO_LOCATION', 'NO_OPERATOR', 'DAMAGED'];
@@ -299,108 +300,43 @@ const ValidationPage = ({ token }) => {
     setError(null);
 
     try {
-      const validatedBy = toolSession?.operatorName || alert.operatorName || 'operator-validation';
+      const resolvedBy = toolSession?.operatorName || alert.operatorName || 'anonymous';
       const toolId = toolSession?.toolId || alert.toolId;
-      const alertCollection = isToolAlert ? 'tool_alerts' : 'alerts';
-      const alertRef = doc(db, `${BASE}/${alertCollection}`, alert.id);
-      const auditEntry = (resolution) => ({
-        action: resolution,
-        by: validatedBy,
-        at: Timestamp.now(),
-      });
+      const sessionId = toolSession?.id || alert.toolSessionId || alert.sessionId;
+      const store = useStore.getState();
 
-      if (action === 'in_use') {
-        await updateDoc(alertRef, {
-          status: isToolAlert ? 'RESOLVED' : 'confirmed_in_use',
-          resolution: isToolAlert ? 'CONFIRMED_IN_USE' : 'confirmed_in_use',
-          lastConfirmedAt: serverTimestamp(),
-          resolvedAt: serverTimestamp(),
-          validatedAt: serverTimestamp(),
-          validatedBy,
-          actionsTaken: arrayUnion('CONFIRMED_IN_USE'),
-          auditLog: arrayUnion(auditEntry('CONFIRMED_IN_USE')),
-        });
-      } else if (action === 'returned') {
-        if (!toolSession) throw new Error('Sessão de equipamento não encontrada.');
-        const now = new Date();
-        const start = timestampToDate(toolSession.startTime) || now;
-        const durationHours = Math.max(0, Math.round(((now - start) / 3_600_000) * 100) / 100);
-
-        const batch = writeBatch(db);
-        batch.update(doc(db, `${BASE}/tool_sessions`, toolSession.id), {
-          status: 'CLOSED',
-          endTime: serverTimestamp(),
-          durationHours,
-          closedBy: 'operator-validation',
-        });
-        if (toolId) {
-          batch.update(doc(db, `${BASE}/tools`, toolId), {
-            status: 'AVAILABLE',
-            currentObraId: null,
-            currentObraName: null,
-            returnedAt: serverTimestamp(),
+      if (isToolToken) {
+        // ---- tool_alerts: usar store actions ----
+        if (action === 'in_use') {
+          await store.updateToolAlert(alert.id, {
+            status: 'IN_REVIEW',
+            resolution: 'CONFIRMED_IN_USE',
+            lastConfirmedAt: (await import('firebase/firestore')).Timestamp.now(),
+          }, { action: 'CONFIRM_IN_USE', by: resolvedBy });
+        } else if (action === 'returned') {
+          await store.markReturnedFromAlert(alert.id, { sessionId, toolId, resolvedBy });
+        } else if (action === 'lost') {
+          if (!toolId) {
+            setError('Não foi possível identificar o equipamento para marcar como perdido.');
+            setSubmitting(false);
+            return;
+          }
+          await store.markLostFromAlert(alert.id, { sessionId, toolId, resolvedBy });
+        } else if (action === 'damaged') {
+          if (!toolId) throw new Error('Equipamento não identificado.');
+          await store.createMaintenanceFromAlert(alert.id, {
+            toolId,
+            sessionId,
+            resolvedBy,
+            notes: `Avaria reportada a partir do alerta ${alert.id}`,
           });
         }
-        batch.update(alertRef, {
-          status: isToolAlert ? 'RESOLVED' : ALERT_STATUS.RESOLVED,
-          resolution: isToolAlert ? 'RETURNED' : 'returned_now',
-          resolvedAt: serverTimestamp(),
-          validatedAt: serverTimestamp(),
-          validatedBy,
-          actionsTaken: arrayUnion('RETURNED'),
-          auditLog: arrayUnion(auditEntry('RETURNED')),
-        });
-        await batch.commit();
-      } else if (action === 'lost') {
-        if (!toolId) {
-          setError('Não foi possível identificar o equipamento para marcar como perdido.');
-          setSubmitting(false);
-          return;
-        }
-
-        const batch = writeBatch(db);
-        if (toolSession?.id) {
-          batch.update(doc(db, `${BASE}/tool_sessions`, toolSession.id), {
-            status: 'LOST',
-            lostAt: serverTimestamp(),
-          });
-        }
-        batch.update(doc(db, `${BASE}/tools`, toolId), {
-          status: 'LOST',
-          lostAt: serverTimestamp(),
-        });
-        batch.update(alertRef, {
-          status: isToolAlert ? 'RESOLVED' : ALERT_STATUS.RESOLVED,
-          resolution: isToolAlert ? 'MARKED_LOST' : 'lost',
-          resolvedAt: serverTimestamp(),
-          validatedAt: serverTimestamp(),
-          validatedBy,
-          actionsTaken: arrayUnion('MARKED_LOST'),
-          auditLog: arrayUnion(auditEntry('MARKED_LOST')),
-        });
-        await batch.commit();
-      } else if (action === 'damaged') {
-        if (!toolId) throw new Error('Equipamento não identificado.');
-        const maintenanceRef = await addDoc(collection(db, `${BASE}/tool_maintenance`), {
-          toolId,
-          type: 'DAMAGE',
-          status: 'OPEN',
-          reportedBy: validatedBy,
-          reportedAt: serverTimestamp(),
-          obraId: toolSession?.obraId || alert.obraId || null,
-          notes: `Avaria reportada a partir do alerta ${alert.id}`,
-          photos: [],
-        });
-        await updateDoc(alertRef, {
-          status: 'RESOLVED',
-          resolution: 'MARKED_DAMAGED',
-          linkedMaintenanceId: maintenanceRef.id,
-          resolvedAt: serverTimestamp(),
-          validatedAt: serverTimestamp(),
-          validatedBy,
-          actionsTaken: arrayUnion('MARKED_DAMAGED'),
-          auditLog: arrayUnion(auditEntry('MARKED_DAMAGED')),
-        });
+      } else {
+        // ---- legacy alerts: useAlertsStore (não tocar) ----
+        const { validateAlert: _validate } = useAlertsStore.getState();
+        // legacy branch usa confirmSubmit/validateAlert — este caminho não chega aqui
+        // mas por compatibilidade mantemos o erro descritivo
+        throw new Error('Acção não suportada para alertas legacy neste handler.');
       }
 
       setSubmitted(true);
@@ -603,6 +539,26 @@ const ValidationPage = ({ token }) => {
               Reportar avaria
             </button>
           </div>
+
+          {toolAlert?.auditLog?.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Histórico</h3>
+              <div className="space-y-2">
+                {[...toolAlert.auditLog].reverse().map((entry, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs">
+                    <span className="text-slate-400 shrink-0">
+                      {entry.at?.toDate?.()?.toLocaleString('pt-PT') || '—'}
+                    </span>
+                    <div>
+                      <span className="font-medium text-slate-700">{entry.action}</span>
+                      <span className="text-slate-500"> · {entry.by}</span>
+                      {entry.notes && <p className="text-slate-500 mt-0.5">{entry.notes}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <p className="text-center text-xs text-slate-500 mt-6">
             CASAIS Fleet Intelligence - Sistema de Gestão de Frotas

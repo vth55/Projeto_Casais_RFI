@@ -1415,6 +1415,7 @@ const ConfiguracoesView = () => {
   const canManageRoles = can(PERMISSIONS.SETTINGS_ROLES);
   const canEditOperationalParams = can(PERMISSIONS.SETTINGS_GENERAL);
   const userLevel = getUserLevel();
+  const { systemSettings, updateSystemSettings } = useStore();
   const availableLevels = getAvailableLevelsForCreation();
   const canCreateRoles = canCreateCustomRoles();
 
@@ -1907,13 +1908,51 @@ const ConfiguracoesView = () => {
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">Notificações por Email</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Enviar resumo diário por email</p>
-                </div>
-                <Badge variant="default">Inativo</Badge>
-              </div>
+              {currentUser?.systemRole === 'admin' && (
+                <>
+                  <label className="flex items-center justify-between p-4 rounded-xl bg-white border border-slate-200 cursor-pointer">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900">Notificações por email</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Quando ligado, alertas críticos enviam email ao operador com link de validação.
+                        Por defeito desligado para demo.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={systemSettings?.notifications?.emailEnabled || false}
+                      onChange={(e) => updateSystemSettings({
+                        notifications: {
+                          ...systemSettings?.notifications,
+                          emailEnabled: e.target.checked,
+                        },
+                      })}
+                      className="ml-3 w-5 h-5"
+                    />
+                  </label>
+
+                  <div className="p-4 rounded-xl bg-white border border-slate-200">
+                    <label className="block">
+                      <span className="font-semibold text-slate-900">Driver SMTP</span>
+                      <select
+                        value={systemSettings?.notifications?.smtpDriver || 'disabled'}
+                        onChange={(e) => updateSystemSettings({
+                          notifications: {
+                            ...systemSettings?.notifications,
+                            smtpDriver: e.target.value,
+                          },
+                        })}
+                        className="mt-2 w-full p-2 border border-slate-300 rounded-lg"
+                      >
+                        <option value="disabled">Desactivado</option>
+                        <option value="sendgrid">SendGrid</option>
+                        <option value="gmail">Gmail</option>
+                        <option value="custom">SMTP custom</option>
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
           </ConfigSection>
         );

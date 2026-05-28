@@ -698,6 +698,12 @@ exports.resendAlertEmail = onRequest(async (req, res) => {
     }
 
     try {
+        const emailEnabled = await isEmailNotificationsEnabled();
+        if (!emailEnabled) {
+            console.log('[email-guard] notifications.emailEnabled=false — skipping email send');
+            return res.status(200).json({ success: false, reason: 'EMAIL_DISABLED' });
+        }
+
         const alertRef = db.doc(`${ALERTS_PATH}/${alertId}`);
         const alertSnap = await alertRef.get();
 
@@ -948,6 +954,12 @@ exports.createTestAlertAndSendEmail = onRequest(async (req, res) => {
     }
 
     try {
+        const emailEnabled = await isEmailNotificationsEnabled();
+        if (!emailEnabled) {
+            console.log('[email-guard] notifications.emailEnabled=false — skipping email send');
+            return res.status(200).json({ success: false, reason: 'EMAIL_DISABLED' });
+        }
+
         // Criar alerta de teste no Firestore (mesma estrutura dos alertas reais)
         const alertId = `alert_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const validationToken = generateToken();

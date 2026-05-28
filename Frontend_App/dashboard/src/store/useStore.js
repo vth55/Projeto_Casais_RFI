@@ -869,6 +869,108 @@ const useStore = create((set, get) => ({
     return toolAlerts.filter(alert => alert.status === 'OPEN' || alert.status === 'IN_REVIEW');
   },
 
+  // ---- helpers de leitura ----
+  getToolAlertById: (id) => get().toolAlerts.find(a => a.id === id),
+  getToolAlertByToken: (token) => get().toolAlerts.find(a => a.token === token || a.emailToken === token),
+  getToolAlertCount: () => get().toolAlerts.filter(a => a.status === 'OPEN' || a.status === 'IN_REVIEW').length,
+
+  // ---- audit log helper ----
+  appendToolAlertAudit: async (alertId, { action, by, notes }) => {
+    const ref = doc(db, `${basePath}/tool_alerts`, alertId);
+    const snap = await getDoc(ref);
+    const current = snap.data() || {};
+    const auditLog = [...(current.auditLog || []), {
+      action,
+      by,
+      at: Timestamp.now(),
+      ...(notes ? { notes } : {}),
+    }];
+    const actionsTaken = [...new Set([...(current.actionsTaken || []), action])];
+    await updateDoc(ref, { auditLog, actionsTaken });
+  },
+
+  // ---- actions de resolução ----
+  ignoreToolAlert: async (alertId, { resolvedBy, notes }) => {
+    const ref = doc(db, `${basePath}/tool_alerts`, alertId);
+    await updateDoc(ref, {
+      status: 'RESOLVED',
+      resolution: 'IGNORED',
+      resolvedBy,
+      resolvedAt: Timestamp.now(),
+    });
+    await get().appendToolAlertAudit(alertId, { action: 'IGNORE', by: resolvedBy, notes });
+  },
+
+  markReturnedFromAlert: async (alertId, { sessionId, toolId, resolvedBy }) => {
+    // 1. Fechar tool_session OPEN se existir
+    if (sessionId) {
+      const sessRef = doc(db, `${basePath}/tool_sessions`, sessionId);
+      const sessSnap = await getDoc(sessRef);
+      if (sessSnap.exists() && sessSnap.data().status === 'OPEN') {
+        const start = sessSnap.data().startTime?.toDate?.() ?? new Date();
+        const now = new Date();
+        const durationHours = Math.round(((now - start) / 3600000) * 100) / 100;
+        await updateDoc(sessRef, {
+          status: 'CLOSED',
+          endTime: Timestamp.now(),
+          durationHours,
+        });
+      }
+    }
+    // 2. tool.status → AVAILABLE
+    if (toolId) {
+      await updateDoc(doc(db, `${basePath}/tools`, toolId), { status: 'AVAILABLE' });
+    }
+    // 3. alert RESOLVED
+    await updateDoc(doc(db, `${basePath}/tool_alerts`, alertId), {
+      status: 'RESOLVED',
+      resolution: 'RETURNED',
+      resolvedBy,
+      resolvedAt: Timestamp.now(),
+    });
+    await get().appendToolAlertAudit(alertId, { action: 'MARK_RETURNED', by: resolvedBy });
+  },
+
+  markLostFromAlert: async (alertId, { sessionId, toolId, resolvedBy }) => {
+    if (sessionId) {
+      await updateDoc(doc(db, `${basePath}/tool_sessions`, sessionId), {
+        status: 'LOST',
+        endTime: Timestamp.now(),
+      });
+    }
+    if (toolId) {
+      await updateDoc(doc(db, `${basePath}/tools`, toolId), { status: 'LOST' });
+    }
+    await updateDoc(doc(db, `${basePath}/tool_alerts`, alertId), {
+      status: 'RESOLVED',
+      resolution: 'MARKED_LOST',
+      resolvedBy,
+      resolvedAt: Timestamp.now(),
+    });
+    await get().appendToolAlertAudit(alertId, { action: 'MARK_LOST', by: resolvedBy });
+  },
+
+  createMaintenanceFromAlert: async (alertId, { toolId, sessionId, resolvedBy, notes }) => {
+    if (!toolId) return null;
+    const maintId = await get().addToolMaintenance({
+      toolId,
+      type: 'DAMAGE',
+      status: 'OPEN',
+      reportedBy: resolvedBy,
+      notes: notes || 'Reportado via link de validação',
+      photos: [],
+    });
+    await updateDoc(doc(db, `${basePath}/tool_alerts`, alertId), {
+      status: 'RESOLVED',
+      resolution: 'MARKED_DAMAGED',
+      linkedMaintenanceId: maintId,
+      resolvedBy,
+      resolvedAt: Timestamp.now(),
+    });
+    await get().appendToolAlertAudit(alertId, { action: 'CREATE_MAINTENANCE_DAMAGE', by: resolvedBy, notes });
+    return maintId;
+  },
+
   addToolMaintenance: async (record) => {
     const data = {
       ...record,

@@ -81,6 +81,8 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
   const activeSessions = toolSessions.filter(s => s.status === 'OPEN').length;
   const totalTools = tools.length;
   const warehouseCount = tools.filter(t => !t.currentObraId).length;
+  const { toolAlerts = [] } = useStore();
+  const alertCount = toolAlerts.filter(a => a.status === 'OPEN' || a.status === 'IN_REVIEW').length;
 
   const userInitials = currentUser?.name
     ?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -252,20 +254,26 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
                   <ul className="mt-1 ml-4 pl-4 border-l border-slate-700 space-y-0.5">
                     {item.submenu.map((subItem) => {
                       const subActive = activeView === subItem.id;
+                      const subBadge = subItem.id === 'manutencao-alertas' && alertCount > 0 ? alertCount : null;
                       return (
                         <li key={subItem.id}>
                           <button
                             onClick={() => { setActiveView(subItem.id); onNavigate?.(); }}
                             className={`
                               w-full text-left px-3 py-2 rounded-lg text-sm
-                              transition-colors duration-150
+                              transition-colors duration-150 flex items-center justify-between
                               ${subActive
                                 ? 'text-primary-400 bg-primary-500/10 font-medium'
                                 : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                               }
                             `}
                           >
-                            {subItem.label}
+                            <span>{subItem.label}</span>
+                            {subBadge && (
+                              <span className="min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                {subBadge > 99 ? '99+' : subBadge}
+                              </span>
+                            )}
                           </button>
                         </li>
                       );

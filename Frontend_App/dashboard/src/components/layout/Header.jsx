@@ -39,8 +39,9 @@ const viewTitles = {
 };
 
 const Header = ({ onMenuClick }) => {
-  const { activeView } = useStore();
+  const { activeView, setActiveView, toolAlerts = [] } = useStore();
   const viewInfo = viewTitles[activeView] || { title: 'Dashboard', description: '' };
+  const alertCount = toolAlerts.filter(a => a.status === 'OPEN' || a.status === 'IN_REVIEW').length;
   const { isInstalled, isInstallable, install } = usePWAInstall();
   const [isStandalone, setIsStandalone] = useState(false);
   const { isOnline } = useOnlineStatus();
@@ -94,9 +95,19 @@ const Header = ({ onMenuClick }) => {
         </button>
 
         {/* Notifications */}
-        <button className="relative p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+        <button
+          onClick={() => setActiveView('manutencao-alertas')}
+          className="relative p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          aria-label="Alertas"
+        >
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+          {alertCount > 0 ? (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {alertCount > 99 ? '99+' : alertCount}
+            </span>
+          ) : (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+          )}
         </button>
 
         {/* PWA Install Button */}
