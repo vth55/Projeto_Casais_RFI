@@ -5,6 +5,11 @@ import useStore from '../store/useStore';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// Guard global para sobreviver ao double-mount do React 19 StrictMode.
+// react-leaflet 4.2.1 não tolera re-init do container; usamos Leaflet
+// directamente e protegemos com esta flag de módulo.
+let _mapInitialized = false;
+
 function toDate(value) {
   if (!value) return null;
   if (typeof value.toDate === 'function') return value.toDate();
@@ -55,9 +60,22 @@ export default function MapaObrasView() {
   );
 
   useEffect(() => {
-    if (!mapNodeRef.current || mapInstanceRef.current) return;
+    const container = mapNodeRef.current;
+    if (!container) return;
 
-    const map = L.map(mapNodeRef.current, {
+    // Se o container já tem um mapa Leaflet vivo, não reinicializar.
+    // Isto protege contra o double-mount do React 19 StrictMode quando
+    // o cleanup da primeira montagem não chegou a correr ainda.
+    if (mapInstanceRef.current) return;
+
+    // Limpar qualquer _leaflet_id residual no container (pode acontecer se
+    // o cleanup anterior falhou a meio ou se o StrictMode destruiu o container
+    // antes do map.remove() ter terminado).
+    if (container._leaflet_id) {
+      delete container._leaflet_id;
+    }
+
+    const map = L.map(container, {
       center: [39.5, -8.0],
       zoom: 7,
       scrollWheelZoom: true,
@@ -70,12 +88,14 @@ export default function MapaObrasView() {
     const markersLayer = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
     markersLayerRef.current = markersLayer;
+    _mapInitialized = true;
 
     return () => {
       markersLayer.clearLayers();
       map.remove();
       markersLayerRef.current = null;
       mapInstanceRef.current = null;
+      _mapInitialized = false;
     };
   }, []);
 
