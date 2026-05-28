@@ -16,6 +16,7 @@ const S = {
   TOOL_NOT_FOUND: 'not_found',
   CONFIRM_CHECKOUT: 'confirm_checkout',
   CONFIRM_CHECKIN: 'confirm_checkin',
+  REPORT_READY: 'report_ready',
   PROCESSING: 'processing',
   SUCCESS: 'success',
   ERROR: 'error',
@@ -32,6 +33,7 @@ export default function ToolTagPage({ onExit }) {
 
   // Extract tagId from URL: /t/:tagId
   const tagId = window.location.pathname.split('/t/')[1]?.split('?')[0]?.toUpperCase();
+  const scanMode = new URLSearchParams(window.location.search).get('mode');
 
   // Garante que loadTool() só corre uma vez — Firebase Auth pode disparar null→user
   // em cold start, o que re-executaria o effect e chamaria loadTool() uma segunda
@@ -98,6 +100,11 @@ export default function ToolTagPage({ onExit }) {
             console.debug('Model fetch failed (non-blocking):', err);
           }
         })();
+      }
+
+      if (scanMode === 'report') {
+        setState(S.REPORT_READY);
+        return;
       }
 
       // Check for open session by this user
@@ -194,6 +201,11 @@ export default function ToolTagPage({ onExit }) {
   // chama confirmRef.current para ter sempre state/openSession/tool atuais.
   confirmRef.current = confirm;
 
+  function goToReport() {
+    if (!tool?.id) return;
+    window.location.href = `/reporte-avaria?tool=${encodeURIComponent(tool.id)}&source=nfc`;
+  }
+
   // ──── Render ────
 
   if (state === S.LOADING || authLoading) return (
@@ -250,6 +262,25 @@ export default function ToolTagPage({ onExit }) {
       <p className="text-white font-bold text-lg text-center">Erro ao processar</p>
       <p className="text-white/60 text-sm text-center">{result}</p>
       <button type="button" onClick={exitToApp} className="text-white/50 text-sm underline">Voltar à app</button>
+    </div>
+  );
+
+  if (state === S.REPORT_READY) return (
+    <div className="min-h-screen bg-amber-900 flex flex-col items-center justify-center p-6 gap-5">
+      <Wrench className="w-16 h-16 text-white" />
+      <div className="text-center">
+        <p className="text-white/70 text-sm uppercase tracking-widest mb-2">Reporte de avaria</p>
+        <p className="text-white font-black text-2xl">{model?.displayName || tool?.name}</p>
+        <p className="text-white/60 text-sm mt-2">Esta leitura não abre sessão de uso.</p>
+      </div>
+      <button
+        type="button"
+        onClick={goToReport}
+        className="w-full max-w-xs py-4 rounded-2xl bg-white text-amber-900 font-black text-lg"
+      >
+        Continuar reporte
+      </button>
+      <button type="button" onClick={exitToApp} className="text-white/60 text-sm underline">Cancelar</button>
     </div>
   );
 
@@ -365,6 +396,13 @@ export default function ToolTagPage({ onExit }) {
                 : <>{isCheckout ? 'Confirmar saída' : 'Confirmar devolução'} · {countdown}s</>
               }
             </span>
+          </button>
+          <button
+            onClick={goToReport}
+            className="w-full py-3 rounded-2xl text-amber-300 text-sm font-bold
+              border border-amber-700/60 hover:bg-amber-900/30 transition-colors"
+          >
+            Reportar avaria sem abrir sessão
           </button>
           <button
             onClick={exitToApp}

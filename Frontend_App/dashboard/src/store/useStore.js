@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, getDocs, writeBatch, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment, arrayUnion } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
 import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
@@ -991,6 +991,66 @@ const useStore = create((set, get) => ({
     };
     const ref = await addDoc(collection(db, `${basePath}/tool_maintenance`), data);
     return ref.id;
+  },
+
+  reportToolMaintenance: async (record) => {
+    if (!record?.toolId) throw new Error('toolId obrigatório');
+
+    const now = Timestamp.now();
+    const qOpen = query(
+      collection(db, `${basePath}/tool_sessions`),
+      where('toolId', '==', record.toolId),
+      where('status', '==', 'OPEN'),
+    );
+    const openSnap = await getDocs(qOpen);
+    const batch = writeBatch(db);
+    const shouldRemoveFromUse = ['DAMAGE', 'REPAIR', 'LOSS'].includes(record.type) || record.usable === false;
+
+    openSnap.docs.forEach((sessionDoc) => {
+      const session = sessionDoc.data();
+      const start = session.startTime?.toDate?.() || new Date();
+      const durationHours = Math.max(0, Math.round(((Date.now() - start.getTime()) / 3_600_000) * 100) / 100);
+      batch.update(sessionDoc.ref, {
+        status: record.type === 'LOSS' ? 'LOST' : 'CLOSED',
+        endTime: now,
+        durationHours,
+        closedBy: 'MAINTENANCE_REPORT',
+        closedReason: record.type || 'MAINTENANCE',
+      });
+    });
+
+    const maintenanceRef = doc(collection(db, `${basePath}/tool_maintenance`));
+    batch.set(maintenanceRef, {
+      ...record,
+      status: record.status || 'OPEN',
+      reportedAt: record.reportedAt || now,
+      photos: record.photos || [],
+      source: record.source || 'PWA_REPORT',
+      externalSync: {
+        sapSynced: false,
+        procoreSynced: false,
+        ...(record.externalSync || {}),
+      },
+      auditLog: record.auditLog || [{
+        action: 'CREATED',
+        by: record.reportedBy || 'anonymous',
+        at: now,
+        notes: record.source || 'PWA_REPORT',
+      }],
+    });
+
+    if (shouldRemoveFromUse) {
+      const toolUpdates = {
+        status: record.type === 'LOSS' ? 'LOST' : 'IN_REPAIR',
+        maintenanceStatusUpdatedAt: now,
+        lastMaintenanceId: maintenanceRef.id,
+      };
+      if (record.type === 'LOSS') toolUpdates.lostAt = now;
+      batch.update(doc(db, `${basePath}/tools`, record.toolId), toolUpdates);
+    }
+
+    await batch.commit();
+    return maintenanceRef.id;
   },
 
   updateToolMaintenance: async (recordId, updates) => {

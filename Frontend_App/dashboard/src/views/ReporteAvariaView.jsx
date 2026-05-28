@@ -8,7 +8,7 @@
  * URL: /reporte-avaria?tool=<toolId>  (também aceita ?machine=<id> como fallback legacy)
  */
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Camera, Send, CheckCircle2, X, AlertOctagon, Wrench, MapPin, ImagePlus, Search } from 'lucide-react';
+import { Send, CheckCircle2, X, AlertOctagon, Wrench, MapPin, ImagePlus, Search, Nfc } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
 import { TOOL_MAINTENANCE_TYPES } from '../types';
@@ -180,7 +180,7 @@ const PhotoCapture = ({ photos, onCapture, onRemove }) => {
 };
 
 export default function ReporteAvariaView() {
-  const { tools = [], addToolMaintenance } = useStore();
+  const { tools = [], reportToolMaintenance } = useStore();
   const { currentUser } = useAuthStore();
 
   // Aceitar URL param ?tool=<id> (novo) ou ?machine=<id> (legacy, fallback só para não crashar).
@@ -196,6 +196,7 @@ export default function ReporteAvariaView() {
   const [cost, setCost] = useState('');
   const [photos, setPhotos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
 
@@ -209,8 +210,47 @@ export default function ReporteAvariaView() {
 
   const selectedTool = tools.find(t => t.id === toolId);
 
+  async function scanToolTagForReport() {
+    if (!('NDEFReader' in window)) {
+      setError('NFC não suportado neste browser. Pesquisa o equipamento manualmente.');
+      return;
+    }
+    setScanning(true);
+    setError(null);
+    try {
+      const reader = new window.NDEFReader();
+      await reader.scan();
+      reader.addEventListener('reading', ({ serialNumber, message }) => {
+        let tag = null;
+        if (message?.records?.length) {
+          for (const record of message.records) {
+            if (record.recordType === 'text' || record.recordType === 'url') {
+              const decoder = new TextDecoder(record.encoding || 'utf-8');
+              const raw = decoder.decode(record.data).trim();
+              tag = raw.includes('/t/') ? raw.split('/t/')[1]?.split(/[?#]/)[0] : raw;
+              break;
+            }
+          }
+        }
+        if (!tag && serialNumber) tag = serialNumber.replace(/:/g, '');
+        const normalized = tag?.trim().toUpperCase();
+        const found = tools.find(t => (t.nfcTagId || '').toUpperCase() === normalized);
+        if (found) {
+          setToolId(found.id);
+          setError(null);
+        } else {
+          setError(normalized ? `Tag NFC não encontrada: ${normalized}` : 'Não foi possível ler a tag NFC.');
+        }
+        setScanning(false);
+      }, { once: true });
+    } catch (err) {
+      setError(err.message || 'Erro ao ler NFC');
+      setScanning(false);
+    }
+  }
+
   async function submit() {
-    if (!toolId || !type) { setError('Seleciona a equipamento e o tipo de problema'); return; }
+    if (!toolId || !type) { setError('Seleciona o equipamento e o tipo de problema'); return; }
     setSubmitting(true);
     setError(null);
     try {
@@ -218,12 +258,14 @@ export default function ReporteAvariaView() {
       // fica para fase seguinte — manter compat com schema que aceita array de strings.
       const photoRefs = photos.map(p => p.id); // placeholder; quando integrar Storage substituir por download URL
 
-      await addToolMaintenance({
+      await reportToolMaintenance({
         toolId,
         type,
         status: 'OPEN',
         reportedBy: currentUser?.id || currentUser?.uid || 'anonymous',
         obraId: selectedTool?.currentObraId || null,
+        source: 'NFC_REPORT',
+        usable,
         notes: [
           notes.trim(),
           usable ? '[Utilizável]' : '[Inutilizável]',
@@ -260,6 +302,22 @@ export default function ReporteAvariaView() {
       <AppHeader />
       <div className="flex-1 flex flex-col gap-5 mt-4">
         <ToolPicker tools={tools} value={toolId} onChange={setToolId} />
+
+        <div className="px-5">
+          <button
+            type="button"
+            onClick={scanToolTagForReport}
+            disabled={scanning}
+            className="w-full py-3 rounded-xl border-2 border-dashed border-primary-300 bg-primary-50 text-primary-700 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Nfc className="w-4 h-4" />
+            {scanning ? 'A aproximar tag NFC...' : 'Ler tag NFC para reportar avaria'}
+          </button>
+          <p className="text-xs text-slate-500 mt-2">
+            Este modo não abre sessão de uso. Ao submeter, sessões abertas deste equipamento são fechadas automaticamente.
+          </p>
+        </div>
+
         <TypePicker value={type} onChange={setType} />
 
         <div className="px-5">
