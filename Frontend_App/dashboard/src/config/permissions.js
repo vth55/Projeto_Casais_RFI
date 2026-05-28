@@ -22,6 +22,9 @@ export const PERMISSIONS = {
   TOOLS_EDIT: 'tools:edit',
   TOOLS_DELETE: 'tools:delete',
   TOOLS_MOVE: 'tools:move', // Transferir equipamento entre obra/armazém
+  TOOL_TRANSFERS_VIEW: 'tool_transfers:view',
+  TOOL_TRANSFERS_CREATE: 'tool_transfers:create',
+  TOOL_TRANSFERS_RECEIVE: 'tool_transfers:receive',
 
   // Operadores
   OPERATORS_VIEW: 'operators:view',
@@ -136,6 +139,9 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.TOOLS_CREATE,
       PERMISSIONS.TOOLS_EDIT,
       PERMISSIONS.TOOLS_MOVE,
+      PERMISSIONS.TOOL_TRANSFERS_VIEW,
+      PERMISSIONS.TOOL_TRANSFERS_CREATE,
+      PERMISSIONS.TOOL_TRANSFERS_RECEIVE,
       PERMISSIONS.OPERATORS_VIEW,
       PERMISSIONS.OPERATORS_CREATE,
       PERMISSIONS.OPERATORS_EDIT,
@@ -227,6 +233,9 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.OBRAS_VIEW, // Só a sua obra (filtrado por assignedObraId)
       PERMISSIONS.TOOLS_VIEW,
       PERMISSIONS.TOOLS_MOVE, // Transferir equipamentos entre obras na sua jurisdição
+      PERMISSIONS.TOOL_TRANSFERS_VIEW,
+      PERMISSIONS.TOOL_TRANSFERS_CREATE,
+      PERMISSIONS.TOOL_TRANSFERS_RECEIVE,
       PERMISSIONS.OPERATORS_VIEW,
       PERMISSIONS.OPERATORS_CREATE,
       PERMISSIONS.OPERATORS_EDIT,
@@ -291,6 +300,34 @@ export const DEFAULT_ROLES = {
     defaultDashboard: 'manutencao',
   },
 
+  logistica: {
+    id: 'logistica',
+    name: 'Logística',
+    description: 'Expedição, receção e controlo físico de equipamentos em armazém',
+    color: 'sky',
+    icon: 'Warehouse',
+    level: ROLE_LEVELS.SUPERVISOR,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.OBRAS_VIEW,
+      PERMISSIONS.TOOLS_VIEW,
+      PERMISSIONS.TOOLS_EDIT,
+      PERMISSIONS.TOOLS_MOVE,
+      PERMISSIONS.TOOL_TRANSFERS_VIEW,
+      PERMISSIONS.TOOL_TRANSFERS_CREATE,
+      PERMISSIONS.TOOL_TRANSFERS_RECEIVE,
+      PERMISSIONS.TOOL_SESSIONS_VIEW,
+      PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
+      PERMISSIONS.MAINTENANCE_VIEW,
+      PERMISSIONS.QUALITY_VIEW,
+      PERMISSIONS.REPORTS_VIEW,
+    ],
+    isSystem: true,
+    restrictedToOwnObra: false,
+    canCreateRolesBelow: false,
+    defaultDashboard: 'logistica',
+  },
+
   operador: {
     id: 'operador',
     name: 'Operador de Campo',
@@ -318,6 +355,7 @@ export const MENU_PERMISSIONS = {
   dashboard: [PERMISSIONS.DASHBOARD_VIEW],
   obras: [PERMISSIONS.OBRAS_VIEW],
   maquinas: [PERMISSIONS.TOOLS_VIEW],      // menu id mantido 'maquinas' para compatibilidade de routing
+  guias: [PERMISSIONS.TOOL_TRANSFERS_VIEW],
   operadores: [PERMISSIONS.OPERATORS_VIEW],
   sessoes: [PERMISSIONS.TOOL_SESSIONS_VIEW],
   // A tab Validações dentro de Sessões requer QUALITY_VIEW ou TOOL_SESSIONS_VIEW_ALL
@@ -456,6 +494,9 @@ export const PERMISSION_CATEGORIES = {
       { id: PERMISSIONS.TOOLS_EDIT, label: 'Editar Equipamentos' },
       { id: PERMISSIONS.TOOLS_DELETE, label: 'Eliminar Equipamentos' },
       { id: PERMISSIONS.TOOLS_MOVE, label: 'Transferir Localização' },
+      { id: PERMISSIONS.TOOL_TRANSFERS_VIEW, label: 'Ver Guias' },
+      { id: PERMISSIONS.TOOL_TRANSFERS_CREATE, label: 'Criar Guias' },
+      { id: PERMISSIONS.TOOL_TRANSFERS_RECEIVE, label: 'Receber Guias' },
     ],
   },
   operators: {

@@ -170,8 +170,36 @@
  * @property {string|'WAREHOUSE'} toObraId
  * @property {string} movedBy               operatorId
  * @property {Timestamp} movedAt
- * @property {'CHECKOUT'|'CHECKIN'|'MANUAL'|'TRANSFER'} triggeredBy
+ * @property {'CHECKOUT'|'CHECKIN'|'MANUAL'|'TRANSFER'|'TRANSFER_DISPATCH'|'TRANSFER_RECEIPT'} triggeredBy
  * @property {string} [relatedSessionId]    tool_session que originou o movimento
+ */
+
+/**
+ * @typedef {Object} ToolTransfer
+ * Colecção: `tool_transfers/{transferId}` — guia logística confirmada por leitura NFC.
+ *
+ * Ponte para SAP/Procore: o documento externo pode criar a intenção logística,
+ * mas a PWA confirma as unidades físicas reais através das tags NFC.
+ *
+ * @property {string} id
+ * @property {'WAREHOUSE_TO_OBRA'|'OBRA_TO_WAREHOUSE'|'OBRA_TO_OBRA'} type
+ * @property {'DRAFT'|'DISPATCHED'|'PARTIAL'|'RECEIVED'|'CANCELLED'} status
+ * @property {{kind:'WAREHOUSE'|'OBRA',obraId:string|null,name:string}} from
+ * @property {{kind:'WAREHOUSE'|'OBRA',obraId:string|null,name:string}} to
+ * @property {string[]} toolIds
+ * @property {Array<{toolId:string,name:string,type?:string,nfcTagId?:string}>} items
+ * @property {string[]} pickedToolIds
+ * @property {string[]} receivedToolIds
+ * @property {string[]} missingToolIds
+ * @property {Timestamp} createdAt
+ * @property {string} createdBy
+ * @property {Timestamp} [dispatchedAt]
+ * @property {string} [dispatchedBy]
+ * @property {Timestamp} [receivedAt]
+ * @property {string} [receivedBy]
+ * @property {string} [notes]
+ * @property {{sourceSystem:string,externalRefs:Object,sapSynced:boolean,procoreSynced:boolean,sapDocumentId?:string,procoreProjectId?:string}} externalSync
+ * @property {{action:string,by:string,at:Timestamp,notes?:string}[]} auditLog
  */
 
 // ============================================================================
@@ -259,6 +287,22 @@ export const TOOL_MAINTENANCE_TYPES = Object.freeze({
   CALIBRATION: 'CALIBRATION',   // ajuste
   REPLACEMENT: 'REPLACEMENT',   // substituição
   LOSS:        'LOSS',          // dada como perdida
+});
+
+/** Tipos de guias logísticas de equipamentos. */
+export const TOOL_TRANSFER_TYPES = Object.freeze({
+  WAREHOUSE_TO_OBRA: 'WAREHOUSE_TO_OBRA',
+  OBRA_TO_WAREHOUSE: 'OBRA_TO_WAREHOUSE',
+  OBRA_TO_OBRA:      'OBRA_TO_OBRA',
+});
+
+/** Estados de guias logísticas de equipamentos. */
+export const TOOL_TRANSFER_STATUS = Object.freeze({
+  DRAFT:      'DRAFT',
+  DISPATCHED: 'DISPATCHED',
+  PARTIAL:    'PARTIAL',
+  RECEIVED:   'RECEIVED',
+  CANCELLED:  'CANCELLED',
 });
 
 /** Threshold defaults — overridable em `settings/system`. */

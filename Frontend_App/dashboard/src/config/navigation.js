@@ -22,6 +22,7 @@ import {
   DollarSign,
   Building2,
   List,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 export const navigationStructure = [
@@ -98,6 +99,13 @@ export const navigationStructure = [
     icon: Map,
     path: '/mapa',
     description: 'Ultima leitura NFC por obra. Nao e localizacao real-time.',
+  },
+  {
+    id: 'guias',
+    label: 'Guias',
+    icon: ArrowRightLeft,
+    path: '/guias',
+    description: 'Expedicao e rececao de equipamentos confirmada por NFC.',
   },
   {
     id: 'sessoes',

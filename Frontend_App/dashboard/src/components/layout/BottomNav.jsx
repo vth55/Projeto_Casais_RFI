@@ -14,6 +14,7 @@ import {
   Settings,
   X,
   Warehouse,
+  ArrowRightLeft,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -29,6 +30,7 @@ const PRIMARY_TABS = [
 // Itens no sheet "Mais"
 const MORE_ITEMS = [
   { id: 'mapa',        label: 'Onde estão',    icon: Map },
+  { id: 'guias',       label: 'Guias',        icon: ArrowRightLeft },
   { id: 'estaleiro',   label: 'Armazém',      icon: Warehouse },
   { id: 'operadores',  label: 'Operadores',     icon: Users },
   { id: 'financeiro-custos', label: 'Financeiro', icon: Wallet },

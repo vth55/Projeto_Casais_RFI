@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Map, Package, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
-  Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc,
+  Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc, ArrowRightLeft,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -19,6 +19,7 @@ const navigation = [
     ],
   },
   { id: 'mapa',        label: 'Onde estão',     icon: Map },
+  { id: 'guias',       label: 'Guias',          icon: ArrowRightLeft },
   { id: 'sessoes',     label: 'Sessões',        icon: Clock,
     submenu: [
       { id: 'sessoes-ativas',     label: 'Sessões Ativas' },

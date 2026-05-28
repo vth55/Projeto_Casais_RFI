@@ -50,6 +50,7 @@ const useStore = create((set, get) => ({
   toolAlerts: [],       // novo — anomalias detectadas (TOOL_OVERDUE, NO_LOCATION, etc.) ver types.js
   toolMaintenance: [],  // novo — inspeção/dano/reparação/calibração/perda (ver types.js)
   toolMovements: [],    // novo — auditoria de transferências obra↔armazém
+  toolTransfers: [],    // novo — guias logísticas de transferência/receção por NFC
   operators: [],
   obras: [],
   // NOTE: maintenanceRecords (legacy heavy machines) movido para machinesStore.js (C1)
@@ -162,6 +163,16 @@ const useStore = create((set, get) => ({
     });
     unsubscribers.push(
       createToolMovementsListener((data) => set({ toolMovements: data || [] }))
+    );
+
+    // tool_transfers — guias logísticas: armazém→obra, obra→obra, obra→armazém
+    const createToolTransfersListener = createCollectionListener(db, `${basePath}/tool_transfers`, {
+      orderByField: 'createdAt',
+      orderByDirection: 'desc',
+      onError: (msg, error) => console.debug('[tool_transfers] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createToolTransfersListener((data) => set({ toolTransfers: data || [] }))
     );
 
     // Operators listener
@@ -1067,6 +1078,169 @@ const useStore = create((set, get) => ({
       ...(notes ? { notes } : {}),
       ...(cost != null ? { cost } : {}),
     });
+  },
+
+  createToolTransferGuide: async ({
+    type = 'WAREHOUSE_TO_OBRA',
+    fromObraId = null,
+    toObraId = null,
+    toolIds = [],
+    createdBy = 'system',
+    notes = '',
+    sourceSystem = 'PWA',
+    externalRefs = {},
+  }) => {
+    const uniqueToolIds = [...new Set(toolIds)].filter(Boolean);
+    if (!uniqueToolIds.length) throw new Error('Adiciona pelo menos um equipamento à guia');
+
+    const { tools, obras } = get();
+    const now = Timestamp.now();
+    const findObra = (id) => obras.find(o => o.id === id);
+    const location = (obraId) => {
+      if (!obraId || obraId === 'WAREHOUSE') return { kind: 'WAREHOUSE', obraId: null, name: 'Armazém' };
+      const obra = findObra(obraId);
+      return { kind: 'OBRA', obraId, name: obra?.name || obraId };
+    };
+
+    const items = uniqueToolIds.map(toolId => {
+      const tool = tools.find(t => t.id === toolId);
+      return {
+        toolId,
+        name: tool?.name || tool?.customNumber || toolId,
+        type: tool?.type || null,
+        nfcTagId: tool?.nfcTagId || null,
+        statusAtDispatch: tool?.status || null,
+      };
+    });
+
+    const ref = doc(collection(db, `${basePath}/tool_transfers`));
+    await setDoc(ref, {
+      id: ref.id,
+      type,
+      status: 'DRAFT',
+      from: location(fromObraId),
+      to: location(toObraId),
+      toolIds: uniqueToolIds,
+      items,
+      pickedToolIds: [],
+      receivedToolIds: [],
+      missingToolIds: [],
+      createdAt: now,
+      createdBy,
+      notes,
+      auditLog: [{ action: 'CREATED', by: createdBy, at: now, notes }],
+      externalSync: {
+        sourceSystem,
+        externalRefs,
+        sapSynced: false,
+        procoreSynced: false,
+        sapDocumentId: externalRefs.sapDocumentId || null,
+        procoreProjectId: externalRefs.procoreProjectId || null,
+      },
+    });
+    return ref.id;
+  },
+
+  dispatchToolTransferGuide: async (transferId, { dispatchedBy = 'system' } = {}) => {
+    const transferRef = doc(db, `${basePath}/tool_transfers`, transferId);
+    const snap = await getDoc(transferRef);
+    if (!snap.exists()) throw new Error('Guia não encontrada');
+
+    const transfer = snap.data();
+    const now = Timestamp.now();
+    const batch = writeBatch(db);
+    const toolIds = transfer.toolIds || [];
+
+    batch.update(transferRef, {
+      status: 'DISPATCHED',
+      dispatchedAt: now,
+      dispatchedBy,
+      pickedToolIds: toolIds,
+      auditLog: arrayUnion({ action: 'DISPATCHED', by: dispatchedBy, at: now }),
+    });
+
+    toolIds.forEach(toolId => {
+      batch.update(doc(db, `${basePath}/tools`, toolId), {
+        logisticsStatus: 'IN_TRANSIT',
+        pendingTransferId: transferId,
+        pendingDestinationObraId: transfer.to?.obraId || null,
+        pendingDestinationName: transfer.to?.name || 'Armazém',
+        lastMovementAt: now,
+      });
+      batch.set(doc(collection(db, `${basePath}/tool_movements`)), {
+        toolId,
+        fromObraId: transfer.from?.obraId || 'WAREHOUSE',
+        toObraId: transfer.to?.obraId || 'WAREHOUSE',
+        movedBy: dispatchedBy,
+        movedAt: now,
+        triggeredBy: 'TRANSFER_DISPATCH',
+        relatedTransferId: transferId,
+        status: 'IN_TRANSIT',
+      });
+    });
+
+    await batch.commit();
+    return { success: true, count: toolIds.length };
+  },
+
+  receiveToolTransferGuide: async (transferId, { receivedBy = 'system', receivedToolIds = [] } = {}) => {
+    const transferRef = doc(db, `${basePath}/tool_transfers`, transferId);
+    const snap = await getDoc(transferRef);
+    if (!snap.exists()) throw new Error('Guia não encontrada');
+
+    const transfer = snap.data();
+    const expectedIds = transfer.toolIds || [];
+    const ids = receivedToolIds.length ? receivedToolIds.filter(id => expectedIds.includes(id)) : expectedIds;
+    const missing = expectedIds.filter(id => !ids.includes(id));
+    const now = Timestamp.now();
+    const batch = writeBatch(db);
+    const { tools } = get();
+    const toWarehouse = !transfer.to?.obraId;
+
+    batch.update(transferRef, {
+      status: missing.length ? 'PARTIAL' : 'RECEIVED',
+      receivedAt: now,
+      receivedBy,
+      receivedToolIds: ids,
+      missingToolIds: missing,
+      auditLog: arrayUnion({
+        action: missing.length ? 'PARTIAL_RECEIPT' : 'RECEIVED',
+        by: receivedBy,
+        at: now,
+        notes: missing.length ? `${missing.length} equipamento(s) em falta` : '',
+      }),
+    });
+
+    ids.forEach(toolId => {
+      const tool = tools.find(t => t.id === toolId);
+      const keepStatus = tool?.status === 'LOST' || tool?.status === 'IN_REPAIR' || tool?.status === 'RETIRED';
+      batch.update(doc(db, `${basePath}/tools`, toolId), {
+        currentObraId: toWarehouse ? null : transfer.to.obraId,
+        currentObraName: toWarehouse ? null : transfer.to.name,
+        storageLocation: toWarehouse ? (transfer.to?.name || 'Armazém') : (tool?.storageLocation || ''),
+        status: keepStatus ? tool.status : 'AVAILABLE',
+        logisticsStatus: 'AT_DESTINATION',
+        pendingTransferId: null,
+        pendingDestinationObraId: null,
+        pendingDestinationName: null,
+        lastMovementAt: now,
+        lastConfirmedAt: now,
+        lastConfirmedBy: receivedBy,
+      });
+      batch.set(doc(collection(db, `${basePath}/tool_movements`)), {
+        toolId,
+        fromObraId: transfer.from?.obraId || 'WAREHOUSE',
+        toObraId: transfer.to?.obraId || 'WAREHOUSE',
+        movedBy: receivedBy,
+        movedAt: now,
+        triggeredBy: 'TRANSFER_RECEIPT',
+        relatedTransferId: transferId,
+        status: 'RECEIVED',
+      });
+    });
+
+    await batch.commit();
+    return { success: true, received: ids.length, missing: missing.length };
   },
 
   // Maintenance/avarias activas para uma ferramenta (independente do status do tool_session)
