@@ -105,7 +105,14 @@
  * @property {string} token                 32 chars — link único do email
  * @property {Timestamp} createdAt
  * @property {string} notifiedTo            operatorId ou email
+ * @property {'OPEN'|'IN_REVIEW'|'RESOLVED'} status Estado interno do alerta
+ * @property {boolean} internal             true por defeito; visível no PWA sem email
+ * @property {{action:string,by:string,at:Timestamp,notes?:string}[]} auditLog
+ * @property {string[]} actionsTaken
+ * @property {string} [linkedMaintenanceId]
  * @property {Timestamp} [emailSentAt]
+ * @property {boolean} [emailSent]
+ * @property {string} [emailToken]
  * @property {Timestamp} [resolvedAt]
  * @property {'CONFIRMED_IN_USE'|'RETURNED'|'MARKED_LOST'|'MARKED_DAMAGED'|'IGNORED'} [resolution]
  * @property {string} [resolvedBy]

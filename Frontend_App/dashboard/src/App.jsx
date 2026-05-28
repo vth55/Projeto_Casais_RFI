@@ -235,7 +235,7 @@ export default function App() {
             getDocs(collection(db, `${basePath}/tools`)),
             getDocs(collection(db, `${basePath}/operators`)),
             getDocs(collection(db, `${basePath}/tool_sessions`)),
-            getDocs(collection(db, `${basePath}/alerts`)),
+            getDocs(collection(db, `${basePath}/tool_alerts`)),
           ]);
 
           if (toolsSnap.empty && operatorsSnap.empty && toolSessionsSnap.empty) {

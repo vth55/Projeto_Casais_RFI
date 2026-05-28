@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment, arrayUnion } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
 import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
@@ -66,6 +66,13 @@ const useStore = create((set, get) => ({
     defaultMaintenanceInterval: 150,
     toolOverdueDays: 7,   // pivot — dias antes de disparar TOOL_OVERDUE
     toolLostDays: 30,     // pivot — dias antes de TOOL_PRESUMED_LOST
+    dormantToolDays: 30,
+    defaultReplacementCost: 0,
+    toolReportRequiresPhoto: false,
+    notifications: {
+      emailEnabled: false,
+      smtpDriver: 'disabled',
+    },
   },
   maintenanceSchedules: [],
   loading: true,
@@ -219,6 +226,13 @@ const useStore = create((set, get) => ({
               defaultMaintenanceInterval: docData.defaultMaintenanceInterval ?? 150,
               toolOverdueDays: docData.toolOverdueDays ?? 7,
               toolLostDays: docData.toolLostDays ?? 30,
+              dormantToolDays: docData.dormantToolDays ?? 30,
+              defaultReplacementCost: docData.defaultReplacementCost ?? 0,
+              toolReportRequiresPhoto: docData.toolReportRequiresPhoto ?? false,
+              notifications: {
+                emailEnabled: docData.notifications?.emailEnabled ?? false,
+                smtpDriver: docData.notifications?.smtpDriver ?? 'disabled',
+              },
             },
           });
         }
@@ -797,6 +811,63 @@ const useStore = create((set, get) => ({
   // TOOL MAINTENANCE — CRUD nativo (substitui maintenanceRecords + avarias para tools)
   // Ver schema em src/types.js (ToolMaintenance)
   // ========================================
+
+  addToolAlert: async (alert) => {
+    const now = Timestamp.now();
+    const token = alert.token || `T_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    const data = {
+      ...alert,
+      token,
+      status: alert.status || 'OPEN',
+      internal: alert.internal ?? true,
+      actionsTaken: alert.actionsTaken || [],
+      auditLog: alert.auditLog || [{
+        action: 'CREATED',
+        by: alert.createdBy || 'system',
+        at: now,
+        notes: alert.anomalyType || alert.type || 'tool_alert',
+      }],
+      emailSent: alert.emailSent ?? false,
+      emailSentAt: alert.emailSentAt || null,
+      emailToken: alert.emailToken || null,
+      createdAt: alert.createdAt || now,
+    };
+    const ref = await addDoc(collection(db, `${basePath}/tool_alerts`), data);
+    return { id: ref.id, token };
+  },
+
+  updateToolAlert: async (alertId, updates, audit = null) => {
+    const ref = doc(db, `${basePath}/tool_alerts`, alertId);
+    const data = { ...updates, updatedAt: Timestamp.now() };
+    if (audit) {
+      data.auditLog = arrayUnion({
+        action: audit.action,
+        by: audit.by || 'system',
+        at: Timestamp.now(),
+        ...(audit.notes ? { notes: audit.notes } : {}),
+      });
+      data.actionsTaken = arrayUnion(audit.action);
+    }
+    await updateDoc(ref, data);
+  },
+
+  resolveToolAlert: async (alertId, { resolution = 'RESOLVED', resolvedBy = 'system', notes = '' } = {}) => {
+    await get().updateToolAlert(alertId, {
+      status: 'RESOLVED',
+      resolution,
+      resolvedBy,
+      resolvedAt: Timestamp.now(),
+    }, {
+      action: resolution,
+      by: resolvedBy,
+      notes,
+    });
+  },
+
+  getOpenToolAlerts: () => {
+    const { toolAlerts } = get();
+    return toolAlerts.filter(alert => alert.status === 'OPEN' || alert.status === 'IN_REVIEW');
+  },
 
   addToolMaintenance: async (record) => {
     const data = {

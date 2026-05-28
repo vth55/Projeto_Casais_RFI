@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { addDoc, arrayUnion, collection, doc, getDoc, getDocs, limit, query, serverTimestamp, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db, projectId } from '../config/firebase';
 import {
   Clock,
@@ -31,8 +31,9 @@ import {
 import useAlertsStore, { ALERT_TYPES, ALERT_STATUS } from '../store/useAlertsStore';
 
 const BASE = `artifacts/${projectId}/public/data`;
-const TOOL_ALERT_TYPES = ['TOOL_OVERDUE', 'TOOL_PRESUMED_LOST'];
+const TOOL_ALERT_TYPES = ['TOOL_OVERDUE', 'TOOL_PRESUMED_LOST', 'NO_LOCATION', 'NO_OPERATOR', 'DAMAGED'];
 const getAlertType = (alert) => alert?.anomalyType || alert?.type;
+const isOpenToolAlert = (alert) => alert?.status === 'OPEN' || alert?.status === 'IN_REVIEW';
 
 // Formatar data para input datetime-local
 const formatDateTimeLocal = (timestamp) => {
@@ -82,6 +83,8 @@ const ValidationPage = ({ token }) => {
   const [error, setError] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [toolSession, setToolSession] = useState(null);
+  const [toolAlert, setToolAlert] = useState(null);
+  const isToolToken = token?.startsWith('T_');
 
   // Form data
   const [formData, setFormData] = useState({
@@ -97,12 +100,40 @@ const ValidationPage = ({ token }) => {
   }, [initializeAlertsListener]);
 
   // Obter alerta pelo token
-  const alert = useMemo(() => {
+  const legacyAlert = useMemo(() => {
+    if (isToolToken) return null;
     return getAlertByToken(token);
-  }, [alerts, token, getAlertByToken]);
+  }, [alerts, token, getAlertByToken, isToolToken]);
+
+  const alert = isToolToken ? toolAlert : legacyAlert;
 
   const alertType = getAlertType(alert);
   const isToolAlert = TOOL_ALERT_TYPES.includes(alertType);
+
+  useEffect(() => {
+    if (!isToolToken || !token) return;
+
+    const loadToolAlert = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(db, `${BASE}/tool_alerts`), where('token', '==', token), limit(1));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          setError('Link de validação inválido ou expirado.');
+          setLoading(false);
+          return;
+        }
+        const docSnap = snap.docs[0];
+        setToolAlert({ id: docSnap.id, ...docSnap.data() });
+      } catch (err) {
+        console.error('Erro ao carregar alerta de equipamento:', err);
+        setError('Erro ao carregar alerta de equipamento.');
+        setLoading(false);
+      }
+    };
+
+    loadToolAlert();
+  }, [isToolToken, token]);
 
   // Quando o alerta é carregado, preencher o formulário
   useEffect(() => {
@@ -112,28 +143,28 @@ const ValidationPage = ({ token }) => {
         correctedEndTime: formatDateTimeLocal(alert.originalEndTime),
         notes: '',
       });
-      if (!TOOL_ALERT_TYPES.includes(getAlertType(alert)) || alert.status !== ALERT_STATUS.PENDING) {
+      if (!TOOL_ALERT_TYPES.includes(getAlertType(alert)) || (!isOpenToolAlert(alert) && alert.status !== ALERT_STATUS.PENDING)) {
         setLoading(false);
       }
-    } else if (alertsLoaded) {
+    } else if (!isToolToken && alertsLoaded) {
       // Firestore respondeu mas token não encontrado
       setError('Link de validação inválido ou expirado.');
       setLoading(false);
     }
-  }, [alert, alertsLoaded]);
+  }, [alert, alertsLoaded, isToolToken]);
 
   useEffect(() => {
-    if (!alert || !TOOL_ALERT_TYPES.includes(getAlertType(alert)) || alert.status !== ALERT_STATUS.PENDING) return;
+    if (!alert || !TOOL_ALERT_TYPES.includes(getAlertType(alert)) || (!isOpenToolAlert(alert) && alert.status !== ALERT_STATUS.PENDING)) return;
 
     const loadToolSession = async () => {
-      if (!alert.sessionId) {
-        setError('Alerta sem sessao de equipamento associada.');
+      const sessionId = alert.toolSessionId || alert.sessionId;
+      if (!sessionId) {
         setLoading(false);
         return;
       }
 
       try {
-        const snap = await getDoc(doc(db, `${BASE}/tool_sessions`, alert.sessionId));
+        const snap = await getDoc(doc(db, `${BASE}/tool_sessions`, sessionId));
         if (!snap.exists()) {
           setError('Sessao de equipamento nao encontrada.');
           setLoading(false);
@@ -261,25 +292,36 @@ const ValidationPage = ({ token }) => {
   };
 
   const handleToolAction = async (action) => {
-    if (!alert || !toolSession) return;
-    if (action === 'lost' && !window.confirm('Confirmar que esta equipamento foi perdida?')) return;
+    if (!alert) return;
+    if (action === 'lost' && !window.confirm('Confirmar que este equipamento foi perdido?')) return;
 
     setSubmitting(true);
     setError(null);
 
     try {
-      const validatedBy = toolSession.operatorName || alert.operatorName || 'operator-validation';
+      const validatedBy = toolSession?.operatorName || alert.operatorName || 'operator-validation';
+      const toolId = toolSession?.toolId || alert.toolId;
+      const alertCollection = isToolAlert ? 'tool_alerts' : 'alerts';
+      const alertRef = doc(db, `${BASE}/${alertCollection}`, alert.id);
+      const auditEntry = (resolution) => ({
+        action: resolution,
+        by: validatedBy,
+        at: Timestamp.now(),
+      });
 
       if (action === 'in_use') {
-        await updateDoc(doc(db, `${BASE}/alerts`, alert.id), {
-          status: 'confirmed_in_use',
-          resolution: 'confirmed_in_use',
+        await updateDoc(alertRef, {
+          status: isToolAlert ? 'RESOLVED' : 'confirmed_in_use',
+          resolution: isToolAlert ? 'CONFIRMED_IN_USE' : 'confirmed_in_use',
           lastConfirmedAt: serverTimestamp(),
           resolvedAt: serverTimestamp(),
           validatedAt: serverTimestamp(),
           validatedBy,
+          actionsTaken: arrayUnion('CONFIRMED_IN_USE'),
+          auditLog: arrayUnion(auditEntry('CONFIRMED_IN_USE')),
         });
       } else if (action === 'returned') {
+        if (!toolSession) throw new Error('Sessão de equipamento não encontrada.');
         const now = new Date();
         const start = timestampToDate(toolSession.startTime) || now;
         const durationHours = Math.max(0, Math.round(((now - start) / 3_600_000) * 100) / 100);
@@ -291,39 +333,74 @@ const ValidationPage = ({ token }) => {
           durationHours,
           closedBy: 'operator-validation',
         });
-        batch.update(doc(db, `${BASE}/alerts`, alert.id), {
-          status: ALERT_STATUS.RESOLVED,
-          resolution: 'returned_now',
+        if (toolId) {
+          batch.update(doc(db, `${BASE}/tools`, toolId), {
+            status: 'AVAILABLE',
+            currentObraId: null,
+            currentObraName: null,
+            returnedAt: serverTimestamp(),
+          });
+        }
+        batch.update(alertRef, {
+          status: isToolAlert ? 'RESOLVED' : ALERT_STATUS.RESOLVED,
+          resolution: isToolAlert ? 'RETURNED' : 'returned_now',
           resolvedAt: serverTimestamp(),
           validatedAt: serverTimestamp(),
           validatedBy,
+          actionsTaken: arrayUnion('RETURNED'),
+          auditLog: arrayUnion(auditEntry('RETURNED')),
         });
         await batch.commit();
       } else if (action === 'lost') {
-        const toolId = toolSession.toolId || alert.toolId;
         if (!toolId) {
-          setError('Nao foi possivel identificar a equipamento para marcar como perdida.');
+          setError('Não foi possível identificar o equipamento para marcar como perdido.');
           setSubmitting(false);
           return;
         }
 
         const batch = writeBatch(db);
-        batch.update(doc(db, `${BASE}/tool_sessions`, toolSession.id), {
+        if (toolSession?.id) {
+          batch.update(doc(db, `${BASE}/tool_sessions`, toolSession.id), {
+            status: 'LOST',
+            lostAt: serverTimestamp(),
+          });
+        }
+        batch.update(doc(db, `${BASE}/tools`, toolId), {
           status: 'LOST',
           lostAt: serverTimestamp(),
         });
-        batch.update(doc(db, `${BASE}/tools`, toolId), {
-          status: 'lost',
-          lostAt: serverTimestamp(),
-        });
-        batch.update(doc(db, `${BASE}/alerts`, alert.id), {
-          status: ALERT_STATUS.RESOLVED,
-          resolution: 'lost',
+        batch.update(alertRef, {
+          status: isToolAlert ? 'RESOLVED' : ALERT_STATUS.RESOLVED,
+          resolution: isToolAlert ? 'MARKED_LOST' : 'lost',
           resolvedAt: serverTimestamp(),
           validatedAt: serverTimestamp(),
           validatedBy,
+          actionsTaken: arrayUnion('MARKED_LOST'),
+          auditLog: arrayUnion(auditEntry('MARKED_LOST')),
         });
         await batch.commit();
+      } else if (action === 'damaged') {
+        if (!toolId) throw new Error('Equipamento não identificado.');
+        const maintenanceRef = await addDoc(collection(db, `${BASE}/tool_maintenance`), {
+          toolId,
+          type: 'DAMAGE',
+          status: 'OPEN',
+          reportedBy: validatedBy,
+          reportedAt: serverTimestamp(),
+          obraId: toolSession?.obraId || alert.obraId || null,
+          notes: `Avaria reportada a partir do alerta ${alert.id}`,
+          photos: [],
+        });
+        await updateDoc(alertRef, {
+          status: 'RESOLVED',
+          resolution: 'MARKED_DAMAGED',
+          linkedMaintenanceId: maintenanceRef.id,
+          resolvedAt: serverTimestamp(),
+          validatedAt: serverTimestamp(),
+          validatedBy,
+          actionsTaken: arrayUnion('MARKED_DAMAGED'),
+          auditLog: arrayUnion(auditEntry('MARKED_DAMAGED')),
+        });
       }
 
       setSubmitted(true);
@@ -366,7 +443,7 @@ const ValidationPage = ({ token }) => {
   }
 
   // Already processed state
-  if (alert && alert.status !== ALERT_STATUS.PENDING) {
+  if (alert && ((isToolAlert && !isOpenToolAlert(alert)) || (!isToolAlert && alert.status !== ALERT_STATUS.PENDING))) {
     const resolutionLabel = alert.resolution === 'CORRECTED' || alert.status === ALERT_STATUS.CORRECTED
       ? 'corrigida'
       : 'validada';
@@ -516,6 +593,14 @@ const ValidationPage = ({ token }) => {
             >
               {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <AlertTriangle className="w-5 h-5" />}
               Perdida
+            </button>
+            <button
+              onClick={() => handleToolAction('damaged')}
+              disabled={submitting}
+              className="w-full py-4 rounded-xl font-semibold text-white text-lg bg-amber-500 hover:bg-amber-600 disabled:bg-slate-400 flex items-center justify-center gap-2"
+            >
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wrench className="w-5 h-5" />}
+              Reportar avaria
             </button>
           </div>
 

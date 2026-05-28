@@ -58,6 +58,17 @@ const RFID_LOCATION_CARDS_PATH = `artifacts/${APP_ID}/public/data/rfidLocationCa
 const MACHINE_LOCATION_EVENTS_PATH = `artifacts/${APP_ID}/public/data/machineLocationEvents`;
 const OBRAS_PATH = `artifacts/${APP_ID}/public/data/obras`;
 
+async function isEmailNotificationsEnabled() {
+    try {
+        const snap = await db.doc(`${SETTINGS_PATH}/system`).get();
+        const settings = snap.exists ? snap.data() : {};
+        return settings?.notifications?.emailEnabled === true && settings?.notifications?.smtpDriver !== 'disabled';
+    } catch (error) {
+        console.warn('Email guard: falha ao ler settings/system, email bloqueado por segurança:', error.message);
+        return false;
+    }
+}
+
 // ============================================
 // CONFIGURAÇÃO DE EMAIL
 // ============================================
@@ -621,6 +632,16 @@ exports.onAlertCreated = onDocumentCreated(
         const alert = snapshot.data();
 
         console.log(`📢 Novo alerta criado: ${alertId} (${alert.type})`);
+
+        const emailEnabled = await isEmailNotificationsEnabled();
+        if (!emailEnabled) {
+            console.log(`Email desativado em settings/system.notifications; alerta ${alertId} mantido apenas interno.`);
+            await snapshot.ref.update({
+                emailStatus: 'DISABLED',
+                emailSkippedAt: admin.firestore.Timestamp.now(),
+            });
+            return { success: true, skipped: true, reason: 'EMAIL_DISABLED' };
+        }
 
         // Verificar se tem email do operador
         if (!alert.operatorEmail) {

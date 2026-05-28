@@ -39,12 +39,12 @@ const MORE_ITEMS = [
 ];
 
 const BottomNav = memo(() => {
-  const { activeView, setActiveView, toolSessions = [], tools = [] } = useStore();
+  const { activeView, setActiveView, toolSessions = [], toolAlerts = [] } = useStore();
   const { canAccess } = useAuthStore();
   const [showMore, setShowMore] = useState(false);
 
   const activeSessions = toolSessions.filter(s => s.status === 'OPEN').length;
-  const maintenanceAlerts = tools.filter(t => ['MAINTENANCE', 'DAMAGED', 'LOST'].includes((t.status || '').toUpperCase())).length;
+  const maintenanceAlerts = toolAlerts.filter(alert => alert.status === 'OPEN' || alert.status === 'IN_REVIEW').length;
 
   const isTabActive = (id) => {
     if (id === 'mapa') return activeView === id;

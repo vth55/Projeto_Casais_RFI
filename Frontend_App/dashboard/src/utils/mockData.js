@@ -250,7 +250,7 @@ export const createMockToolSessions = async () => {
 
 const generateValidationToken = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
+  let token = 'T_';
   for (let i = 0; i < 32; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
   return token;
 };
@@ -261,8 +261,9 @@ export const createMockAlerts = async () => {
 
   const fixtures = [
     {
-      type: 'TOOL_OVERDUE',
+      anomalyType: 'TOOL_OVERDUE',
       ageDays: 8,
+      sessionId: null,
       toolId: 'tool_martelo_001',
       toolName: 'Martelo Pneumatico #1',
       operatorId: 'OP_001',
@@ -272,8 +273,9 @@ export const createMockAlerts = async () => {
       obraName: 'Torre Boavista',
     },
     {
-      type: 'TOOL_MISSING_LOCATION',
+      anomalyType: 'NO_LOCATION',
       ageDays: 2,
+      sessionId: null,
       toolId: 'tool_gerador_portatil',
       toolName: 'Gerador Portatil 5kVA',
       operatorId: 'OP_003',
@@ -283,8 +285,9 @@ export const createMockAlerts = async () => {
       obraName: 'Braga Norte',
     },
     {
-      type: 'SAP_SYNC_PENDING',
+      anomalyType: 'NO_OPERATOR',
       ageDays: 1,
+      sessionId: null,
       toolId: 'tool_compactador',
       toolName: 'Compactador Placa',
       operatorId: 'OP_005',
@@ -301,9 +304,12 @@ export const createMockAlerts = async () => {
     const id = `alert_${createdAt.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
     const alert = {
       id,
-      validationToken: generateValidationToken(),
-      type: f.type,
-      status: 'PENDING',
+      token: generateValidationToken(),
+      anomalyType: f.anomalyType,
+      type: f.anomalyType,
+      status: 'OPEN',
+      internal: true,
+      toolSessionId: f.sessionId,
       toolId: f.toolId,
       toolName: f.toolName,
       operatorId: f.operatorId,
@@ -314,16 +320,18 @@ export const createMockAlerts = async () => {
       createdAt: Timestamp.fromDate(createdAt),
       validatedAt: null,
       validatedBy: null,
-      emailSentAt: Timestamp.fromDate(createdAt),
-      emailResendCount: 0,
-      lastEmailResendAt: null,
+      actionsTaken: [],
+      linkedMaintenanceId: null,
+      emailSent: false,
+      emailSentAt: null,
+      emailToken: null,
       operatorNotes: '',
       auditLog: [
-        { action: 'CREATED', timestamp: Timestamp.fromDate(createdAt), details: `Alerta criado: ${f.type}` },
+        { action: 'CREATED', by: 'mockData', at: Timestamp.fromDate(createdAt), notes: `Alerta criado: ${f.anomalyType}` },
       ],
     };
     try {
-      await setDoc(doc(db, `${BASE_PATH}/alerts`, id), alert);
+      await setDoc(doc(db, `${BASE_PATH}/tool_alerts`, id), alert);
       results.push({ id, success: true });
     } catch (error) {
       results.push({ success: false, error: error.message });
