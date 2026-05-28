@@ -62,6 +62,7 @@ const FinanceiroView = lazy(() => import('./views/FinanceiroView'));
 const AnalisesView = lazy(() => import('./views/AnalisesView'));
 const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
 const ConfiguracoesView = lazy(() => import('./views/ConfiguracoesView'));
+const CatalogoModelosView = lazy(() => import('./views/CatalogoModelosView'));
 const SessoesCorrigidasView = lazy(() => import('./views/SessoesCorrigidasView'));
 const EstaleiroView = lazy(() => import('./views/EstaleiroView'));
 const MapaObrasView = lazy(() => import('./views/MapaObrasView'));
@@ -135,6 +136,7 @@ export default function App() {
       '/configuracoes': 'configuracoes',
       '/mapa': 'mapa',
       '/guias': 'guias',
+      '/catalogo': 'catalogo',
     };
     const mappedView = PATH_TO_VIEW[path];
     if (mappedView) {
@@ -288,6 +290,7 @@ export default function App() {
     if (activeView.startsWith('analises')) return <AnalisesView />;
     if (activeView === 'relatorios') return <RelatoriosView />;
     if (activeView === 'configuracoes') return <ConfiguracoesView />;
+    if (activeView === 'catalogo') return <CatalogoModelosView />;
     if (activeView === 'mapa') return <MapaObrasView />;
     return <DashboardRouter DefaultDashboard={DashboardView} />;
   }, [activeView, currentUser?.systemRole]);

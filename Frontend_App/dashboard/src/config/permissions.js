@@ -365,6 +365,7 @@ export const MENU_PERMISSIONS = {
   analises: [PERMISSIONS.ANALYTICS_VIEW],
   relatorios: [PERMISSIONS.REPORTS_VIEW],
   configuracoes: [PERMISSIONS.SETTINGS_VIEW],
+  catalogo: [PERMISSIONS.SETTINGS_VIEW],
 };
 
 // Helpers para verificar permissões

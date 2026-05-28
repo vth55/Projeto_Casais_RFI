@@ -1080,6 +1080,62 @@ const useStore = create((set, get) => ({
     });
   },
 
+  // ========================================
+  // EQUIPMENT MODELS — CRUD admin (Fase 5 pivot)
+  // Catálogo de modelos partilhado entre múltiplas unidades físicas (tools).
+  // Schema completo em src/types.js (EquipmentModel).
+  // ========================================
+
+  slugify: (str) => String(str || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, ''),
+
+  addEquipmentModel: async (modelData) => {
+    if (!modelData?.id) throw new Error('modelId obrigatório (slug)');
+    const data = {
+      ...modelData,
+      unitCount: 0,
+      activeUnitCount: 0,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
+    await setDoc(doc(db, `${basePath}/equipment_models`, modelData.id), data);
+    return modelData.id;
+  },
+
+  updateEquipmentModel: async (modelId, updates) => {
+    await updateDoc(doc(db, `${basePath}/equipment_models`, modelId), {
+      ...updates,
+      updatedAt: Timestamp.now(),
+    });
+  },
+
+  deleteEquipmentModel: async (modelId) => {
+    // Guarda: bloquear se houver unidades a referenciar este modelo
+    const units = get().tools.filter(t => t.modelId === modelId);
+    if (units.length > 0) {
+      throw new Error(`Não é possível eliminar: ${units.length} unidade(s) ainda referenciam este modelo.`);
+    }
+    await deleteDoc(doc(db, `${basePath}/equipment_models`, modelId));
+  },
+
+  uploadModelPhoto: async (modelId, file) => {
+    if (!storage) throw new Error('Storage não inicializado');
+    if (!modelId || !file) throw new Error('modelId e ficheiro obrigatórios');
+    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const path = `equipment_models/${modelId}/cover_${Date.now()}_${safeName}`;
+    const fileRef = ref(storage, path);
+    await uploadBytes(fileRef, file);
+    const url = await getDownloadURL(fileRef);
+    await updateDoc(doc(db, `${basePath}/equipment_models`, modelId), {
+      photoUrl: url,
+      updatedAt: Timestamp.now(),
+    });
+    return { url, path };
+  },
+
   createToolTransferGuide: async ({
     type = 'WAREHOUSE_TO_OBRA',
     fromObraId = null,

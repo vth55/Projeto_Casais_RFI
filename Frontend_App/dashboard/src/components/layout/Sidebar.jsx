@@ -3,6 +3,7 @@ import {
   Map, Package, Users, Clock, Wrench, BarChart3,
   FileText, Settings, ChevronDown, Wallet, LogOut,
   Activity, Building2, Shield, ChevronLeft, ChevronRight, Warehouse, Nfc, ArrowRightLeft,
+  BookOpen,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -45,6 +46,7 @@ const navigation = [
   },
   { id: 'analises',    label: 'Análises',      icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',    icon: FileText },
+  { id: 'catalogo',    label: 'Catálogo',       icon: BookOpen },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
 

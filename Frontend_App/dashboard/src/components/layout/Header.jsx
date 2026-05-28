@@ -42,6 +42,7 @@ const viewTitles = {
   'analises-utilizacao': { title: 'Utilização', description: 'Taxa de utilização' },
   relatorios: { title: 'Relatórios', description: 'Exportação de relatórios' },
   configuracoes: { title: 'Configurações', description: 'Configurações do sistema' },
+  catalogo: { title: 'Catálogo de Modelos', description: 'Gestão do catálogo (admin)' },
 };
 
 const Header = ({ onMenuClick }) => {
