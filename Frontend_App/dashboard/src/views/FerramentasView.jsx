@@ -1,8 +1,12 @@
 /**
- * EquipamentosView - inventario operacional de equipamentos pequenos com NFC.
+ * EquipamentosView — landing agrupada por modelo (Milwaukee ONE-KEY + Hilti style).
  *
- * Sem CAN bus nem tracking continuo: a localizacao apresentada e sempre a
- * ultima leitura NFC conhecida. A pagina funciona como inventory dashboard.
+ * 2 níveis:
+ *   1. Landing: grelha de modelos (equipment_models) com foto cover, brand badge e mini-stats.
+ *   2. Drilldown: detalhe do modelo + lista das unidades físicas (tools com modelId=X).
+ *
+ * Mantém também um toggle "Lista plana" que mostra todos os tools agrupados.
+ * A localização apresentada é sempre a última leitura NFC conhecida.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -13,7 +17,8 @@ import { db, projectId } from '../config/firebase';
 import {
   Wrench, Plus, Search, Edit2, Trash2, Nfc, Tag, Copy, Check,
   Building2, Package, AlertCircle, LogOut, Radio, Loader2, Clock,
-  ShieldAlert, Activity, TrendingUp, Euro, BarChart3,
+  ShieldAlert, Activity, TrendingUp, AlertTriangle, ChevronLeft,
+  X,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 
@@ -21,8 +26,6 @@ const BASE = `artifacts/${projectId}/public/data`;
 const TOOLS_PATH = `${BASE}/tools`;
 const SESSIONS_PATH = `${BASE}/tool_sessions`;
 const STALE_READ_DAYS = 7;
-const DORMANT_DAYS = 30;
-const RECENT_READ_DAYS = 7;
 
 const TOOL_TYPES = [
   'Martelo Pneumático',
@@ -35,6 +38,9 @@ const TOOL_TYPES = [
   'Outro',
 ];
 
+// ──────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────
 function toDate(value) {
   if (!value) return null;
   if (typeof value.toDate === 'function') return value.toDate();
@@ -58,116 +64,574 @@ function getSessionReadTime(session) {
   return session?.endTime || session?.startTime || session?.createdAt || null;
 }
 
-function getNumericCost(tool) {
-  const value = Number(tool?.replacementCost);
-  return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('pt-PT', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-}
-
-function daysBetween(a, b) {
-  const start = toDate(a);
-  const end = toDate(b);
-  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-  return Math.max(0, (end.getTime() - start.getTime()) / 86400000);
-}
-
-function isOpenIssue(record) {
-  return record?.status === 'OPEN' || record?.status === 'IN_PROGRESS';
-}
-
-function getModelLabel(tool) {
-  const brand = tool.brand || tool.manufacturer || '';
-  const model = tool.model || tool.modelName || '';
-  const joined = `${brand} ${model}`.trim();
-  return joined || tool.type || 'Sem modelo';
-}
-
-function calculateEquipmentIntelligence({ tools, openSessions, latestSessions, allSessions, toolMaintenance }) {
-  const now = Date.now();
-  const recentThreshold = RECENT_READ_DAYS * 86400000;
-  const staleThreshold = STALE_READ_DAYS * 86400000;
-  const dormantThreshold = DORMANT_DAYS * 86400000;
-  const monthAgo = now - 30 * 86400000;
-
-  const sessions30d = allSessions.filter((session) => {
-    const time = toDate(getSessionReadTime(session) || session.startTime);
-    return time && !Number.isNaN(time.getTime()) && time.getTime() >= monthAgo;
-  });
-
-  const maintenance30d = toolMaintenance.filter((record) => {
-    const time = toDate(record.reportedAt || record.createdAt);
-    return time && !Number.isNaN(time.getTime()) && time.getTime() >= monthAgo;
-  });
-
-  const openIssueByTool = new Map();
-  toolMaintenance.forEach((record) => {
-    if (record.toolId && isOpenIssue(record)) openIssueByTool.set(record.toolId, true);
-  });
-
-  let recentReads = 0;
-  let riskCount = 0;
-  let riskValue = 0;
-  let dormantCount = 0;
-  let valueOnSite = 0;
-
-  tools.forEach((tool) => {
-    const latest = latestSessions[tool.id];
-    const lastRead = toDate(getSessionReadTime(latest));
-    const age = lastRead && !Number.isNaN(lastRead.getTime()) ? now - lastRead.getTime() : Infinity;
-    const cost = getNumericCost(tool);
-    const isInUse = !!openSessions[tool.id] || !!tool.currentObraId;
-    const isRisk = age > staleThreshold && tool.status !== 'LOST' && tool.status !== 'RETIRED';
-
-    if (age <= recentThreshold) recentReads += 1;
-    if (age > dormantThreshold && !isInUse) dormantCount += 1;
-    if (isInUse) valueOnSite += cost;
-    if (isRisk || openIssueByTool.has(tool.id)) {
-      riskCount += 1;
-      riskValue += cost;
-    }
-  });
-
-  const resolvedDurations = toolMaintenance
-    .filter(record => record.status === 'DONE' && record.reportedAt && record.resolvedAt)
-    .map(record => daysBetween(record.reportedAt, record.resolvedAt))
-    .filter(value => value != null);
-
-  const issueCount30d = maintenance30d.filter(record =>
-    ['DAMAGE', 'REPAIR', 'LOSS'].includes(record.type)
-  ).length;
-
-  return {
-    total: tools.length,
-    inUse: Object.keys(openSessions).length,
-    available: Math.max(0, tools.length - Object.keys(openSessions).length),
-    stale: tools.filter((tool) => {
-      const latest = latestSessions[tool.id];
-      const lastReadAt = toDate(getSessionReadTime(latest));
-      return !lastReadAt || now - lastReadAt.getTime() > staleThreshold;
-    }).length,
-    riskCount,
-    riskValue,
-    nfcCoveragePct: tools.length ? Math.round((recentReads / tools.length) * 100) : 0,
-    issuesPer100Checkouts: sessions30d.length ? Math.round((issueCount30d / sessions30d.length) * 1000) / 10 : 0,
-    rotation30d: tools.length ? Math.round((sessions30d.length / tools.length) * 10) / 10 : 0,
-    dormantCount,
-    valueOnSite,
-    openIssues: toolMaintenance.filter(isOpenIssue).length,
-    avgResolutionDays: resolvedDurations.length
-      ? Math.round((resolvedDurations.reduce((sum, value) => sum + value, 0) / resolvedDurations.length) * 10) / 10
-      : null,
+function statusBadge(status) {
+  const map = {
+    AVAILABLE: { label: 'Disponível', cls: 'bg-emerald-100 text-emerald-800' },
+    IN_USE: { label: 'Em uso', cls: 'bg-blue-100 text-blue-800' },
+    IN_REPAIR: { label: 'Reparação', cls: 'bg-amber-100 text-amber-800' },
+    LOST: { label: 'Perdido', cls: 'bg-red-100 text-red-800' },
+    RETIRED: { label: 'Retirado', cls: 'bg-slate-200 text-slate-700' },
   };
+  const cfg = map[status] || { label: status || '—', cls: 'bg-slate-100 text-slate-700' };
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.cls}`}>{cfg.label}</span>;
 }
 
 // ──────────────────────────────────────────────
-// Modal: criar / editar equipamento
+// KPI tile
+// ──────────────────────────────────────────────
+function KpiTile({ icon: Icon, label, value, sub, tone = 'slate' }) {
+  const toneMap = {
+    primary: 'border-primary-200 bg-primary-50/60 text-primary-700',
+    slate: 'border-slate-200 bg-white text-slate-900',
+    emerald: 'border-emerald-200 bg-emerald-50/60 text-emerald-700',
+    amber: 'border-amber-200 bg-amber-50/60 text-amber-700',
+    red: 'border-red-200 bg-red-50/60 text-red-700',
+  };
+  return (
+    <div className={`rounded-2xl border p-4 ${toneMap[tone] || toneMap.slate}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-xs uppercase tracking-wider font-semibold opacity-75">{label}</p>
+          <p className="text-2xl font-black mt-1">{value}</p>
+        </div>
+        <div className="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4" />
+        </div>
+      </div>
+      {sub && <p className="text-xs mt-2 opacity-75 leading-snug">{sub}</p>}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// ModelCard — card de modelo na grelha
+// ──────────────────────────────────────────────
+function ModelCard({ stat, onClick }) {
+  const { model, unitCount, inUse, available, inRepair, lost } = stat;
+  return (
+    <button
+      onClick={onClick}
+      data-testid="model-card"
+      className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-primary-400 hover:shadow-md transition-all dark:bg-slate-800 dark:border-slate-700"
+    >
+      {/* Foto cover */}
+      <div className="aspect-[16/10] bg-slate-100 dark:bg-slate-700 relative">
+        {model.photoUrl ? (
+          <img
+            src={model.photoUrl}
+            alt={model.displayName}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <Wrench className="w-12 h-12 text-slate-300" />
+          </div>
+        )}
+        {model.brand && (
+          <span className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 backdrop-blur text-xs font-bold text-slate-700 rounded">
+            {model.brand}
+          </span>
+        )}
+      </div>
+
+      <div className="p-4">
+        <p className="text-xs uppercase tracking-wide text-primary-700 font-semibold dark:text-primary-300">
+          {model.category}
+        </p>
+        <h3 className="font-bold text-slate-900 dark:text-white leading-tight truncate mt-1">
+          {model.displayName}
+        </h3>
+        {model.modelCode && (
+          <p className="text-xs text-slate-500 mt-0.5 font-mono">{model.modelCode}</p>
+        )}
+
+        <div className="flex items-baseline gap-2 mt-3">
+          <span className="text-3xl font-bold text-slate-900 dark:text-white">{unitCount}</span>
+          <span className="text-xs text-slate-500">
+            {unitCount === 1 ? 'unidade' : 'unidades'}
+          </span>
+        </div>
+
+        <div className="flex gap-2 mt-3 flex-wrap text-xs">
+          {available > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+              {available} disp.
+            </span>
+          )}
+          {inUse > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold">
+              {inUse} uso
+            </span>
+          )}
+          {inRepair > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">
+              {inRepair} reparação
+            </span>
+          )}
+          {lost > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-semibold">
+              {lost} perdido
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────
+// UnitDetailDrawer — painel lateral de unidade
+// ──────────────────────────────────────────────
+function UnitDetailDrawer({ unit, model, sessions, maintenance, onClose }) {
+  if (!unit) return null;
+
+  const unitSessions = sessions
+    .filter(s => s.toolId === unit.id)
+    .sort((a, b) => {
+      const ta = toDate(a.startTime)?.getTime() ?? 0;
+      const tb = toDate(b.startTime)?.getTime() ?? 0;
+      return tb - ta;
+    });
+
+  const lastSession = unitSessions[0];
+  const lastReadAt = getSessionReadTime(lastSession);
+  const lastLocation = lastSession?.obraName || lastSession?.currentObraName || unit.currentObraName || unit.storageLocation || '—';
+  const lastOperator = lastSession?.operatorName || lastSession?.operatorId || '—';
+
+  const openIssues = maintenance.filter(m =>
+    m.toolId === unit.id && (m.status === 'OPEN' || m.status === 'IN_PROGRESS')
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex" data-testid="unit-detail-drawer">
+      <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto flex flex-col">
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+          <h2 className="font-bold text-slate-900 dark:text-white">Detalhe da Unidade</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Foto modelo */}
+          <div className="aspect-[16/10] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
+            {model?.photoUrl ? (
+              <img src={model.photoUrl} alt={model.displayName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Wrench className="w-12 h-12 text-slate-300" />
+              </div>
+            )}
+          </div>
+
+          {/* Identificação */}
+          <div>
+            {model?.brand && (
+              <p className="text-xs uppercase tracking-wide text-primary-700 dark:text-primary-300 font-semibold">
+                {model.brand} · {model.category}
+              </p>
+            )}
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
+              {model?.displayName || unit.name}
+            </h3>
+            {unit.customNumber && (
+              <p className="text-2xl font-black text-primary-600 mt-2 font-mono">#{unit.customNumber}</p>
+            )}
+          </div>
+
+          {/* IDs */}
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-2 text-sm">
+            {unit.serialNumber && (
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Serial</span>
+                <span className="font-mono text-slate-900 dark:text-white">{unit.serialNumber}</span>
+              </div>
+            )}
+            {unit.nfcTagId && (
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">NFC tag</span>
+                <span className="font-mono text-slate-900 dark:text-white">{unit.nfcTagId}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-2 items-center">
+              <span className="text-slate-500">Estado</span>
+              {statusBadge(unit.status)}
+            </div>
+          </div>
+
+          {/* Última leitura literal */}
+          <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl p-3">
+            <p className="text-xs uppercase tracking-wide text-primary-700 dark:text-primary-300 font-semibold mb-1">
+              Última leitura NFC
+            </p>
+            <p className="text-sm text-slate-900 dark:text-white">
+              {lastReadAt
+                ? <>— {formatRelative(lastReadAt)} em <strong>{lastLocation}</strong> por <strong>{lastOperator}</strong></>
+                : <>Sem leituras registadas</>
+              }
+            </p>
+          </div>
+
+          {/* Histórico */}
+          {unitSessions.length > 0 && (
+            <div>
+              <h4 className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">
+                Últimas sessões
+              </h4>
+              <div className="space-y-1.5">
+                {unitSessions.slice(0, 5).map(s => (
+                  <div key={s.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-900 dark:text-white">
+                        {s.operatorName || s.operatorId}
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded-full font-semibold ${
+                        s.status === 'OPEN' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {s.status}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 mt-0.5">
+                      {formatRelative(s.startTime)} em {s.obraName || s.currentObraName || '—'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Avarias abertas */}
+          {openIssues.length > 0 && (
+            <div>
+              <h4 className="text-xs uppercase tracking-wide text-red-600 font-semibold mb-2 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" /> Avarias abertas
+              </h4>
+              <div className="space-y-1.5">
+                {openIssues.map(m => (
+                  <div key={m.id} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 text-xs">
+                    <p className="font-medium text-red-700 dark:text-red-300">{m.type} · {m.status}</p>
+                    {m.description && <p className="text-slate-600 dark:text-slate-300 mt-0.5">{m.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// ModelDrilldownView — detalhe de um modelo
+// ──────────────────────────────────────────────
+function ModelDrilldownView({ modelId, onBack }) {
+  const { getModelById, getUnitsByModelId, toolSessions, toolMaintenance } = useStore();
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedUnitId, setSelectedUnitId] = useState(null);
+
+  const model = getModelById(modelId);
+  const units = getUnitsByModelId(modelId);
+
+  // Última leitura por unit
+  const lastSeenByUnit = useMemo(() => {
+    const map = new Map();
+    toolSessions.forEach(s => {
+      const tCurrent = toDate(s.startTime);
+      if (!tCurrent) return;
+      const prev = map.get(s.toolId);
+      if (!prev || tCurrent > prev.start) {
+        map.set(s.toolId, { start: tCurrent, session: s });
+      }
+    });
+    return map;
+  }, [toolSessions]);
+
+  const openByToolId = useMemo(
+    () => new Set(toolSessions.filter(s => s.status === 'OPEN').map(s => s.toolId)),
+    [toolSessions]
+  );
+
+  if (!model) {
+    return (
+      <div className="p-6">
+        <button onClick={onBack} className="text-sm text-primary-600 flex items-center gap-1 hover:underline">
+          <ChevronLeft className="w-4 h-4" /> Equipamentos
+        </button>
+        <div className="text-center py-16 text-slate-500">Modelo não encontrado</div>
+      </div>
+    );
+  }
+
+  const stats = {
+    total: units.length,
+    available: units.filter(u => u.status === 'AVAILABLE' && !openByToolId.has(u.id)).length,
+    inUse: units.filter(u => openByToolId.has(u.id)).length,
+    inRepair: units.filter(u => u.status === 'IN_REPAIR').length,
+    lost: units.filter(u => u.status === 'LOST').length,
+  };
+
+  const filtered = statusFilter === 'all'
+    ? units
+    : statusFilter === 'IN_USE'
+      ? units.filter(u => openByToolId.has(u.id))
+      : units.filter(u => u.status === statusFilter);
+
+  const selectedUnit = filtered.find(u => u.id === selectedUnitId)
+    || units.find(u => u.id === selectedUnitId);
+
+  return (
+    <div className="p-6 space-y-5" data-testid="model-drilldown">
+      {/* Breadcrumb */}
+      <button
+        onClick={onBack}
+        className="text-sm text-primary-600 flex items-center gap-1 hover:underline"
+      >
+        <ChevronLeft className="w-4 h-4" /> Equipamentos
+      </button>
+
+      {/* Header do modelo */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-0">
+          <div className="aspect-square md:aspect-auto bg-slate-100 dark:bg-slate-700">
+            {model.photoUrl ? (
+              <img src={model.photoUrl} alt={model.displayName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Wrench className="w-16 h-16 text-slate-300" />
+              </div>
+            )}
+          </div>
+          <div className="p-5">
+            <p className="text-xs uppercase tracking-wide text-primary-700 dark:text-primary-300 font-semibold">
+              {model.brand} · {model.category}
+            </p>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+              {model.displayName}
+            </h1>
+            {model.modelCode && (
+              <p className="text-sm text-slate-500 mt-1 font-mono">{model.modelCode}</p>
+            )}
+
+            {model.specs && Object.keys(model.specs).length > 0 && (
+              <div className="flex gap-2 flex-wrap mt-3">
+                {Object.entries(model.specs).map(([k, v]) => (
+                  <span
+                    key={k}
+                    className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 rounded-full text-slate-700 dark:text-slate-200"
+                  >
+                    <span className="font-medium opacity-70">{k}:</span> {v}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 5 stat tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <KpiTile icon={Package} label="Total" value={stats.total} tone="primary" />
+        <KpiTile icon={Check} label="Disponíveis" value={stats.available} tone={stats.available > 0 ? 'emerald' : 'slate'} />
+        <KpiTile icon={Activity} label="Em uso" value={stats.inUse} tone={stats.inUse > 0 ? 'emerald' : 'slate'} />
+        <KpiTile icon={Wrench} label="Reparação" value={stats.inRepair} tone={stats.inRepair > 0 ? 'amber' : 'slate'} />
+        <KpiTile icon={AlertTriangle} label="Perdidas" value={stats.lost} tone={stats.lost > 0 ? 'red' : 'slate'} />
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-2 items-center">
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 dark:text-white"
+        >
+          <option value="all">Todos os estados</option>
+          <option value="AVAILABLE">Disponíveis</option>
+          <option value="IN_USE">Em uso</option>
+          <option value="IN_REPAIR">Reparação</option>
+          <option value="LOST">Perdidas</option>
+        </select>
+        <p className="text-sm text-slate-500">{filtered.length} unidade{filtered.length !== 1 ? 's' : ''}</p>
+      </div>
+
+      {/* Tabela de unidades */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-700/50 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="text-left px-4 py-3">Nº interno</th>
+                <th className="text-left px-4 py-3">Serial</th>
+                <th className="text-left px-4 py-3">NFC</th>
+                <th className="text-left px-4 py-3">Estado</th>
+                <th className="text-left px-4 py-3">Obra actual</th>
+                <th className="text-left px-4 py-3">Última leitura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-slate-400">
+                    Sem unidades com este filtro
+                  </td>
+                </tr>
+              ) : (
+                filtered.map(unit => {
+                  const last = lastSeenByUnit.get(unit.id);
+                  const isOpen = openByToolId.has(unit.id);
+                  return (
+                    <tr
+                      key={unit.id}
+                      onClick={() => setSelectedUnitId(unit.id)}
+                      data-testid="unit-row"
+                      className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                    >
+                      <td className="px-4 py-3 font-mono font-bold text-primary-700 dark:text-primary-300">
+                        #{unit.customNumber || '—'}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">
+                        {unit.serialNumber || '—'}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">
+                        {unit.nfcTagId || '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {statusBadge(isOpen ? 'IN_USE' : unit.status)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-200">
+                        {last?.session?.obraName || unit.currentObraName || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500">
+                        {last ? formatRelative(last.start) : 'sem leitura'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Drawer */}
+      {selectedUnit && (
+        <UnitDetailDrawer
+          unit={selectedUnit}
+          model={model}
+          sessions={toolSessions}
+          maintenance={toolMaintenance}
+          onClose={() => setSelectedUnitId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// FlatUnitsList — vista "Lista plana" (mantém UX antiga para quem prefere)
+// ──────────────────────────────────────────────
+function FlatUnitsList({ tools, models, sessions, search, categoryFilter }) {
+  const modelById = useMemo(
+    () => new Map(models.map(m => [m.id, m])),
+    [models]
+  );
+
+  const openByToolId = useMemo(
+    () => new Set(sessions.filter(s => s.status === 'OPEN').map(s => s.toolId)),
+    [sessions]
+  );
+
+  const lastSeenByUnit = useMemo(() => {
+    const map = new Map();
+    sessions.forEach(s => {
+      const t = toDate(s.startTime);
+      if (!t) return;
+      const prev = map.get(s.toolId);
+      if (!prev || t > prev.start) map.set(s.toolId, { start: t, session: s });
+    });
+    return map;
+  }, [sessions]);
+
+  const q = search.trim().toLowerCase();
+  const filtered = tools.filter(t => {
+    const model = modelById.get(t.modelId);
+    if (categoryFilter !== 'all' && model?.category !== categoryFilter) return false;
+    if (!q) return true;
+    return (t.name || '').toLowerCase().includes(q)
+      || (t.customNumber || '').toLowerCase().includes(q)
+      || (t.serialNumber || '').toLowerCase().includes(q)
+      || (t.nfcTagId || '').toLowerCase().includes(q)
+      || (model?.displayName || '').toLowerCase().includes(q)
+      || (model?.brand || '').toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 dark:bg-slate-700/50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="text-left px-4 py-3">Equipamento</th>
+              <th className="text-left px-4 py-3">Nº interno</th>
+              <th className="text-left px-4 py-3">Estado</th>
+              <th className="text-left px-4 py-3">Obra</th>
+              <th className="text-left px-4 py-3">Última leitura</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-8 text-slate-400">Sem unidades</td>
+              </tr>
+            ) : filtered.map(unit => {
+              const model = modelById.get(unit.modelId);
+              const last = lastSeenByUnit.get(unit.id);
+              const isOpen = openByToolId.has(unit.id);
+              return (
+                <tr key={unit.id} className="border-t border-slate-100 dark:border-slate-700">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {model?.photoUrl ? (
+                        <img src={model.photoUrl} alt="" className="w-8 h-8 rounded object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                          <Wrench className="w-4 h-4 text-slate-400" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white truncate max-w-[200px]">
+                          {model?.displayName || unit.name}
+                        </p>
+                        {model?.brand && <p className="text-xs text-slate-500">{model.brand}</p>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-mono font-bold text-primary-700 dark:text-primary-300">
+                    #{unit.customNumber || '—'}
+                  </td>
+                  <td className="px-4 py-3">{statusBadge(isOpen ? 'IN_USE' : unit.status)}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-200">
+                    {last?.session?.obraName || unit.currentObraName || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">
+                    {last ? formatRelative(last.start) : 'sem leitura'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Modal: criar / editar equipamento (mantido)
 // ──────────────────────────────────────────────
 function ToolModal({ tool, onClose, onSaved }) {
   const isEdit = !!tool?.id;
@@ -179,7 +643,6 @@ function ToolModal({ tool, onClose, onSaved }) {
   const [error, setError] = useState(null);
   const [scanning, setScanning] = useState(false);
 
-  // Web NFC scan para preencher automaticamente
   async function scanNfcTag() {
     if (!('NDEFReader' in window)) {
       setError('NFC não suportado neste browser (precisa de Chrome Android)');
@@ -303,9 +766,6 @@ function ToolModal({ tool, onClose, onSaved }) {
                 {scanning ? 'A ler...' : 'Scan'}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Escreve manualmente ou clica em Scan e encosta a tag
-            </p>
           </div>
 
           <div>
@@ -348,481 +808,201 @@ function ToolModal({ tool, onClose, onSaved }) {
 }
 
 // ──────────────────────────────────────────────
-// Escreve URL na tag NFC (Web NFC API — só Chrome Android)
-// ──────────────────────────────────────────────
-async function writeUrlToNfcTag(url) {
-  if (!('NDEFReader' in window)) {
-    throw new Error('NFC não suportado (precisa Chrome Android)');
-  }
-  const reader = new window.NDEFReader();
-  await reader.write({
-    records: [{ recordType: 'url', data: url }],
-  });
-}
-
-// ──────────────────────────────────────────────
-// Card de equipamento
-// ──────────────────────────────────────────────
-function ToolCard({ tool, openSession, latestSession, onEdit, onDelete, onCopyUrl, onProgramTag, programming }) {
-  const isInUse = !!openSession;
-  const lastReadAt = getSessionReadTime(latestSession);
-  const lastReadLocation = latestSession?.obraName
-    || latestSession?.currentObraName
-    || tool.currentObraName
-    || tool.storageLocation
-    || 'localização desconhecida';
-  const lastReadOperator = latestSession?.operatorName || latestSession?.operatorId || 'operador desconhecido';
-
-  return (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl border ${
-      isInUse ? 'border-emerald-300 dark:border-emerald-700' : 'border-slate-200 dark:border-slate-700'
-    } p-4 hover:shadow-md transition-shadow`}>
-
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            isInUse ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-slate-100 dark:bg-slate-700'
-          }`}>
-            <Wrench className={`w-5 h-5 ${isInUse ? 'text-emerald-600' : 'text-slate-500'}`} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-900 dark:text-white truncate">{tool.name}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{tool.type}</p>
-          </div>
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={onEdit}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <Tag className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-mono text-slate-600 dark:text-slate-300">{tool.nfcTagId}</span>
-          <div className="ml-auto flex gap-2">
-            <button
-              onClick={onCopyUrl}
-              className="text-primary-500 hover:text-primary-600 flex items-center gap-1"
-              title="Copiar URL da tag"
-            >
-              <Copy className="w-3 h-3" />
-              URL
-            </button>
-            <button
-              onClick={onProgramTag}
-              disabled={programming}
-              className="text-primary-500 hover:text-primary-600 flex items-center gap-1 disabled:opacity-50"
-              title="Escrever este URL numa tag NFC física"
-            >
-              {programming ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Radio className="w-3 h-3" />
-              )}
-              {programming ? 'A escrever...' : 'Programar'}
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <Package className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-slate-600 dark:text-slate-300">{tool.storageLocation || 'Sem armazém'}</span>
-        </div>
-        {tool.currentObraName && (
-          <div className="flex items-center gap-2 text-xs">
-            <Building2 className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-600 dark:text-slate-300">{tool.currentObraName}</span>
-          </div>
-        )}
-        <div className="flex items-start gap-2 text-xs">
-          <Clock className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
-          <span className="text-slate-600 dark:text-slate-300">
-            Última leitura NFC — {formatRelative(lastReadAt)}
-            {latestSession ? ` em ${lastReadLocation} por ${lastReadOperator}` : ''}
-          </span>
-        </div>
-      </div>
-
-      {isInUse && (
-        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-              <LogOut className="w-3.5 h-3.5" />
-              Em uso por {openSession.operatorName}
-            </span>
-            <span className="text-slate-500">
-              {openSession.startTime?.toDate?.()?.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function IntelligenceCard({ icon: Icon, label, value, helper, tone = 'slate' }) {
-  const toneMap = {
-    slate: 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white bg-white dark:bg-slate-800',
-    blue: 'border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 bg-primary-50/60 dark:bg-primary-900/10',
-    emerald: 'border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 dark:bg-emerald-900/10',
-    amber: 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-900/10',
-    red: 'border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 bg-red-50/60 dark:bg-red-900/10',
-  };
-
-  return (
-    <div className={`rounded-2xl border p-4 ${toneMap[tone] || toneMap.slate}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider font-semibold opacity-75">{label}</p>
-          <p className="text-2xl font-black mt-1">{value}</p>
-        </div>
-        <div className="w-10 h-10 rounded-xl bg-white/70 dark:bg-slate-900/40 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5" />
-        </div>
-      </div>
-      {helper && <p className="text-xs mt-2 opacity-75 leading-snug">{helper}</p>}
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────
 // View principal
 // ──────────────────────────────────────────────
 export default function EquipamentosView() {
-  const { toolMaintenance = [] } = useStore();
-  const [tools, setTools] = useState([]);
-  const [allSessions, setAllSessions] = useState([]);
-  const [openSessions, setOpenSessions] = useState({});
-  const [latestSessions, setLatestSessions] = useState({});
-  const [loading, setLoading] = useState(true);
+  const {
+    equipmentModels, tools, toolSessions, toolAlerts = [],
+    getModelStats,
+  } = useStore();
+
+  const [view, setView] = useState('grouped'); // 'grouped' | 'flat'
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [editing, setEditing] = useState(null);  // null | {} | tool obj
-  const [copied, setCopied] = useState(null);
-  const [programming, setProgramming] = useState(null);  // tool.id em execução
-  const [toast, setToast] = useState(null);  // { kind: 'success'|'error', msg }
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [selectedModelId, setSelectedModelId] = useState(null);
+  const [editing, setEditing] = useState(null);
 
-  // Listener: equipamentos
-  useEffect(() => {
-    const q = query(collection(db, TOOLS_PATH));
-    const unsub = onSnapshot(q, (snap) => {
-      setTools(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
-
-  // Listener: leituras NFC. A localização é última leitura conhecida, não GPS real-time.
-  useEffect(() => {
-    const q = query(collection(db, SESSIONS_PATH), orderBy('startTime', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const open = {};
-      const latest = {};
-      const sessions = [];
-      snap.docs.forEach(d => {
-        const session = { id: d.id, ...d.data() };
-        sessions.push(session);
-        if (session.toolId && !latest[session.toolId]) latest[session.toolId] = session;
-        if (session.status === 'OPEN') open[session.toolId] = session;
-      });
-      setAllSessions(sessions);
-      setOpenSessions(open);
-      setLatestSessions(latest);
-    });
-    return unsub;
-  }, []);
-
-  const filtered = useMemo(() => {
-    const s = search.toLowerCase().trim();
-    return tools.filter(t => {
-      if (filterType !== 'all' && t.type !== filterType) return false;
-      const latest = latestSessions[t.id];
-      const lastReadAt = toDate(getSessionReadTime(latest));
-      const isStale = !lastReadAt || Date.now() - lastReadAt.getTime() > STALE_READ_DAYS * 86400000;
-      if (statusFilter === 'in-use' && !openSessions[t.id]) return false;
-      if (statusFilter === 'available' && openSessions[t.id]) return false;
-      if (statusFilter === 'stale' && !isStale) return false;
-      if (!s) return true;
-      return (t.name || '').toLowerCase().includes(s)
-          || (t.nfcTagId || '').toLowerCase().includes(s)
-          || (t.type || '').toLowerCase().includes(s);
-    });
-  }, [tools, search, filterType, statusFilter, openSessions, latestSessions]);
-
-  const stats = useMemo(() => calculateEquipmentIntelligence({
-    tools,
-    openSessions,
-    latestSessions,
-    allSessions,
-    toolMaintenance,
-  }), [tools, openSessions, latestSessions, allSessions, toolMaintenance]);
-
-  const modelGroups = useMemo(() => {
-    const groups = new Map();
-    tools.forEach((tool) => {
-      const label = getModelLabel(tool);
-      const group = groups.get(label) || {
-        label,
-        total: 0,
-        inUse: 0,
-        stale: 0,
-        value: 0,
-        searchToken: label,
-      };
-      const latest = latestSessions[tool.id];
-      const lastReadAt = toDate(getSessionReadTime(latest));
-      const stale = !lastReadAt || Date.now() - lastReadAt.getTime() > STALE_READ_DAYS * 86400000;
-      group.total += 1;
-      group.inUse += openSessions[tool.id] ? 1 : 0;
-      group.stale += stale ? 1 : 0;
-      group.value += getNumericCost(tool);
-      groups.set(label, group);
-    });
-    return Array.from(groups.values())
-      .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label))
-      .slice(0, 8);
-  }, [tools, openSessions, latestSessions]);
-
-  async function handleDelete(tool) {
-    if (!confirm(`Eliminar "${tool.name}"?`)) return;
-    await deleteDoc(doc(db, TOOLS_PATH, tool.id));
-  }
-
-  function handleCopyUrl(tool) {
-    const url = `${window.location.origin}/t/${tool.nfcTagId}`;
-    navigator.clipboard?.writeText(url);
-    setCopied(tool.id);
-    setTimeout(() => setCopied(null), 1500);
-  }
-
-  async function handleProgramTag(tool) {
-    const url = `${window.location.origin}/t/${tool.nfcTagId}`;
-    setProgramming(tool.id);
-    setToast({ kind: 'info', msg: `Encosta a tag de "${tool.name}" ao telemóvel agora...` });
-    try {
-      await writeUrlToNfcTag(url);
-      setToast({ kind: 'success', msg: `Tag de "${tool.name}" programada!` });
-    } catch (err) {
-      setToast({ kind: 'error', msg: err.message });
-    } finally {
-      setProgramming(null);
-      setTimeout(() => setToast(null), 4000);
-    }
-  }
-
-  if (loading) return (
-    <div className="p-8 flex items-center justify-center">
-      <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-    </div>
+  const modelStats = useMemo(
+    () => getModelStats(),
+    [equipmentModels, tools, toolSessions, getModelStats]
   );
 
-  return (
-    <div className="p-6 space-y-5">
+  const filteredStats = useMemo(() => {
+    let list = modelStats;
+    if (categoryFilter !== 'all') list = list.filter(s => s.model.category === categoryFilter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(s =>
+        (s.model.displayName || '').toLowerCase().includes(q) ||
+        (s.model.brand || '').toLowerCase().includes(q) ||
+        (s.model.modelCode || '').toLowerCase().includes(q) ||
+        (s.model.category || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [modelStats, search, categoryFilter]);
 
+  const categories = useMemo(
+    () => [...new Set(equipmentModels.map(m => m.category).filter(Boolean))].sort(),
+    [equipmentModels]
+  );
+
+  const globalStats = useMemo(() => {
+    const openSessions = toolSessions.filter(s => s.status === 'OPEN');
+    const totalInUse = openSessions.length;
+    const lastByTool = new Map();
+    toolSessions.forEach(s => {
+      const t = toDate(s.startTime);
+      if (!t) return;
+      const prev = lastByTool.get(s.toolId);
+      if (!prev || t > prev) lastByTool.set(s.toolId, t);
+    });
+    const stale = tools.filter(t => {
+      const last = lastByTool.get(t.id);
+      if (!last) return true;
+      return (Date.now() - last.getTime()) > STALE_READ_DAYS * 86400000;
+    }).length;
+    const openAlertCount = toolAlerts.filter(a => a.status === 'OPEN' || a.status === 'IN_REVIEW').length;
+
+    return {
+      totalUnits: tools.length,
+      inUse: totalInUse,
+      stale,
+      openAlerts: openAlertCount,
+      totalModels: equipmentModels.length,
+    };
+  }, [tools, toolSessions, toolAlerts, equipmentModels]);
+
+  // Drilldown
+  if (selectedModelId) {
+    return (
+      <ModelDrilldownView
+        modelId={selectedModelId}
+        onBack={() => setSelectedModelId(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-5" data-testid="equipamentos-view">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">Equipamentos</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Equipamentos pequenos com tag NFC — saídas e devoluções automáticas
+            Inventário agrupado por modelo · {globalStats.totalModels} modelos · {globalStats.totalUnits} unidades
           </p>
         </div>
-        <button
-          onClick={() => setEditing({})}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl font-bold text-sm hover:bg-primary-600 active:scale-95 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Equipamento
-        </button>
-      </div>
-
-      {/* Intelligence KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <IntelligenceCard
-          icon={ShieldAlert}
-          label="Valor em risco"
-          value={formatCurrency(stats.riskValue)}
-          helper={`${stats.riskCount} equipamentos sem leitura recente ou com avaria aberta`}
-          tone={stats.riskValue > 0 ? 'red' : 'emerald'}
-        />
-        <IntelligenceCard
-          icon={Radio}
-          label="Cobertura NFC"
-          value={`${stats.nfcCoveragePct}%`}
-          helper={`Com leitura nos últimos ${RECENT_READ_DAYS} dias`}
-          tone={stats.nfcCoveragePct >= 80 ? 'emerald' : stats.nfcCoveragePct >= 60 ? 'amber' : 'red'}
-        />
-        <IntelligenceCard
-          icon={BarChart3}
-          label="Avarias / 100 usos"
-          value={stats.issuesPer100Checkouts}
-          helper="Dano, reparação ou perda nos últimos 30 dias"
-          tone={stats.issuesPer100Checkouts > 5 ? 'red' : stats.issuesPer100Checkouts > 2 ? 'amber' : 'blue'}
-        />
-        <IntelligenceCard
-          icon={TrendingUp}
-          label="Rotação 30d"
-          value={`${stats.rotation30d}x`}
-          helper="Leituras por equipamento nos últimos 30 dias"
-          tone="blue"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <IntelligenceCard
-          icon={Package}
-          label="Total"
-          value={stats.total}
-          helper={`${stats.available} disponíveis · ${stats.inUse} em uso`}
-        />
-        <IntelligenceCard
-          icon={Clock}
-          label="Dormentes"
-          value={stats.dormantCount}
-          helper={`Sem leitura há mais de ${DORMANT_DAYS} dias`}
-          tone={stats.dormantCount > 0 ? 'amber' : 'emerald'}
-        />
-        <IntelligenceCard
-          icon={Euro}
-          label="Valor em obra"
-          value={formatCurrency(stats.valueOnSite)}
-          helper="Valor de substituição actualmente fora do armazém"
-          tone="slate"
-        />
-        <IntelligenceCard
-          icon={Activity}
-          label="Resolução média"
-          value={stats.avgResolutionDays == null ? '—' : `${stats.avgResolutionDays}d`}
-          helper={`${stats.openIssues} avarias abertas/em progresso`}
-          tone={stats.openIssues > 0 ? 'amber' : 'emerald'}
-        />
-      </div>
-
-      {modelGroups.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Famílias de equipamentos</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Agrupado por marca/modelo quando existe; caso contrário por tipo.
-              </p>
-            </div>
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="text-xs font-semibold text-primary-600 hover:text-primary-700"
-              >
-                Limpar filtro
-              </button>
-            )}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-medium">
+            <button
+              onClick={() => setView('grouped')}
+              data-testid="view-grouped"
+              className={view === 'grouped'
+                ? 'px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white'
+                : 'px-3 py-1.5 text-slate-500'}
+            >
+              Por modelo
+            </button>
+            <button
+              onClick={() => setView('flat')}
+              data-testid="view-flat"
+              className={view === 'flat'
+                ? 'px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white'
+                : 'px-3 py-1.5 text-slate-500'}
+            >
+              Lista plana
+            </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
-            {modelGroups.map(group => (
-              <button
-                key={group.label}
-                onClick={() => setSearch(group.searchToken)}
-                className="text-left rounded-xl border border-slate-200 dark:border-slate-700 p-3 hover:border-primary-400 hover:bg-primary-50/40 dark:hover:bg-primary-900/10 transition-colors"
-              >
-                <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{group.label}</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {group.total} un. · {group.inUse} em uso · {group.stale} sem leitura
-                </p>
-                <p className="text-xs text-slate-400 mt-1">{formatCurrency(group.value)} inventariado</p>
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => setEditing({})}
+            className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-xl font-bold text-sm hover:bg-primary-600 active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Novo
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiTile
+          icon={Wrench}
+          label="Total Equipamentos"
+          value={globalStats.totalUnits}
+          sub={`${globalStats.totalModels} modelos`}
+          tone="primary"
+        />
+        <KpiTile
+          icon={Activity}
+          label="Em Uso Agora"
+          value={globalStats.inUse}
+          sub={globalStats.totalUnits > 0
+            ? `${Math.round((globalStats.inUse / globalStats.totalUnits) * 100)}%`
+            : ''}
+          tone={globalStats.inUse > 0 ? 'emerald' : 'slate'}
+        />
+        <KpiTile
+          icon={Clock}
+          label="Sem Leitura >7d"
+          value={globalStats.stale}
+          tone={globalStats.stale > 0 ? 'amber' : 'slate'}
+        />
+        <KpiTile
+          icon={AlertTriangle}
+          label="Avarias Abertas"
+          value={globalStats.openAlerts}
+          tone={globalStats.openAlerts > 0 ? 'red' : 'slate'}
+        />
+      </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pesquisar por nome, tag ou tipo..."
-            className="w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Pesquisar marca, modelo, código..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
         <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+          className="px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 dark:text-white"
         >
-          <option value="all">Todos os tipos</option>
-          {TOOL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-        >
-          <option value="all">Todos os estados</option>
-          <option value="in-use">Em uso</option>
-          <option value="available">Disponíveis</option>
-          <option value="stale">Sem leitura &gt; {STALE_READ_DAYS} dias</option>
+          <option value="all">Todas as categorias</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
-      {/* Toast de copy */}
-      {copied && (
-        <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg flex items-center gap-2 z-50">
-          <Check className="w-4 h-4" />
-          URL copiado
-        </div>
-      )}
-
-      {/* Toast de programação NFC */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl text-sm font-medium shadow-lg flex items-center gap-2 z-50 max-w-sm ${
-          toast.kind === 'success' ? 'bg-emerald-500 text-white' :
-          toast.kind === 'error'   ? 'bg-red-500 text-white' :
-                                     'bg-slate-800 text-white'
-        }`}>
-          {toast.kind === 'success' ? <Check className="w-4 h-4 flex-shrink-0" /> :
-           toast.kind === 'error'   ? <AlertCircle className="w-4 h-4 flex-shrink-0" /> :
-                                      <Radio className="w-4 h-4 flex-shrink-0 animate-pulse" />}
-          {toast.msg}
-        </div>
-      )}
-
-      {/* Lista */}
-      {filtered.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
-          <Wrench className="w-12 h-12 text-slate-300 mx-auto" />
-          <p className="text-slate-500 mt-3">
-            {tools.length === 0 ? 'Sem equipamentos. Cria o primeiro.' : 'Nenhum resultado para a pesquisa.'}
-          </p>
-        </div>
+      {/* Vista */}
+      {view === 'grouped' ? (
+        filteredStats.length === 0 ? (
+          <div className="text-center py-16 text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl">
+            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p>{equipmentModels.length === 0 ? 'Sem modelos. Aguarda seed.' : 'Sem modelos com estes filtros'}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredStats.map(stat => (
+              <ModelCard
+                key={stat.model.id}
+                stat={stat}
+                onClick={() => setSelectedModelId(stat.model.id)}
+              />
+            ))}
+          </div>
+        )
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(tool => (
-            <ToolCard
-              key={tool.id}
-              tool={tool}
-              openSession={openSessions[tool.id]}
-              latestSession={latestSessions[tool.id]}
-              onEdit={() => setEditing(tool)}
-              onDelete={() => handleDelete(tool)}
-              onCopyUrl={() => handleCopyUrl(tool)}
-              onProgramTag={() => handleProgramTag(tool)}
-              programming={programming === tool.id}
-            />
-          ))}
-        </div>
+        <FlatUnitsList
+          tools={tools}
+          models={equipmentModels}
+          sessions={toolSessions}
+          search={search}
+          categoryFilter={categoryFilter}
+        />
       )}
 
       {editing !== null && (

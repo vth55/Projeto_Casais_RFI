@@ -4,7 +4,7 @@ import {
   collection, query, where, getDocs, addDoc, updateDoc, doc,
   serverTimestamp, limit, getDoc,
 } from 'firebase/firestore';
-import { LogOut, LogIn, Package, MapPin, User, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { LogOut, LogIn, Package, MapPin, User, CheckCircle, AlertCircle, Loader2, Wrench } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { getCurrentPosition } from '../utils/geolocation';
 
@@ -24,6 +24,7 @@ const S = {
 export default function ToolTagPage({ onExit }) {
   const [state, setState] = useState(S.LOADING);
   const [tool, setTool] = useState(null);
+  const [model, setModel] = useState(null);
   const [openSession, setOpenSession] = useState(null);
   const [result, setResult] = useState(null);
   const [countdown, setCountdown] = useState(4);
@@ -84,6 +85,21 @@ export default function ToolTagPage({ onExit }) {
       const toolData = { id: snap.docs[0].id, ...snap.docs[0].data() };
       setTool(toolData);
 
+      // Fetch do modelo em background — não bloqueia checkout/checkin se falhar
+      if (toolData.modelId) {
+        (async () => {
+          try {
+            const modelRef = doc(db, `${BASE}/equipment_models`, toolData.modelId);
+            const modelSnap = await getDoc(modelRef);
+            if (modelSnap.exists()) {
+              setModel({ id: modelSnap.id, ...modelSnap.data() });
+            }
+          } catch (err) {
+            console.debug('Model fetch failed (non-blocking):', err);
+          }
+        })();
+      }
+
       // Check for open session by this user
       const sessQ = query(
         collection(db, `${BASE}/tool_sessions`),
@@ -129,6 +145,10 @@ export default function ToolTagPage({ onExit }) {
           toolId: tool.id,
           toolName: tool.name,
           toolType: tool.type || null,
+          // Snapshot modelo (Fase 4): permite agregação por modelo mesmo se o
+          // modelo for renomeado / unidade for retipificada no futuro.
+          modelId: tool.modelId || null,
+          modelName: model?.displayName || null,
           nfcTagId: tool.nfcTagId,
           operatorId: uid,
           operatorName: currentUser.name || currentUser.displayName || currentUser.email || uid,
@@ -242,15 +262,29 @@ export default function ToolTagPage({ onExit }) {
       {/* Top accent */}
       <div className={`h-1.5 w-full ${isCheckout ? 'bg-emerald-500' : 'bg-blue-500'}`} />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-5">
 
-        {/* Icon */}
-        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center
-          ${isCheckout ? 'bg-emerald-500/20' : 'bg-blue-500/20'}`}>
-          {isCheckout
-            ? <LogOut className="w-9 h-9 text-emerald-400" />
-            : <LogIn className="w-9 h-9 text-blue-400" />
-          }
+        {/* Foto modelo + icon overlay */}
+        <div className="w-full max-w-xs aspect-[16/10] bg-white/5 rounded-2xl overflow-hidden relative">
+          {model?.photoUrl ? (
+            <img
+              src={model.photoUrl}
+              alt={model.displayName}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Wrench className="w-16 h-16 text-slate-600" />
+            </div>
+          )}
+          <div className={`absolute bottom-2 right-2 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur
+            ${isCheckout ? 'bg-emerald-500/80' : 'bg-blue-500/80'}`}>
+            {isCheckout
+              ? <LogOut className="w-6 h-6 text-white" />
+              : <LogIn className="w-6 h-6 text-white" />
+            }
+          </div>
         </div>
 
         {/* Tool info */}
@@ -258,8 +292,18 @@ export default function ToolTagPage({ onExit }) {
           <p className="text-slate-400 text-xs uppercase tracking-widest mb-1">
             {isCheckout ? 'Saída de equipamento' : 'Devolução de equipamento'}
           </p>
-          <p className="text-white font-black text-2xl leading-tight">{tool.name}</p>
-          {tool.type && <p className="text-slate-400 text-sm mt-1">{tool.type}</p>}
+          {model?.brand && (
+            <p className="text-primary-300 text-xs uppercase tracking-wide font-semibold mb-1">
+              {model.brand} · {model.category}
+            </p>
+          )}
+          <p className="text-white font-black text-2xl leading-tight">{model?.displayName || tool.name}</p>
+          {tool.customNumber && (
+            <p className="text-slate-300 text-sm mt-1 font-mono">#{tool.customNumber}</p>
+          )}
+          {!tool.customNumber && tool.type && (
+            <p className="text-slate-400 text-sm mt-1">{tool.type}</p>
+          )}
         </div>
 
         {/* Details card */}
