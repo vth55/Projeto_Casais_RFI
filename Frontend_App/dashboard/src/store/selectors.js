@@ -17,8 +17,19 @@ import { useCallback } from 'react';
 import { shallow } from 'zustand/shallow';
 
 // ============================================
-// SELECTORS PRIMÁRIOS — tools / tool_sessions
+// SELECTORS PRIMÁRIOS — equipment_models / tools / tool_sessions
 // ============================================
+
+/** Todos os modelos de equipamento (catálogo 2-níveis pivot 2026-05). */
+export const selectEquipmentModels = (state) => state.equipmentModels;
+
+/** Factory: selector para um modelo específico por id. */
+export const selectModelById = (modelId) => (state) =>
+  state.equipmentModels.find(m => m.id === modelId);
+
+/** Factory: selector para todas as unidades físicas de um dado modelo. */
+export const selectUnitsForModel = (modelId) => (state) =>
+  state.tools.filter(t => t.modelId === modelId);
 
 /** Todas as ferramentas NFC. */
 export const selectTools = (state) => state.tools;

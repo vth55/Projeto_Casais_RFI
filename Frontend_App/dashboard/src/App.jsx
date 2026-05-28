@@ -231,14 +231,15 @@ export default function App() {
       if (db) {
         try {
           const basePath = `artifacts/${projectId}/public/data`;
-          const [toolsSnap, operatorsSnap, toolSessionsSnap, alertsSnap] = await Promise.all([
+          const [modelsSnap, toolsSnap, operatorsSnap, toolSessionsSnap, alertsSnap] = await Promise.all([
+            getDocs(collection(db, `${basePath}/equipment_models`)),
             getDocs(collection(db, `${basePath}/tools`)),
             getDocs(collection(db, `${basePath}/operators`)),
             getDocs(collection(db, `${basePath}/tool_sessions`)),
             getDocs(collection(db, `${basePath}/tool_alerts`)),
           ]);
 
-          if (toolsSnap.empty && operatorsSnap.empty && toolSessionsSnap.empty) {
+          if (modelsSnap.empty && toolsSnap.empty && toolSessionsSnap.empty) {
             console.log('Criando dados mock...');
             await createAllMockData();
           } else if (alertsSnap.empty) {

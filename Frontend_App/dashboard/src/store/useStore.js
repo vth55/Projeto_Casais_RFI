@@ -44,6 +44,7 @@ const useStore = create((set, get) => ({
   // Estado
   // NOTE: sessions e machines foram movidos para store/legacy/machinesStore.js (C1 pivot 2026-05)
   // Consumir via useLegacyMachinesStore() em DashboardView/ProcoreReconciliationPanel.
+  equipmentModels: [],  // novo — catálogo de modelos (2-níveis pivot 2026-05)
   tools: [],            // novo — small tools NFC (modelo activo pós-pivot 2026-05)
   toolSessions: [],     // novo — checkout/checkin NFC das ferramentas
   toolAlerts: [],       // novo — anomalias detectadas (TOOL_OVERDUE, NO_LOCATION, etc.) ver types.js
@@ -103,6 +104,16 @@ const useStore = create((set, get) => ({
     // NOTE: sessions e machines listeners movidos para store/legacy/machinesStore.js
     // São inicializados por useLegacyMachinesStore.getState().initializeLegacyListeners()
     // em App.jsx — ver C1 pivot 2026-05.
+
+    // ============================================
+    // EQUIPMENT_MODELS — catálogo (2-níveis pivot 2026-05)
+    // ============================================
+    const createModelsListener = createCollectionListener(db, `${basePath}/equipment_models`, {
+      onError: (msg, error) => console.debug('[equipment_models] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createModelsListener((data) => set({ equipmentModels: data || [] }))
+    );
 
     // ============================================
     // TOOLS + TOOL_SESSIONS — pivot 2026-05 (small tools NFC)
@@ -1157,6 +1168,125 @@ const useStore = create((set, get) => ({
       avgDurationHours:   Math.round(avgDurationHours * 10) / 10,
       utilizationPct,
     };
+  },
+
+  // ========================================
+  // EQUIPMENT MODELS — selectors (2-níveis pivot 2026-05)
+  // ========================================
+
+  // Mapa modelId → model (lookup O(1) para enriquecimento de UI)
+  getModelsById: () => {
+    const map = new Map();
+    get().equipmentModels.forEach(m => map.set(m.id, m));
+    return map;
+  },
+
+  // Lookup pontual de modelo por id
+  getModelById: (modelId) => modelId
+    ? (get().equipmentModels.find(m => m.id === modelId) || null)
+    : null,
+
+  // Enriquece um tool com defaults do modelo (fallback model → unit).
+  // Retorna um objecto com name/type/photoUrl/specs derivados, sem perder os
+  // campos originais da unidade.
+  getToolDisplay: (tool) => {
+    if (!tool) return null;
+    const model = get().getModelById(tool.modelId);
+    return {
+      ...tool,
+      name: tool.name || model?.displayName || tool.modelId || 'Equipamento sem nome',
+      type: tool.type || model?.category || '—',
+      photoUrl: model?.photoUrl || null,
+      brand: model?.brand || null,
+      modelCode: model?.modelCode || null,
+      specs: model?.specs || {},
+      effectiveReplacementCost: tool.replacementCost ?? model?.defaultReplacementCost ?? 0,
+      effectiveMaintenanceIntervalDays: tool.maintenanceIntervalDays ?? model?.defaultMaintenanceIntervalDays ?? null,
+    };
+  },
+
+  // Agregação por modelo — número de unidades + estado actual + valor total.
+  // Útil para a vista FerramentasView no modo "Equipamentos por Modelo".
+  getModelStats: () => {
+    const { equipmentModels, tools, toolSessions } = get();
+    const openByToolId = new Set(
+      toolSessions.filter(s => s.status === 'OPEN').map(s => s.toolId)
+    );
+    return equipmentModels.map(model => {
+      const units = tools.filter(t => t.modelId === model.id);
+      return {
+        model,
+        unitCount: units.length,
+        inUse: units.filter(u => openByToolId.has(u.id)).length,
+        available: units.filter(u => u.status === 'AVAILABLE' && !openByToolId.has(u.id)).length,
+        inRepair: units.filter(u => u.status === 'IN_REPAIR').length,
+        lost: units.filter(u => u.status === 'LOST').length,
+        totalValue: units.reduce((sum, u) => sum + (u.replacementCost ?? model.defaultReplacementCost ?? 0), 0),
+      };
+    }).sort((a, b) => b.unitCount - a.unitCount);
+  },
+
+  // Unidades físicas associadas a um modelo
+  getUnitsByModelId: (modelId) => modelId
+    ? get().tools.filter(t => t.modelId === modelId)
+    : [],
+
+  // Top N modelos por número de checkouts num período (agrega ao nível modelo, não unidade)
+  getTopModelsByUsage: (dateRange, limit = 5) => {
+    const { toolSessions, equipmentModels, tools } = get();
+    const modelById = new Map(equipmentModels.map(m => [m.id, m]));
+    const toolById = new Map(tools.map(t => [t.id, t]));
+    const counts = new Map();
+    toolSessions.forEach(s => {
+      if (dateRange) {
+        const start = s.startTime?.toDate?.() ?? new Date(s.startTime);
+        if (!start || start < dateRange.start || start > dateRange.end) return;
+      }
+      const modelId = s.modelId || toolById.get(s.toolId)?.modelId;
+      if (!modelId) return;
+      counts.set(modelId, (counts.get(modelId) || 0) + 1);
+    });
+    return [...counts.entries()]
+      .map(([modelId, count]) => {
+        const model = modelById.get(modelId);
+        return {
+          modelId,
+          count,
+          displayName: model?.displayName || modelId,
+          brand: model?.brand,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+  },
+
+  // Modelos com mais avarias (DAMAGE) — útil para análise de fiabilidade
+  getModelsWithMostBreakdowns: (sinceDate = null, limit = 5) => {
+    const { toolMaintenance, equipmentModels, tools } = get();
+    const modelById = new Map(equipmentModels.map(m => [m.id, m]));
+    const toolById = new Map(tools.map(t => [t.id, t]));
+    const counts = new Map();
+    toolMaintenance.forEach(r => {
+      if (r.type !== 'DAMAGE') return;
+      if (sinceDate) {
+        const at = r.reportedAt?.toDate?.() ?? new Date(r.reportedAt);
+        if (at < sinceDate) return;
+      }
+      const modelId = r.modelId || toolById.get(r.toolId)?.modelId;
+      if (!modelId) return;
+      counts.set(modelId, (counts.get(modelId) || 0) + 1);
+    });
+    return [...counts.entries()]
+      .map(([modelId, count]) => {
+        const model = modelById.get(modelId);
+        return {
+          modelId,
+          count,
+          displayName: model?.displayName || modelId,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
   },
 }));
 

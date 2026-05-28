@@ -16,18 +16,57 @@
 // ============================================================================
 
 /**
+ * @typedef {Object} EquipmentModel
+ * Colecção: `equipment_models/{modelId}` — catálogo de modelos de equipamento.
+ *
+ * Sem NFC, sem localização. Define marca + modelo + foto + specs + defaults
+ * que são partilhados entre múltiplas unidades físicas (tools).
+ *
+ * @property {string} id                          slug ex: 'bosch-gsh-16-30'
+ * @property {string} brand                       Ex.: "Bosch", "Hilti"
+ * @property {string} modelCode                   Ex.: "GSH 16-30"
+ * @property {string} displayName                 Cache para UI (ex.: "Martelo Pneumático Bosch GSH 16-30")
+ * @property {string} category                    "Martelo Pneumático", "Rebarbadora", etc.
+ * @property {string} [subcategory]
+ * @property {string} [photoUrl]                  Storage URL principal
+ * @property {Array<{id:string,url:string,path:string,name:string}>} [photos]
+ * @property {Object} [specs]                     {power, weight, voltage, ...}
+ * @property {number} [defaultReplacementCost]    € fallback (override em tool.replacementCost)
+ * @property {number} [defaultMaintenanceIntervalDays]
+ * @property {number} [defaultCalibrationIntervalDays]
+ * @property {string} [manualUrl]
+ * @property {string} [procoreEquipmentTypeId]
+ * @property {number} unitCount                   Cache denormalizado (nº total de tools com este modelId)
+ * @property {number} activeUnitCount             Cache (status != RETIRED)
+ * @property {Timestamp} createdAt
+ * @property {Timestamp} updatedAt
+ * @property {string} createdBy
+ */
+
+/**
  * @typedef {Object} Tool
- * Colecção: `tools/{toolId}` — inventário de ferramentas pequenas com NFC.
+ * Colecção: `tools/{toolId}` — UNIDADES físicas de equipamento com NFC.
+ *
+ * Cada `tool` referencia um `equipment_models/{modelId}`. Foto / specs / defaults
+ * vêm do modelo via getToolDisplay(). Os campos `name` e `type` mantêm-se neste
+ * doc apenas para retrocompat — em UI nova, derivar via getToolDisplay().
  *
  * @property {string} id
- * @property {string} name                  Ex.: "Martelo pneumático Bosch GSH 16-30"
- * @property {string} type                  Categoria: "Martelo pneumático", "Rebarbadora", etc.
+ * @property {string} modelId               FK equipment_models — fonte de verdade do "que ferramenta é"
+ * @property {string} [serialNumber]        Nº de série do fabricante
+ * @property {string} [customNumber]        Nº interno (ex.: "MART-018")
+ * @property {string} [name]                @deprecated — derivado de model.displayName via getToolDisplay()
+ * @property {string} [type]                @deprecated — derivado de model.category via getToolDisplay()
  * @property {string} nfcTagId              Tag NFC programada (UID upper-case)
  * @property {string} [currentObraId]       Obra onde está atribuída (null = armazém)
  * @property {string} [currentObraName]     Cache do nome para evitar lookups
  * @property {string} storageLocation       "Armazém Central", etc.
  * @property {'AVAILABLE'|'IN_USE'|'IN_REPAIR'|'LOST'|'RETIRED'} status
- * @property {number} replacementCost       € — para valor imobilizado e perdas
+ * @property {'ACTIVE'|'STORED'|'DECOMMISSIONED'} [lifecycleStatus]
+ * @property {Timestamp} [acquiredAt]
+ * @property {number} [acquisitionCost]     € — custo na aquisição
+ * @property {number} [replacementCost]     € — override de model.defaultReplacementCost
+ * @property {number} [maintenanceIntervalDays]  Override de model.defaultMaintenanceIntervalDays
  * @property {Date|Timestamp} [lastInspection]
  * @property {string} [procoreEquipmentId]  Compatibility com Procore (legacy)
  * @property {string} [procoreEquipmentNumber]
