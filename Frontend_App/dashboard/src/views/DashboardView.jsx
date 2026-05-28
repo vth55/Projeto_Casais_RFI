@@ -7,7 +7,7 @@ import {
   Activity, Truck, Clock, Fuel, Leaf, AlertTriangle,
   Wrench, TrendingUp, ArrowRight, Play, User, Zap, ChevronRight,
   RefreshCw, Building2, CheckCircle2, XCircle, Link2, CalendarDays, X,
-  Sparkles, Brain, ShieldAlert,
+  Sparkles, Brain, ShieldAlert, Package,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useLegacyMachinesStore from '../store/legacy/machinesStore';
@@ -954,6 +954,9 @@ const DashboardView = () => {
     operators, systemSettings, loading,
     tools, toolSessions, getToolsInUse, getOverdueTools, getTopToolsByUsage, getToolKPIs,
     dateFilter, customRange,
+    equipmentModels, toolMaintenance,
+    getModelStats, getTopModelsByUsage, getModelsWithMostBreakdowns,
+    setActiveView,
   } = useStore();
   // LEGACY — heavy machines para WorkFocusPanel + maintenanceAlerts badge
   const { machines, sessions } = useLegacyMachinesStore();
@@ -1021,6 +1024,19 @@ const DashboardView = () => {
 
   // Devolucao atrasada: equipamentos com sessao OPEN > threshold (config em systemSettings)
   const overdueList = useMemo(() => getOverdueTools(), [getOverdueTools, toolSessions, systemSettings]);
+
+  // Fase 7 — EquipmentModel: agregações por modelo (diferencial face ao Hilti)
+  const modelStats = useMemo(() => getModelStats(), [getModelStats, equipmentModels, tools, toolSessions]);
+  const topModels = useMemo(() => getTopModelsByUsage(null, 5), [getTopModelsByUsage, toolSessions, equipmentModels, tools]);
+  const breakdownModels = useMemo(() => getModelsWithMostBreakdowns(null, 5), [getModelsWithMostBreakdowns, toolMaintenance, equipmentModels, tools]);
+  const openDamageCount = useMemo(
+    () => toolMaintenance.filter(r => r.status === 'OPEN' && r.type === 'DAMAGE').length,
+    [toolMaintenance]
+  );
+  const inUseCount = useMemo(
+    () => toolSessions.filter(s => s.status === 'OPEN').length,
+    [toolSessions]
+  );
 
   // Alertas manutenção (legacy — heavy machines, mantém para compat enquanto o user quiser manter o módulo)
   const maintenanceAlerts = machines.filter(m => {
@@ -1111,6 +1127,121 @@ const DashboardView = () => {
           variant="gradient"
           className="animate-fade-in stagger-4"
         />
+      </div>
+
+      {/* Fase 7 EquipmentModel — KPI strip por modelo (Modelos / Equipamentos / Em Uso / Avarias) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="dashboard-models-kpis">
+        <StatCard
+          icon={Package}
+          title="Modelos"
+          value={equipmentModels.length}
+          color="primary"
+        />
+        <StatCard
+          icon={Wrench}
+          title="Equipamentos"
+          value={tools.length}
+          color="primary"
+        />
+        <StatCard
+          icon={Activity}
+          title="Em Uso Agora"
+          value={inUseCount}
+          color={inUseCount > 0 ? 'emerald' : 'slate'}
+        />
+        <StatCard
+          icon={AlertTriangle}
+          title="Avarias Abertas"
+          value={openDamageCount}
+          color={openDamageCount > 0 ? 'red' : 'slate'}
+        />
+      </div>
+
+      {/* Fase 7 — Top 5 modelos por uso + Avarias por modelo (grid 2 cols desktop) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="dashboard-models-charts">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-3">Top 5 Modelos por Utilização</h3>
+          {topModels.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-10">Sem dados de utilização ainda</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={topModels} layout="vertical" margin={{ left: 30, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis type="number" stroke="#94a3b8" fontSize={12} />
+                <YAxis type="category" dataKey="displayName" width={150} fontSize={12} stroke="#94a3b8" />
+                <Tooltip formatter={(v) => [`${v} checkouts`, '']} />
+                <Bar dataKey="count" fill="#005EB8" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-3">Modelos com Mais Avarias</h3>
+          {breakdownModels.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-10">Sem avarias críticas</p>
+          ) : (
+            <div className="space-y-2">
+              {breakdownModels.map(m => (
+                <button
+                  key={m.modelId}
+                  onClick={() => setActiveView('manutencao-avarias')}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Wrench className="w-4 h-4 text-red-500 shrink-0" />
+                    <span className="text-sm font-medium text-slate-900 dark:text-white truncate">{m.displayName}</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-bold shrink-0">
+                    {m.count} {m.count === 1 ? 'avaria' : 'avarias'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Fase 7 — Top 6 modelos por frota (cards com foto/brand/count/mini-stats) */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4" data-testid="dashboard-models-cards">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-slate-900 dark:text-white">Modelos com Mais Unidades</h3>
+          <button onClick={() => setActiveView('maquinas-lista')} className="text-xs text-primary-600 dark:text-primary-400 font-semibold">
+            Ver tudo →
+          </button>
+        </div>
+        {modelStats.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-10">Sem modelos cadastrados ainda</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {modelStats.slice(0, 6).map(stat => (
+              <button
+                key={stat.model.id}
+                onClick={() => setActiveView('maquinas-lista')}
+                className="text-left flex gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary-400 hover:shadow-sm transition-all"
+              >
+                <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                  {stat.model.photoUrl ? (
+                    <img src={stat.model.photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  ) : <Wrench className="w-8 h-8 text-slate-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs uppercase tracking-wide text-primary-700 dark:text-primary-400 font-semibold truncate">{stat.model.brand}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{stat.model.displayName}</p>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-lg font-bold text-slate-900 dark:text-white">{stat.unitCount}</span>
+                    <span className="text-xs text-slate-500">unidades</span>
+                  </div>
+                  <div className="flex gap-1 mt-1 flex-wrap text-xs">
+                    {stat.available > 0 && <span className="px-1.5 rounded bg-emerald-100 text-emerald-800 font-semibold">{stat.available}d</span>}
+                    {stat.inUse > 0 && <span className="px-1.5 rounded bg-blue-100 text-blue-800 font-semibold">{stat.inUse}u</span>}
+                    {stat.inRepair > 0 && <span className="px-1.5 rounded bg-amber-100 text-amber-800 font-semibold">{stat.inRepair}r</span>}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Alerta de Manutenção */}
