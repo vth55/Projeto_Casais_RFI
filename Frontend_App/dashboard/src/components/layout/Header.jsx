@@ -22,8 +22,14 @@ const viewTitles = {
   'sessoes-ativas': { title: 'Sessões Ativas', description: 'Sessões em curso' },
   'sessoes-historico': { title: 'Histórico de Sessões', description: 'Todas as sessões' },
   'sessoes-validacoes': { title: 'Validações', description: 'Sessões pendentes de validação' },
+  'sessoes-corrigidas': { title: 'Sessões Corrigidas', description: 'Sessões com correção manual' },
+  alertas: { title: 'Alertas', description: 'Anomalias detectadas — gestão operacional' },
+  avarias: { title: 'Avarias', description: 'Avarias reportadas em equipamentos' },
+  estaleiro: { title: 'Armazém', description: 'Inventário de equipamentos no armazém' },
+  armazem: { title: 'Armazém', description: 'Inventário de equipamentos no armazém' },
+  'obra-detalhe': { title: 'Detalhe da Obra', description: 'Equipamentos, sessões e avarias da obra' },
   manutencao: { title: 'Manutenção', description: 'Gestão de manutenções' },
-  'manutencao-alertas': { title: 'Alertas de Manutenção', description: 'Equipamentos que precisam de atenção' },
+  'manutencao-alertas': { title: 'Alertas', description: 'Anomalias detectadas — gestão operacional' },
   'manutencao-calendario': { title: 'Calendário', description: 'Manutenções programadas' },
   'manutencao-historico': { title: 'Histórico de Manutenção', description: 'Manutenções realizadas' },
   financeiro: { title: 'Financeiro', description: 'Gestão financeira' },
@@ -40,7 +46,7 @@ const viewTitles = {
 
 const Header = ({ onMenuClick }) => {
   const { activeView, setActiveView, toolAlerts = [] } = useStore();
-  const viewInfo = viewTitles[activeView] || { title: 'Dashboard', description: '' };
+  const viewInfo = viewTitles[activeView] || { title: 'Painel', description: '' };
   const alertCount = toolAlerts.filter(a => a.status === 'OPEN' || a.status === 'IN_REVIEW').length;
   const { isInstalled, isInstallable, install } = usePWAInstall();
   const [isStandalone, setIsStandalone] = useState(false);

@@ -21,7 +21,7 @@ const STATUS_META = {
   [TOOL_STATUS.IN_USE]:    { label: 'Em uso',     dot: 'bg-primary-500', badge: 'bg-primary-50 text-primary-700' },
   [TOOL_STATUS.IN_REPAIR]: { label: 'Reparação',  dot: 'bg-amber-500',   badge: 'bg-amber-50 text-amber-700' },
   [TOOL_STATUS.LOST]:      { label: 'Perdida',    dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700' },
-  [TOOL_STATUS.RETIRED]:   { label: 'Retirada',   dot: 'bg-slate-400',   badge: 'bg-slate-100 text-slate-600' },
+  [TOOL_STATUS.RETIRED]:   { label: 'Retirado',   dot: 'bg-slate-400',   badge: 'bg-slate-100 text-slate-600' },
 };
 
 const FILTERS = [
