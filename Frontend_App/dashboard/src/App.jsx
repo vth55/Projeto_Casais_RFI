@@ -56,6 +56,7 @@ const MaquinasView = lazy(() => import('./views/FerramentasView'));
 const OperadoresView = lazy(() => import('./views/OperadoresView'));
 const SessoesView = lazy(() => import('./views/SessoesView'));
 const ManutencaoView = lazy(() => import('./views/ManutencaoView'));
+const AlertsView = lazy(() => import('./views/AlertsView'));
 const FinanceiroView = lazy(() => import('./views/FinanceiroView'));
 const AnalisesView = lazy(() => import('./views/AnalisesView'));
 const RelatoriosView = lazy(() => import('./views/RelatoriosView'));
@@ -126,6 +127,7 @@ export default function App() {
       '/maquinas': 'maquinas-lista',
       '/operadores': 'operadores',
       '/manutencao': 'manutencao-alertas',
+      '/alertas': 'manutencao-alertas',
       '/financeiro': 'financeiro-custos',
       '/analises': 'analises-geral',
       '/relatorios': 'relatorios',
@@ -277,6 +279,7 @@ export default function App() {
     if (activeView === 'operadores') return <OperadoresView />;
     if (activeView === 'sessoes-corrigidas' || activeView === 'sessoes-validacoes') return <SessoesCorrigidasView />;
     if (activeView.startsWith('sessoes')) return <SessoesView />;
+    if (activeView === 'manutencao-alertas' || activeView === 'alertas') return <AlertsView />;
     if (activeView.startsWith('manutencao')) return <ManutencaoView />;
     if (activeView.startsWith('financeiro')) return <FinanceiroView />;
     if (activeView.startsWith('analises')) return <AnalisesView />;
