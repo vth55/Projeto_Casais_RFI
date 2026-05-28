@@ -12,7 +12,7 @@ export default defineConfig({
       manifest: {
         name: 'CASAIS Fleet Intelligence',
         short_name: 'CASAIS Fleet',
-        description: 'Sistema de Gestão Inteligente de Frotas para Grupo Casais',
+        description: 'Sistema de gestão inteligente de equipamentos para Grupo Casais',
         theme_color: '#005EB8',
         background_color: '#f1f5f9',
         display: 'standalone',
@@ -45,7 +45,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/validar/],
         runtimeCaching: [
           {
-            // Assets estáticos com hash — CacheFirst é seguro
+            // Assets estáticos com hash - CacheFirst é seguro
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
             handler: 'CacheFirst',
             options: {
@@ -68,7 +68,7 @@ export default defineConfig({
             },
           },
           {
-            // Firebase Firestore — Network first com fallback de 10s
+            // Firebase Firestore - Network first com fallback de 10s
             urlPattern: /^https:\/\/firestore\.googleapis\.com/,
             handler: 'NetworkFirst',
             options: {
@@ -85,7 +85,6 @@ export default defineConfig({
       devOptions: {
         enabled: false,
       },
-      manifest: false,
     }),
   ],
   build: {

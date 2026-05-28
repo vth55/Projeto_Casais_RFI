@@ -156,7 +156,7 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
           previousValue={prevKpis?.activeNow}
         />
         <KpiCard
-          label="Overdue"
+          label="Atrasadas"
           value={kpis.overdueCount}
           icon={AlertTriangle}
           color={kpis.overdueCount > 0 ? 'red' : 'slate'}

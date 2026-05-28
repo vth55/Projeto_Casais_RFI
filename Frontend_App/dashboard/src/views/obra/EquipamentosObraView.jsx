@@ -20,14 +20,14 @@ const FILTER_OPTIONS = [
   { value: 'all', label: 'Todos' },
   { value: 'in_use', label: 'Em uso' },
   { value: 'returned', label: 'Devolvidas' },
-  { value: 'overdue', label: 'Overdue' },
+  { value: 'overdue', label: 'Atrasadas' },
 ];
 
 const TOOL_STATE_LABEL = {
   available: 'Disponivel',
   in_use: 'Em uso',
   returned: 'Devolvida',
-  overdue: 'Overdue',
+  overdue: 'Atrasada',
 };
 
 const TOOL_STATE_COLOR = {
@@ -119,7 +119,7 @@ const InventoryHeader = ({ summary }) => {
       bg: 'bg-primary-50 dark:bg-primary-900/20',
     },
     {
-      label: 'Overdue',
+      label: 'Atrasadas',
       value: summary.overdueSessions,
       icon: AlertTriangle,
       color: summary.overdueSessions > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400',
@@ -306,7 +306,7 @@ const ToolDrawer = ({ stats, operators, overdueDays, onClose }) => {
                     : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300';
 
                 const badgeLabel = overdue
-                  ? 'Overdue'
+                  ? 'Atrasada'
                   : session.status === 'OPEN'
                     ? 'Em uso'
                     : 'Devolvida';

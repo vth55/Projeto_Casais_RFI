@@ -103,7 +103,7 @@ export default function MapaObrasView() {
           ${obra.address ? `<p class="text-xs text-slate-500">${obra.address}</p>` : ''}
         </div>
         <p class="text-sm text-slate-700">
-          Equipamentos: ${obraTools.length} · Em uso: ${openSessions.length} · Overdue: ${overdueSessions.length}
+          Equipamentos: ${obraTools.length} · Em uso: ${openSessions.length} · Atrasados: ${overdueSessions.length}
         </p>
       `;
 

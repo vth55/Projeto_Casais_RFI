@@ -178,7 +178,7 @@ const AnalisesView = () => {
         />
         <StatCard
           icon={AlertTriangle}
-          title="Overdue total"
+          title="Devoluções atrasadas"
           value={overdueTools.length}
           color="red"
         />
@@ -258,7 +258,7 @@ const AnalisesView = () => {
 
         <Card>
           <div className="mb-4">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Overdue por obra</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Devoluções atrasadas por obra</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">Sessões abertas acima do limite configurado.</p>
           </div>
           {overdueByObra.length ? (
@@ -277,9 +277,9 @@ const AnalisesView = () => {
                 <YAxis allowDecimals={false} stroke="#94a3b8" fontSize={12} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                  formatter={(value) => [value, 'Overdue']}
+                  formatter={(value) => [value, 'Atrasadas']}
                 />
-                <Bar dataKey="overdue" fill="#ef4444" radius={[6, 6, 0, 0]} name="Overdue" />
+                <Bar dataKey="overdue" fill="#ef4444" radius={[6, 6, 0, 0]} name="Atrasadas" />
               </BarChart>
             </ResponsiveContainer>
           ) : (

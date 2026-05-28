@@ -167,7 +167,7 @@ const ActiveSessionCard = ({ session, machine, operator }) => {
           tickMs={1000}
           className={`text-2xl ${isOverdue ? 'text-amber-600' : 'text-emerald-600'}`}
         />
-        <p className="text-xs text-slate-500 dark:text-slate-400">{isOverdue ? 'overdue' : 'em curso'}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{isOverdue ? 'devolução atrasada' : 'em curso'}</p>
       </div>
     </div>
   );
@@ -720,7 +720,7 @@ const MobileProcoreCard = () => {
 const MobileActiveSessionCard = ({ session, machine, operator }) => (
   <button
     onClick={() => useStore.getState().setActiveView('sessoes-ativas')}
-    aria-label={`Ver detalhes da sessão da equipamento ${machine?.name || session.machineId}`}
+    aria-label={`Ver detalhes da sessão do equipamento ${machine?.name || session.toolName || session.machineId}`}
     className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform w-full text-left"
     style={{ WebkitTapHighlightColor: 'transparent' }}
   >
@@ -730,11 +730,11 @@ const MobileActiveSessionCard = ({ session, machine, operator }) => (
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-        {machine?.name || session.machineId}
+        {machine?.name || session.toolName || session.machineId}
       </p>
       <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
         <User className="w-3 h-3 flex-shrink-0" />
-        {operator?.name || session.cardId}
+        {operator?.name || session.operatorName || session.cardId}
       </p>
     </div>
     <div className="text-right flex-shrink-0">
@@ -930,7 +930,7 @@ const WorkFocusPanel = ({ machines, avarias }) => {
               <ShieldAlert className="w-4 h-4 text-red-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">Avaria: {a.machineId}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">Avaria: {a.toolName || a.toolId || a.machineId}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{a.descricao}</p>
             </div>
             {a.maquinaParada && (
@@ -1019,7 +1019,7 @@ const DashboardView = () => {
     }));
   }, [getTopToolsByUsage, dateRange, toolSessions]);
 
-  // Overdue — equipamentos com sessão OPEN > threshold (config em systemSettings)
+  // Devolucao atrasada: equipamentos com sessao OPEN > threshold (config em systemSettings)
   const overdueList = useMemo(() => getOverdueTools(), [getOverdueTools, toolSessions, systemSettings]);
 
   // Alertas manutenção (legacy — heavy machines, mantém para compat enquanto o user quiser manter o módulo)
@@ -1095,7 +1095,7 @@ const DashboardView = () => {
         />
         <StatCard
           icon={AlertTriangle}
-          title="Overdue"
+          title="Atrasadas"
           value={toolKpis.overdueCount}
           unit=""
           color={toolKpis.overdueCount > 0 ? 'red' : 'emerald'}
@@ -1256,7 +1256,7 @@ const DashboardView = () => {
 
       {/* Segunda linha de gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Overdue Alert Card — KPI 4 crítico (loss prevention) */}
+        {/* Card de devolucoes atrasadas - KPI critico (loss prevention) */}
         <Card className="hover-enterprise">
           <div className="flex items-center justify-between mb-6">
             <div>
