@@ -62,7 +62,8 @@ async function isEmailNotificationsEnabled() {
     try {
         const snap = await db.doc(`${SETTINGS_PATH}/system`).get();
         const settings = snap.exists ? snap.data() : {};
-        return settings?.notifications?.emailEnabled === true && settings?.notifications?.smtpDriver !== 'disabled';
+        const smtpDriver = settings?.notifications?.smtpDriver;
+        return settings?.notifications?.emailEnabled === true && !!smtpDriver && smtpDriver !== 'disabled';
     } catch (error) {
         console.warn('Email guard: falha ao ler settings/system, email bloqueado por segurança:', error.message);
         return false;
@@ -1102,6 +1103,11 @@ exports.sendTestEmail = onRequest(async (req, res) => {
     }
 
     try {
+        const emailEnabled = await isEmailNotificationsEnabled();
+        if (!emailEnabled) {
+            return res.status(200).json({ success: false, reason: 'EMAIL_DISABLED' });
+        }
+
         // Buscar alerta
         const alertRef = db.doc(`${ALERTS_PATH}/${alertId}`);
         const alertSnap = await alertRef.get();

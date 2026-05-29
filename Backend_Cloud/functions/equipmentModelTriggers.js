@@ -1,14 +1,10 @@
 /**
- * Triggers Firestore para manter equipment_models.unitCount / activeUnitCount
- * sincronizados com tools (pivot 2026-05).
+ * Firestore triggers for keeping equipment_models.unitCount / activeUnitCount
+ * synchronized with tools (pivot 2026-05).
  *
- * Cache denormalizado:
- * - unitCount: total de tools que referenciam o modelId
- * - activeUnitCount: total excluindo tools com status RETIRED
- *
- * Sem estes triggers, o cliente teria de agregar em runtime — viável para
- * <500 unidades mas degrada com escala. Os triggers garantem consistência
- * O(1) na leitura do catálogo.
+ * Denormalized cache:
+ * - unitCount: total tools referencing the modelId
+ * - activeUnitCount: total tools excluding status RETIRED
  */
 
 const { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } = require('firebase-functions/v2/firestore');
@@ -19,19 +15,28 @@ const TOOLS_PATH = `artifacts/${APP_ID}/public/data/tools`;
 const MODELS_PATH = `artifacts/${APP_ID}/public/data/equipment_models`;
 
 async function recomputeModelCounts(modelId) {
-  if (!modelId) return;
+  if (!modelId) {
+    console.warn('[equipmentModelTriggers] Ignored recompute without modelId');
+    return;
+  }
+
   const db = admin.firestore();
+  const modelRef = db.collection(MODELS_PATH).doc(modelId);
+  const modelSnap = await modelRef.get();
+  if (!modelSnap.exists) {
+    console.warn(`[equipmentModelTriggers] Model ${modelId} not found; cannot update unit counters`);
+    return;
+  }
+
   const toolsSnap = await db.collection(TOOLS_PATH).where('modelId', '==', modelId).get();
   const tools = toolsSnap.docs.map(d => d.data());
   const unitCount = tools.length;
   const activeUnitCount = tools.filter(t => t.status !== 'RETIRED').length;
-  await db.collection(MODELS_PATH).doc(modelId).update({
+
+  await modelRef.update({
     unitCount,
     activeUnitCount,
     updatedAt: admin.firestore.Timestamp.now(),
-  }).catch(err => {
-    // Se o model não existe, ignorar (tool órfão)
-    if (err.code !== 5 /* NOT_FOUND */) throw err;
   });
 }
 
@@ -39,6 +44,8 @@ exports.onToolCreated = onDocumentCreated(`${TOOLS_PATH}/{toolId}`, async (event
   const data = event.data?.data();
   if (data?.modelId) {
     await recomputeModelCounts(data.modelId);
+  } else {
+    console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} created without modelId`);
   }
 });
 
@@ -46,6 +53,8 @@ exports.onToolDeleted = onDocumentDeleted(`${TOOLS_PATH}/{toolId}`, async (event
   const data = event.data?.data();
   if (data?.modelId) {
     await recomputeModelCounts(data.modelId);
+  } else {
+    console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} deleted without modelId`);
   }
 });
 
@@ -53,13 +62,19 @@ exports.onToolUpdated = onDocumentUpdated(`${TOOLS_PATH}/{toolId}`, async (event
   const before = event.data?.before?.data();
   const after = event.data?.after?.data();
   if (!before || !after) return;
-  // Recompute se modelId mudou (rebranding) ou se status mudou para/de RETIRED
+
   const modelChanged = before.modelId !== after.modelId;
   const retirementChanged = (before.status === 'RETIRED') !== (after.status === 'RETIRED');
+
   if (modelChanged) {
     if (before.modelId) await recomputeModelCounts(before.modelId);
+    else console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} had no previous modelId`);
+
     if (after.modelId) await recomputeModelCounts(after.modelId);
+    else console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} updated without modelId`);
   } else if (retirementChanged && after.modelId) {
     await recomputeModelCounts(after.modelId);
+  } else if (retirementChanged) {
+    console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} changed retirement status without modelId`);
   }
 });
