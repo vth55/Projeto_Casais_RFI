@@ -193,7 +193,6 @@ export default function ReporteAvariaView() {
   const [type, setType] = useState(TOOL_MAINTENANCE_TYPES.DAMAGE);
   const [usable, setUsable] = useState(false);  // "O equipamento está utilizável?"
   const [notes, setNotes] = useState('');
-  const [cost, setCost] = useState('');
   const [photos, setPhotos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -272,7 +271,6 @@ export default function ReporteAvariaView() {
           usable ? '[Utilizável]' : '[Inutilizável]',
         ].filter(Boolean).join(' '),
         photos: photoRefs,
-        ...(cost ? { cost: Number(cost) } : {}),
       });
       setDone(true);
     } catch (err) {
@@ -346,20 +344,6 @@ export default function ReporteAvariaView() {
             className="w-full p-3 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
-
-        {(type === TOOL_MAINTENANCE_TYPES.REPAIR || type === TOOL_MAINTENANCE_TYPES.DAMAGE) && (
-          <div className="px-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Custo estimado (€, opcional)</label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={cost}
-              onChange={e => setCost(e.target.value)}
-              placeholder="0"
-              className="w-full p-3 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-        )}
 
         <PhotoCapture
           photos={photos}
