@@ -179,7 +179,7 @@ const FinanceiroView = () => {
           <p className="text-sm font-semibold uppercase tracking-wide text-primary-600">Valor Imobilizado &amp; Perdas</p>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Quanto vale o que está fora do armazém</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Visão financeira das equipamentos em obra, em atraso e declaradas perdidas.
+            Visão financeira dos equipamentos em obra, em atraso e declarados perdidos.
           </p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExport}>
@@ -267,7 +267,7 @@ const FinanceiroView = () => {
             <div>
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Em risco</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Sessões com mais de {overdueDays} dias ou equipamentos perdidas, ordenadas por valor.
+                Sessões com mais de {overdueDays} dias ou equipamentos perdidos, ordenados por valor.
               </p>
             </div>
             <Badge variant={riskRows.length > 0 ? 'warning' : 'success'} size="sm">

@@ -608,7 +608,7 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, toolsCount, activeS
                 </span>
               </div>
             )}
-            <p className="text-xs text-slate-500 dark:text-slate-400">Mova as equipamentos e encerre os checkouts antes de eliminar.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Mova os equipamentos e encerre os checkouts antes de eliminar.</p>
           </div>
         ) : step === 1 ? (
           /* Passo 1 — Confirmação inicial */

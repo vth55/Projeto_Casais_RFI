@@ -17,7 +17,7 @@ const EMPLOYEE_ROLES = [
   { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra', suggestedSystemRole: 'encarregado_obra' },
   { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras', suggestedSystemRole: 'gestor_frota' },
   { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Inspeção e reparação de equipamentos', suggestedSystemRole: 'tecnico_manutencao' },
-  { id: 'gestor_frota', label: 'Gestor de Inventário', color: 'blue', description: 'Gestão geral das equipamentos', suggestedSystemRole: 'gestor_frota' },
+  { id: 'gestor_frota', label: 'Gestor de Inventário', color: 'blue', description: 'Gestão geral dos equipamentos', suggestedSystemRole: 'gestor_frota' },
   { id: 'administrativo', label: 'Administrativo', color: 'slate', description: 'Funções administrativas', suggestedSystemRole: 'operador' },
 ];
 

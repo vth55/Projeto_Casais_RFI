@@ -318,7 +318,7 @@ const AnalisesView = () => {
           ) : (
             <div className="h-[280px] flex items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/10">
               <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                Todas as equipamentos tiveram checkout nos últimos {DORMANT_DAYS} dias.
+                Todos os equipamentos tiveram checkout nos últimos {DORMANT_DAYS} dias.
               </p>
             </div>
           )}

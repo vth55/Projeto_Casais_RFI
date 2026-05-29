@@ -25,7 +25,7 @@ const reportTypes = [
   {
     id: 'overdue',
     name: 'Atrasadas & Perdidas',
-    description: 'Sessões atrasadas, presumidas perdidas e equipamentos marcadas como perdidas.',
+    description: 'Sessões atrasadas, presumidas perdidas e equipamentos marcados como perdidos.',
     icon: AlertTriangle,
     filename: 'equipamentos_overdue_perdidas',
   },
