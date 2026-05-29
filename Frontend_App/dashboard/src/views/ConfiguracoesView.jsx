@@ -134,7 +134,7 @@ const ProcoreLivePanel = ({ data, loading, lastUpdate, onRefresh, projectName })
             </div>
             <div>
               <p className="text-4xl font-bold tabular-nums leading-none">{data.total_hours}h</p>
-              <p className="text-xs mt-1.5 opacity-70">Horas totais</p>
+              <p className="text-xs mt-1.5 opacity-70">Tempo reportado</p>
             </div>
             <div>
               <p className="text-4xl font-bold tabular-nums leading-none">{data.unique_workers}</p>
@@ -221,7 +221,7 @@ const ProcoreLivePanel = ({ data, loading, lastUpdate, onRefresh, projectName })
           </p>
           <p className="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1 leading-relaxed">
             GPS em tempo real via <code className="text-[10px] bg-amber-100 dark:bg-amber-800/30 px-1 rounded">/rest/v1.0/telematics/</code> —
-            CAT, Samsara, John Deere, United Rentals. Horas de motor e localização da frota.
+            Preparado para enriquecer obras, diretório, equipamentos e movimentos quando a integração ficar activa.
           </p>
         </div>
       </div>
@@ -812,7 +812,8 @@ const OperationalSettingsSection = () => {
     dormantToolDays: '',
     defaultReplacementCost: '',
     toolReportRequiresPhoto: false,
-    // Legacy (só persistidos quando o utilizador abre e guarda)
+    // Legacy values remain in Firestore for backend compatibility, but are not
+    // exposed in the primary configuration UI.
     fuelPricePerLitre: '',
     co2FactorPerLitre: '',
     defaultMaintenanceInterval: '',
@@ -842,10 +843,6 @@ const OperationalSettingsSection = () => {
         dormantToolDays: Math.max(7, Math.min(365, parseInt(form.dormantToolDays, 10) || 30)),
         defaultReplacementCost: Math.max(0, parseFloat(form.defaultReplacementCost) || 0),
         toolReportRequiresPhoto: Boolean(form.toolReportRequiresPhoto),
-        // Legacy — preservar valores existentes
-        fuelPricePerLitre: parseFloat(form.fuelPricePerLitre) || 1.89,
-        co2FactorPerLitre: parseFloat(form.co2FactorPerLitre) || 2.68,
-        defaultMaintenanceInterval: parseInt(form.defaultMaintenanceInterval, 10) || 150,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -859,10 +856,7 @@ const OperationalSettingsSection = () => {
     String(systemSettings.toolLostDays ?? 30) !== form.toolLostDays ||
     String(systemSettings.dormantToolDays ?? 30) !== form.dormantToolDays ||
     String(systemSettings.defaultReplacementCost ?? 0) !== form.defaultReplacementCost ||
-    Boolean(systemSettings.toolReportRequiresPhoto ?? false) !== form.toolReportRequiresPhoto ||
-    String(systemSettings.fuelPricePerLitre) !== form.fuelPricePerLitre ||
-    String(systemSettings.co2FactorPerLitre) !== form.co2FactorPerLitre ||
-    String(systemSettings.defaultMaintenanceInterval) !== form.defaultMaintenanceInterval;
+    Boolean(systemSettings.toolReportRequiresPhoto ?? false) !== form.toolReportRequiresPhoto;
 
   // Helper para campo numérico
   const NumField = ({ label, hint, value, onChange, min, max, step = 1 }) => (
@@ -1022,333 +1016,7 @@ const OperationalSettingsSection = () => {
         </div>
       </div>
 
-      {/* ── Secção Legacy (colapsada por defeito) ── */}
-      <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setLegacyOpen(o => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700/60 transition-colors text-left"
-        >
-          <div className="flex items-center gap-2">
-            <Fuel className="w-4 h-4 text-slate-400" />
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-              Parâmetros Legacy — Equipamentos Pesados
-            </span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-              Procore / SAP
-            </span>
-          </div>
-          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${legacyOpen ? 'rotate-90' : ''}`} />
-        </button>
-
-        {legacyOpen && (
-          <div className="px-4 pb-4 pt-3 space-y-3 bg-slate-50 dark:bg-slate-800/30">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Estes valores são usados apenas pelo Procore exporter e pelo modelo de equipamentos legacy (legacy).
-              Não afectam o fluxo NFC de equipamentos.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
-                  <Fuel className="w-3.5 h-3.5 text-amber-500" /> Preço Diesel (€/L)
-                </p>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.fuelPricePerLitre}
-                  onChange={e => setForm({ ...form, fuelPricePerLitre: e.target.value })}
-                  className="w-full px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
-                  <Leaf className="w-3.5 h-3.5 text-emerald-500" /> CO₂/litro diesel (kg)
-                </p>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.co2FactorPerLitre}
-                  onChange={e => setForm({ ...form, co2FactorPerLitre: e.target.value })}
-                  className="w-full px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
-                  <Wrench className="w-3.5 h-3.5 text-blue-500" /> Intervalo manutenção (horas)
-                </p>
-                <input
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={form.defaultMaintenanceInterval}
-                  onChange={e => setForm({ ...form, defaultMaintenanceInterval: e.target.value })}
-                  className="w-full px-2 py-1.5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </ConfigSection>
-  );
-};
-
-// ============================================================
-// RFID LOCATION CARDS SECTION
-// ============================================================
-const RFID_CARDS_PATH = `artifacts/${projectId}/public/data/rfidLocationCards`;
-
-const RfidCardModal = ({ card, obras, onSave, onClose, saving }) => {
-  const isEdit = !!card;
-  const [tipo, setTipo] = useState(card?.tipo || 'obra');
-  const [cardIdRaw, setCardIdRaw] = useState(
-    card ? card.id.replace(/^LOC_/i, '') : ''
-  );
-  const [obraId, setObraId] = useState(card?.obraId || '');
-  const [lat, setLat] = useState(card?.gps?.lat ?? '');
-  const [lon, setLon] = useState(card?.gps?.lon ?? '');
-  const [procoreProjectId, setProcoreProjectId] = useState(card?.procoreProjectId || '');
-
-  const obrasSorted = [...(obras || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  const selectedObra = obrasSorted.find(o => o.id === obraId);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const finalId = `LOC_${cardIdRaw.toUpperCase().replace(/^LOC_/i, '')}`;
-    const gps = lat && lon ? { lat: parseFloat(lat), lon: parseFloat(lon) } : null;
-    onSave({
-      cardId: finalId,
-      tipo,
-      obraId: tipo === 'estaleiro' ? 'estaleiro' : obraId,
-      obraName: tipo === 'estaleiro' ? 'Estaleiro' : (selectedObra?.name || obraId),
-      gps,
-      procoreProjectId: procoreProjectId || null,
-    });
-  };
-
-  return (
-    <Modal isOpen onClose={onClose} title={isEdit ? 'Editar Cartão RFID' : 'Novo Cartão RFID'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID do Cartão</label>
-          <div className="flex items-center">
-            <span className="inline-flex items-center px-3 py-2 text-sm text-slate-500 bg-slate-100 dark:bg-slate-700 border border-r-0 border-slate-300 dark:border-slate-600 rounded-l-lg">LOC_</span>
-            <input
-              type="text"
-              required
-              disabled={isEdit}
-              value={cardIdRaw}
-              onChange={e => setCardIdRaw(e.target.value.toUpperCase())}
-              placeholder="ESTALEIRO_PRINCIPAL"
-              className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-r-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-50 dark:disabled:bg-slate-700"
-            />
-          </div>
-          <p className="text-xs text-slate-400 mt-1">ID final: LOC_{cardIdRaw || '…'}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
-          <select
-            value={tipo}
-            onChange={e => setTipo(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="estaleiro">Estaleiro (parque de equipamentos)</option>
-            <option value="obra">Obra</option>
-          </select>
-        </div>
-
-        {tipo === 'obra' && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Obra</label>
-            <select
-              required
-              value={obraId}
-              onChange={e => setObraId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">Selecionar obra…</option>
-              {obrasSorted.map(o => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Latitude (opcional)</label>
-            <input
-              type="number"
-              step="any"
-              value={lat}
-              onChange={e => setLat(e.target.value)}
-              placeholder="41.1496"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Longitude (opcional)</label>
-            <input
-              type="number"
-              step="any"
-              value={lon}
-              onChange={e => setLon(e.target.value)}
-              placeholder="-8.6110"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID Projecto Procore (opcional)</label>
-          <input
-            type="text"
-            value={procoreProjectId}
-            onChange={e => setProcoreProjectId(e.target.value)}
-            placeholder="12345"
-            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <p className="text-xs text-slate-400 mt-1">Usado para sincronizar localização com Procore automaticamente via RFID</p>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="ghost" onClick={onClose} type="button">Cancelar</Button>
-          <Button type="submit" loading={saving}>{isEdit ? 'Guardar' : 'Criar Cartão'}</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-};
-
-const RfidLocationCardsSection = () => {
-  const [cards, setCards] = useState([]);
-  const [loadingCards, setLoadingCards] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editCard, setEditCard] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const { obras } = useStore();
-
-  const loadCards = async () => {
-    setLoadingCards(true);
-    try {
-      const snap = await getDocs(collection(db, RFID_CARDS_PATH));
-      setCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } finally {
-      setLoadingCards(false);
-    }
-  };
-
-  useEffect(() => { loadCards(); }, []);
-
-  const handleSave = async (formData) => {
-    setSaving(true);
-    try {
-      await setDoc(doc(db, RFID_CARDS_PATH, formData.cardId), {
-        obraId: formData.obraId,
-        obraName: formData.obraName,
-        tipo: formData.tipo,
-        gps: formData.gps,
-        procoreProjectId: formData.procoreProjectId,
-        updatedAt: serverTimestamp(),
-      });
-      await loadCards();
-      setShowModal(false);
-      setEditCard(null);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (cardId) => {
-    if (!confirm(`Eliminar cartão ${cardId}?`)) return;
-    await deleteDoc(doc(db, RFID_CARDS_PATH, cardId));
-    setCards(prev => prev.filter(c => c.id !== cardId));
-  };
-
-  const estaleiro = cards.filter(c => c.tipo === 'estaleiro');
-  const obra = cards.filter(c => c.tipo !== 'estaleiro');
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">Cartões RFID de Localização</h3>
-          <p className="text-sm text-slate-500 mt-0.5">Cartões físicos associados a localizações (estaleiro ou obras). Ao passar na leitora junto com uma equipamento, actualizam a sua localização automaticamente.</p>
-        </div>
-        <Button icon={Plus} onClick={() => { setEditCard(null); setShowModal(true); }}>Novo Cartão</Button>
-      </div>
-
-      {loadingCards ? (
-        <div className="text-center py-8 text-slate-400">A carregar cartões…</div>
-      ) : cards.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-          <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-medium">Nenhum cartão registado</p>
-          <p className="text-sm text-slate-400 mt-1">Crie cartões para registar localizações via RFID</p>
-          <Button className="mt-4" icon={Plus} onClick={() => { setEditCard(null); setShowModal(true); }}>Criar primeiro cartão</Button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {estaleiro.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Estaleiro</p>
-              <div className="space-y-2">
-                {estaleiro.map(card => (
-                  <div key={card.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                      <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white font-mono">{card.id}</p>
-                      <p className="text-xs text-slate-500">{card.obraName}{card.gps ? ` · ${card.gps.lat.toFixed(4)}, ${card.gps.lon.toFixed(4)}` : ''}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditCard(card); setShowModal(true); }} />
-                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(card.id)} className="text-red-500 hover:text-red-700" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {obra.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Obras ({obra.length})</p>
-              <div className="space-y-2">
-                {obra.map(card => (
-                  <div key={card.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                      <MapPin className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white font-mono">{card.id}</p>
-                      <p className="text-xs text-slate-500">{card.obraName}{card.gps ? ` · ${card.gps.lat.toFixed(4)}, ${card.gps.lon.toFixed(4)}` : ''}{card.procoreProjectId ? ` · Procore #${card.procoreProjectId}` : ''}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditCard(card); setShowModal(true); }} />
-                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(card.id)} className="text-red-500 hover:text-red-700" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {showModal && (
-        <RfidCardModal
-          card={editCard}
-          obras={obras}
-          onSave={handleSave}
-          onClose={() => { setShowModal(false); setEditCard(null); }}
-          saving={saving}
-        />
-      )}
-    </div>
   );
 };
 
@@ -1888,22 +1556,22 @@ const ConfiguracoesView = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">Alertas de Manutenção</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar quando equipamento atinge 80% do limite de horas</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Devoluções atrasadas</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Criar alerta quando um equipamento fica fora além do limite definido</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">Anomalias de Duração</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar quando uma sessão excede um limite de tempo sem fecho</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Perda presumida</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Escalar automaticamente quando o equipamento continua sem devolução</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Fecho de Sessões</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Fechar sessões automaticamente após 14 horas</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Avarias reportadas</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Notificar logística/manutenção quando há novo reporte por NFC</p>
                 </div>
                 <Badge variant="success">Ativo</Badge>
               </div>
@@ -2004,21 +1672,21 @@ const ConfiguracoesView = () => {
             {canEditOperationalParams && <OperationalSettingsSection />}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ConfigSection icon={Settings} title="Limites de Sessão" description="Thresholds para alertas automáticos">
+              <ConfigSection icon={Settings} title="Limites Operacionais" description="Thresholds activos para alertas de equipamentos">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">Anomalia de Duração</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Horas contínuas para disparar alerta</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Devolução atrasada</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Dias até criar alerta de atraso</p>
                     </div>
-                    <Badge>5h</Badge>
+                    <Badge>{systemSettings.toolOverdueDays ?? 7}d</Badge>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Fecho Sessão</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Fechar sessão automaticamente</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Perda presumida</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Dias até escalar para provável perda</p>
                     </div>
-                    <Badge>14h</Badge>
+                    <Badge>{systemSettings.toolLostDays ?? 30}d</Badge>
                   </div>
                 </div>
               </ConfigSection>

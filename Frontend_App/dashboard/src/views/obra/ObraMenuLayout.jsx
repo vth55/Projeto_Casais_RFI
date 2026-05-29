@@ -9,7 +9,6 @@ import {
   BarChart, Bar,
 } from 'recharts';
 import useStore from '../../store/useStore';
-import useAvariasStore from '../../store/useAvariasStore';
 import { useObraId, navigateToObra } from '../../hooks/useObraId';
 import PeriodHeader from '../../components/obra/PeriodHeader';
 import KpiCard from '../../components/obra/KpiCard';
@@ -17,7 +16,6 @@ import EquipamentosObraView from './EquipamentosObraView';
 import SessoesObraView from './SessoesObraView';
 import ManutencaoObraView from './ManutencaoObraView';
 import { getDateRangeFromPreset, getPreviousPeriodRange } from '../../utils/chartDataHelpers';
-import { MAINTENANCE_ALERT_PCT } from '../../utils/sessionHelpers';
 
 // ─── TAB DEFINITIONS ─────────────────────────────────────────────────────────
 
@@ -79,10 +77,10 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
     getToolSessionsByObraId,
     toolSessions,
     tools,
+    toolMaintenance,
     getToolsByObraId,
     getTopToolsByUsage,
   } = useStore();
-  const { avarias } = useAvariasStore();
 
   const kpis = useMemo(() => getToolKPIs(obraId, dateRange), [obraId, dateRange, toolSessions, tools]);
   const prevKpis = useMemo(
@@ -115,14 +113,10 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
     [getTopToolsByUsage, dateRange, toolSessions, tools]
   );
 
-  const openAvarias = avarias.filter(a => {
-    const toolInObra = obraTools.some(t => t.id === a.toolId);
-    return toolInObra && a.status !== 'resolvida';
+  const openAvarias = toolMaintenance.filter(record => {
+    const toolInObra = obraTools.some(t => t.id === record.toolId);
+    return toolInObra && record.status !== 'DONE';
   }).length;
-  const alertTools = obraTools.filter(tool => {
-    const threshold = tool.maintenanceThreshold || tool.maintenanceInterval || 150;
-    return ((tool.partialHours || 0) / threshold) >= MAINTENANCE_ALERT_PCT;
-  });
 
   const formatDate = (d) => {
     const parts = d.split('-');
@@ -186,16 +180,8 @@ const ResumoView = ({ obraId, dateRange, prevDateRange, showComparison, loading 
       </div>
 
       {/* ALERTS STRIP */}
-      {(alertTools.length > 0 || openAvarias > 0 || kpis.overdueCount > 0) && (
+      {(openAvarias > 0 || kpis.overdueCount > 0) && (
         <div className="flex flex-wrap gap-2">
-          {alertTools.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>
-                <strong>{alertTools.length}</strong> equipamento{alertTools.length > 1 ? 's' : ''} próxima{alertTools.length > 1 ? 's' : ''} de inspeção/manutenção
-              </span>
-            </div>
-          )}
           {openAvarias > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />

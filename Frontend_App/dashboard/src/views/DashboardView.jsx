@@ -12,9 +12,7 @@ import {
 import useStore from '../store/useStore';
 import useLegacyMachinesStore from '../store/legacy/machinesStore';
 import { parseFirestoreTimestamp } from '../utils/dateUtils';
-import useAvariasStore from '../store/useAvariasStore';
 import { Card, StatCard, Button, Badge, Skeleton } from '../components/ui';
-import MachineStoryRings from '../components/ui/MachineStoryRings';
 import LiveTimer from '../components/ui/LiveTimer';
 import useDeviceType from '../hooks/useDeviceType';
 import { useProcoreStatus } from '../hooks/useProcoreStatus';
@@ -748,7 +746,7 @@ const MobileActiveSessionCard = ({ session, machine, operator }) => (
   </button>
 );
 
-const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanceAlerts, chartData }) => {
+const MobileDashboard = ({ kpis, activeSessions, machines, operators, chartData }) => {
   const { setActiveView } = useStore();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
@@ -763,38 +761,12 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanc
         </p>
       </div>
 
-      {/* Machine Story Rings */}
-      <MachineStoryRings />
-
-      {/* Alerta de manutenção — destaque mobile */}
-      {maintenanceAlerts.length > 0 && (
-        <button
-          onClick={() => setActiveView('manutencao-alertas')}
-          className="w-full flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl active:scale-[0.98] transition-transform text-left"
-          style={{ WebkitTapHighlightColor: 'transparent' }}
-        >
-          <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
-              {maintenanceAlerts.length} alerta{maintenanceAlerts.length > 1 ? 's' : ''} de manutenção
-            </p>
-            <p className="text-xs text-amber-600 dark:text-amber-400 truncate">
-              {maintenanceAlerts.slice(0, 2).map(m => m.name).join(', ')}
-              {maintenanceAlerts.length > 2 ? ` +${maintenanceAlerts.length - 2}` : ''}
-            </p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-amber-500 flex-shrink-0" />
-        </button>
-      )}
-
       {/* KPI Grid 2x2 */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={Activity} title="Horas" value={kpis.totalHours} unit="h" color="primary" variant="gradient" className="animate-fade-in stagger-1" />
-        <StatCard icon={Truck} title="Utilização" value={kpis.utilizationRate} unit="%" color="emerald" variant="gradient" className="animate-fade-in stagger-2" />
-        <StatCard icon={Play} title="Ativas" value={kpis.activeSessions} color={kpis.activeSessions > 0 ? 'emerald' : 'slate'} className="animate-fade-in stagger-3" />
-        <StatCard icon={Wrench} title="Alertas" value={maintenanceAlerts.length} color={maintenanceAlerts.length > 0 ? 'red' : 'slate'} className="animate-fade-in stagger-4" />
+        <StatCard icon={Package} title="Equipamentos" value={kpis.totalTools} color="primary" variant="gradient" className="animate-fade-in stagger-1" />
+        <StatCard icon={TrendingUp} title="Utilização" value={kpis.utilizationPct} unit="%" color="emerald" variant="gradient" className="animate-fade-in stagger-2" />
+        <StatCard icon={Play} title="Em uso" value={kpis.activeNow} color={kpis.activeNow > 0 ? 'emerald' : 'slate'} className="animate-fade-in stagger-3" />
+        <StatCard icon={AlertTriangle} title="Atrasadas" value={kpis.overdueCount} color={kpis.overdueCount > 0 ? 'red' : 'slate'} className="animate-fade-in stagger-4" />
       </div>
 
       {/* Sessões ativas */}
@@ -819,14 +791,11 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanc
         </div>
       )}
 
-      {/* Procore — reconciliação mobile-native */}
-      <MobileProcoreCard />
-
-      {/* Mini gráfico de atividade */}
+      {/* Mini gráfico de movimentos */}
       <Card className="p-4 hover-enterprise">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-bold text-slate-900 dark:text-white">Atividade Semanal</span>
-          <Badge variant="primary" className="text-xs">Horas</Badge>
+          <span className="text-sm font-bold text-slate-900 dark:text-white">Movimentos Recentes</span>
+          <Badge variant="primary" className="text-xs">Checkouts</Badge>
         </div>
         <ResponsiveContainer width="100%" height={120}>
           <AreaChart data={chartData}>
@@ -841,11 +810,11 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, maintenanc
               if (!active || !payload?.length) return null;
               return (
                 <div className="bg-slate-900 text-white rounded-lg px-2 py-1 text-xs">
-                  <span className="font-bold">{payload[0]?.value}h</span>
+                  <span className="font-bold">{payload[0]?.value} checkouts</span>
                 </div>
               );
             }} />
-            <Area type="monotone" dataKey="horas" stroke="#005EB8" strokeWidth={2} fill="url(#mobileGradient)" />
+            <Area type="monotone" dataKey="checkouts" stroke="#005EB8" strokeWidth={2} fill="url(#mobileGradient)" />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
@@ -949,7 +918,7 @@ const WorkFocusPanel = ({ machines, avarias }) => {
 
 const DashboardView = () => {
   // Pivot 2026-05: dados primários vêm de tools/toolSessions.
-  // machines/sessions (legacy) vêm do useLegacyMachinesStore — só para Procore e WorkFocus.
+  // sessions legacy vêm do useLegacyMachinesStore apenas para reconciliação Procore.
   const {
     operators, systemSettings, loading,
     tools, toolSessions, getToolsInUse, getOverdueTools, getTopToolsByUsage, getToolKPIs,
@@ -958,9 +927,6 @@ const DashboardView = () => {
     getModelStats, getTopModelsByUsage, getModelsWithMostBreakdowns,
     setActiveView,
   } = useStore();
-  // LEGACY — heavy machines para WorkFocusPanel + maintenanceAlerts badge
-  const { machines, sessions } = useLegacyMachinesStore();
-  const { avarias } = useAvariasStore();
   const { isMobile } = useDeviceType();
 
   // Calcular dateRange a partir do filtro global (mesmo formato esperado pelos selectors)
@@ -984,7 +950,7 @@ const DashboardView = () => {
   // Sessões activas (até 4) — usa selector pivot
   const activeSessions = useMemo(() => getToolsInUse().slice(0, 4), [getToolsInUse, toolSessions]);
 
-  // Chart "Movimentos por dia" — substitui o legacy "Atividade Semanal" (horas + combustível)
+  // Chart "Movimentos por dia" — conta checkouts/devoluções de equipamentos.
   // Para small tools faz sentido contar checkouts/devoluções, não horas de operação.
   const chartData = useMemo(() => {
     const start = dateRange.start;
@@ -1038,13 +1004,6 @@ const DashboardView = () => {
     [toolSessions]
   );
 
-  // Alertas manutenção (legacy — heavy machines, mantém para compat enquanto o user quiser manter o módulo)
-  const maintenanceAlerts = machines.filter(m => {
-    const interval = m.maintenanceInterval || systemSettings?.defaultMaintenanceInterval || 150;
-    const threshold = interval * 0.8;
-    return (m.partialHours || m.totalHours || 0) >= threshold;
-  });
-
   const COLORS = ['#005EB8', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 
   if (loading) {
@@ -1071,7 +1030,6 @@ const DashboardView = () => {
         activeSessions={activeSessions}
         machines={tools}
         operators={operators}
-        maintenanceAlerts={maintenanceAlerts}
         chartData={chartData}
       />
     );
@@ -1244,51 +1202,6 @@ const DashboardView = () => {
         )}
       </div>
 
-      {/* Alerta de Manutenção */}
-      {maintenanceAlerts.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 shadow-lg">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-              <AlertTriangle className="w-7 h-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-white">Manutenção Necessária</h3>
-              <p className="text-white/80 mt-1">
-                {maintenanceAlerts.length} equipamento{maintenanceAlerts.length > 1 ? 's' : ''} próximo{maintenanceAlerts.length > 1 ? 's' : ''} do limite de horas
-              </p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {maintenanceAlerts.slice(0, 3).map(machine => (
-                  <div key={machine.id} className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
-                    <span className="text-sm font-medium text-white">
-                      {machine.name}: {machine.partialHours || machine.totalHours}h
-                    </span>
-                  </div>
-                ))}
-                {maintenanceAlerts.length > 3 && (
-                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
-                    <span className="text-sm font-medium text-white">
-                      +{maintenanceAlerts.length - 3} mais
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <Button
-              variant="primary"
-              className="border-none shadow-md"
-              icon={ArrowRight}
-              iconPosition="right"
-              onClick={() => useStore.getState().setActiveView('manutencao')}
-            >
-              Ver Todos
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Work Focus — IA Preditiva */}
-      <WorkFocusPanel machines={machines} avarias={avarias} />
-
       {/* KPIs Secundários — pivot tools */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
@@ -1310,15 +1223,12 @@ const DashboardView = () => {
           color="violet"
         />
         <StatCard
-          icon={Wrench}
-          title="Manutenção"
-          value={maintenanceAlerts.length}
-          color={maintenanceAlerts.length > 0 ? 'amber' : 'slate'}
+          icon={AlertTriangle}
+          title="Avarias Abertas"
+          value={openDamageCount}
+          color={openDamageCount > 0 ? 'red' : 'slate'}
         />
       </div>
-
-      {/* Procore Reconciliation Hub — Painel executivo Fase 4 */}
-      <ProcoreReconciliationPanel />
 
       {/* Gráficos e Sessões */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

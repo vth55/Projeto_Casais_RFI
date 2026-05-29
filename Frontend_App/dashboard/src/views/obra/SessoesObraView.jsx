@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Activity, Clock, Euro, AlertTriangle, X,
+  Activity, Clock, AlertTriangle, X,
   ChevronRight, ChevronDown, Download, User,
-  CheckCircle, AlertCircle, RefreshCw, ExternalLink, Leaf,
+  CheckCircle, AlertCircle, RefreshCw, ExternalLink,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import {
@@ -64,7 +64,7 @@ const SummaryHeader = ({ summary, onClickAnomalies }) => {
       color: summary.anomalies > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400',
       bg:    summary.anomalies > 0 ? 'bg-amber-50 dark:bg-amber-900/20'    : 'bg-slate-100 dark:bg-slate-700',
       clickable: true, onClick: onClickAnomalies },
-    { label: 'Horas fechadas',   value: `${summary.totalHours.toFixed(1)}h`,  icon: Clock,        color: 'text-slate-700 dark:text-slate-200',      bg: 'bg-slate-50 dark:bg-slate-700/50' },
+    { label: 'Tempo fechado',    value: `${summary.totalHours.toFixed(1)}h`,  icon: Clock,        color: 'text-slate-700 dark:text-slate-200',      bg: 'bg-slate-50 dark:bg-slate-700/50' },
   ];
 
   return (
@@ -104,7 +104,7 @@ const FilterBar = ({
       onChange={e => setFilterTool(e.target.value)}
       className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
     >
-      <option value="all">Todas as equipamentos</option>
+      <option value="all">Todos os equipamentos</option>
       {tools.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
     </select>
 
@@ -162,7 +162,7 @@ const DayHeader = ({ dateKey, sessions, collapsed, onToggle }) => {
       className="bg-slate-50 dark:bg-slate-700/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
       onClick={onToggle}
     >
-      <td colSpan={8} className="px-4 py-2.5">
+      <td colSpan={7} className="px-4 py-2.5">
         <div className="flex items-center gap-3">
           <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${collapsed ? '-rotate-90' : ''}`} />
           <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm capitalize">{label}</span>
@@ -215,9 +215,6 @@ const SessionRow = ({ session, onClick }) => {
           {STATUS_LABEL[session.status] || session.status}
         </span>
       </td>
-      <td className="px-4 py-2.5 text-sm tabular-nums text-right text-slate-500">
-        {session.costs?.total ? `${Math.round(session.costs.total)}€` : '—'}
-      </td>
       <td className="px-4 py-2.5 text-right">
         <div className="flex items-center justify-end gap-1">
           {hasAnomalies && (
@@ -269,7 +266,6 @@ const SessionCard = ({ session, onClick }) => {
         <span className="font-medium">
           {session.status === 'OPEN' ? '—' : formatDuration(session.durationHours)}
         </span>
-        {session.costs?.total > 0 && <span>{Math.round(session.costs.total)}€</span>}
         {hasAnomalies && <AlertTriangle className="w-3 h-3 text-amber-500 ml-auto shrink-0" />}
       </div>
     </div>
@@ -279,11 +275,6 @@ const SessionCard = ({ session, onClick }) => {
 // ─── SESSION DRAWER ───────────────────────────────────────────────────────────
 
 const SessionDrawer = ({ session, setActiveView, onClose }) => {
-  const co2Factor = 2.68;
-  const estimatedCO2 = session.durationHours
-    ? (session.tool.consumptionRate || 0) * session.durationHours * co2Factor
-    : null;
-
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
       <div className="flex-1 bg-black/30" />
@@ -345,24 +336,6 @@ const SessionDrawer = ({ session, setActiveView, onClose }) => {
                 <p className="text-xs text-slate-400">
                   {session.operatorId ? `ID: ${session.operatorId}` : 'Sem registo de operador'}
                 </p>
-              </div>
-            </div>
-
-            {/* Cost + CO₂ — cost may be absent in localhost/sessions without tariff */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-                <p className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                  <Euro className="w-3.5 h-3.5 text-slate-400" />
-                  {session.costs?.total !== undefined ? `${Math.round(session.costs.total)}€` : '—'}
-                </p>
-                <p className="text-xs text-slate-500">Custo estimado</p>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-                <p className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                  <Leaf className="w-3.5 h-3.5 text-slate-400" />
-                  {estimatedCO2 !== null ? `${Math.round(estimatedCO2)} kg` : '—'}
-                </p>
-                <p className="text-xs text-slate-500">CO₂ estimado</p>
               </div>
             </div>
 
@@ -543,7 +516,7 @@ const SessoesObraView = ({ obraId, dateRange }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    {['Equipamento', 'Operador', 'Início', 'Fim', 'Duração', 'Estado', 'Custo', ''].map((h, i) => (
+                    {['Equipamento', 'Operador', 'Início', 'Fim', 'Duração', 'Estado', ''].map((h, i) => (
                       <th
                         key={i}
                         className={`px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide ${i >= 6 ? 'text-right' : 'text-left'}`}
