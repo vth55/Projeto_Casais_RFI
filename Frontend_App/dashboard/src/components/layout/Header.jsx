@@ -38,7 +38,7 @@ const viewTitles = {
   'financeiro-rentabilidade': { title: 'Rentabilidade', description: 'Análise de rentabilidade' },
   analises: { title: 'Análises', description: 'Análises e estatísticas' },
   'analises-geral': { title: 'Análise Geral', description: 'Visão geral das operações' },
-  'analises-emissoes': { title: 'Emissões CO₂', description: 'Análise de emissões' },
+  'analises-emissoes': { title: 'Impacto Operacional', description: 'Risco, utilização e perdas' },
   'analises-utilizacao': { title: 'Utilização', description: 'Taxa de utilização' },
   relatorios: { title: 'Relatórios', description: 'Exportação de relatórios' },
   configuracoes: { title: 'Configurações', description: 'Configurações do sistema' },
