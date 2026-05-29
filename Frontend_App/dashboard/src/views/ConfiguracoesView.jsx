@@ -1425,7 +1425,6 @@ const ConfiguracoesView = () => {
   const tabs = [
     { id: 'general', label: 'Geral', icon: Settings },
     { id: 'roles', label: 'Perfis de Acesso', icon: Shield },
-    { id: 'rfid_cards', label: 'Cartões RFID', icon: CreditCard },
     { id: 'integrations', label: 'Integrações', icon: Link2 },
     { id: 'demo', label: 'Modo Demo', icon: Users },
     { id: 'notifications', label: 'Notificações', icon: Bell },
@@ -1956,9 +1955,6 @@ const ConfiguracoesView = () => {
             </div>
           </ConfigSection>
         );
-
-      case 'rfid_cards':
-        return <RfidLocationCardsSection />;
 
       case 'integrations':
         return <ProcoreIntegrationSection />;

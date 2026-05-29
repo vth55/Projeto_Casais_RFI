@@ -202,6 +202,7 @@ export default function ReporteAvariaView() {
 
   // Se URL passou um id que existe em tools, confirmar; senão mantém para o picker mostrar nada e o utilizador escolher.
   useEffect(() => {
+    if (!tools.length) return;
     if (initialToolId && !tools.find(t => t.id === initialToolId)) {
       // ID inválido — limpar para mostrar picker
       setToolId(null);
