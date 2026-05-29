@@ -9,11 +9,11 @@ import { PERMISSIONS, getLevelLabel } from '../config/permissions';
  * Definição de cargos de TRABALHO (job roles - o que a pessoa FAZ no terreno)
  * Estes são diferentes dos perfis de SISTEMA (system roles - o que a pessoa pode ACEDER no PWA)
  *
- * NOTA: operadores de obra usam RFID/NFC para levantar e devolver equipamentos.
+ * NOTA: operadores de obra usam credencial NFC/app para levantar e devolver equipamentos.
  * O PWA é para gestores, supervisores e pessoal de escritório.
  */
 const EMPLOYEE_ROLES = [
-  { id: 'operador', label: 'Operador de Equipamentos', color: 'primary', description: 'Levanta e devolve equipamentos via RFID/NFC', suggestedSystemRole: null },
+  { id: 'operador', label: 'Operador de Equipamentos', color: 'primary', description: 'Levanta e devolve equipamentos via NFC/app', suggestedSystemRole: null },
   { id: 'encarregado', label: 'Encarregado de Obra', color: 'amber', description: 'Supervisiona equipa em obra', suggestedSystemRole: 'encarregado_obra' },
   { id: 'supervisor', label: 'Supervisor', color: 'purple', description: 'Coordena múltiplas obras', suggestedSystemRole: 'gestor_frota' },
   { id: 'tecnico_manutencao', label: 'Técnico de Manutenção', color: 'emerald', description: 'Inspeção e reparação de equipamentos', suggestedSystemRole: 'tecnico_manutencao' },
@@ -183,7 +183,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
           <div className="flex items-center gap-1.5">
             <CreditCard className="w-4 h-4" />
-            ID Cartão RFID
+            Credencial do operador
           </div>
         </label>
 
@@ -227,7 +227,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                      Cartão capturado!
+                      Credencial capturada!
                     </p>
                     <p className="text-xl font-mono font-black tracking-wider text-slate-900 dark:text-white truncate">
                       {formData.cardId}
@@ -244,7 +244,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
                     type="button"
                     onClick={clearDetectedCard}
                     className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-white/60 dark:hover:bg-slate-700/60 transition flex-shrink-0"
-                    title="Limpar e ler outro cartão"
+                    title="Limpar e ler outra credencial"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -257,10 +257,10 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-violet-700 dark:text-violet-400">
-                      Aproxime o cartão do telemóvel...
+                      Aproxime a credencial do telemóvel...
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Segure o cartão RFID junto ao sensor NFC do dispositivo
+                      Segure a credencial junto ao sensor NFC do dispositivo
                     </p>
                   </div>
                   <button
@@ -286,7 +286,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
                       A escutar sensores de obra...
                     </p>
                     <p className="text-xs text-slate-400 dark:text-slate-500">
-                      Passe um cartão no leitor RFID ou digite manualmente
+                      Leia a credencial no telemóvel ou digite manualmente
                     </p>
                   </div>
                   <button
@@ -455,7 +455,7 @@ const OperatorForm = ({ operator, obras, onSave, onCancel, assignableRoles, canA
           placeholder="Ex: joao.silva@casais.pt"
         />
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Campo de contacto. O levantamento de equipamentos é feito via cartão RFID/NFC, não email.
+          Campo de contacto. O levantamento de equipamentos é feito via credencial NFC/app, não email.
         </p>
       </div>
 
@@ -731,7 +731,7 @@ const OperadoresView = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Operadores</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de operadores, cargos e cartões RFID</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de operadores, cargos e credenciais</p>
         </div>
         <Button icon={Plus} onClick={() => setShowModal(true)}>Novo Operador</Button>
       </div>
@@ -740,7 +740,7 @@ const OperadoresView = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard icon={Users} title="Total" value={operators.length} color="primary" />
         <StatCard icon={Activity} title="Ativos" value={operatorStats.filter(op => op.isActive).length} color="emerald" />
-        <StatCard icon={CreditCard} title="Com RFID" value={operators.filter(o => o.cardId).length} color="blue" />
+        <StatCard icon={CreditCard} title="Com credencial" value={operators.filter(o => o.cardId).length} color="blue" />
         <StatCard icon={Briefcase} title="Encarregados" value={roleStats.encarregado || 0} color="amber" />
         <StatCard icon={Briefcase} title="Técnicos" value={roleStats.tecnico_manutencao || 0} color="emerald" />
         <StatCard icon={Clock} title="Checkouts totais" value={operatorStats.reduce((sum, op) => sum + op.sessionCount, 0)} color="slate" />
@@ -762,11 +762,11 @@ const OperadoresView = () => {
             </div>
             <div>
               <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                Operadores do Procore sem RFID
+                Operadores do Procore sem credencial
                 <Badge variant="primary">{pendingFromProcore.length}</Badge>
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Encontrados no directory do Procore. Associe um cartão RFID para os activar.
+                Encontrados no directory do Procore. Associe uma credencial para os activar.
               </p>
             </div>
           </div>
@@ -793,7 +793,7 @@ const OperadoresView = () => {
                     </span>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
                       <CreditCard className="w-2.5 h-2.5" />
-                      Sem RFID
+                      Sem credencial
                     </span>
                     <Button
                       size="xs"
@@ -899,7 +899,7 @@ const OperadoresView = () => {
                           {!op.cardId && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                               <CreditCard className="w-2.5 h-2.5" />
-                              Sem RFID
+                              Sem credencial
                             </span>
                           )}
                         </div>

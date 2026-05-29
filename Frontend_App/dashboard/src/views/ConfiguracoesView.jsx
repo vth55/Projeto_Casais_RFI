@@ -179,7 +179,7 @@ const ProcoreLivePanel = ({ data, loading, lastUpdate, onRefresh, projectName })
           <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700">
             <Clock className="w-7 h-7 mb-2 opacity-40" />
             <p className="text-sm font-medium">Sem timecards hoje</p>
-            <p className="text-xs mt-0.5 opacity-70">Scans RFID aparecem aqui em tempo real</p>
+            <p className="text-xs mt-0.5 opacity-70">Leituras NFC aparecem aqui em tempo real</p>
           </div>
         )}
       </div>
