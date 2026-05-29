@@ -10,7 +10,35 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() &&
         get(/databases/$(database)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid))
-          .data.systemRole in ['admin', 'gestor'];
+          .data.systemRole in ['admin', 'it', 'gestor', 'gestor_frota'];
+    }
+    function hasSystemRole(roles) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid))
+          .data.systemRole in roles;
+    }
+    function canManageLogistics() {
+      return hasSystemRole(['admin', 'it', 'gestor', 'gestor_frota', 'logistica', 'encarregado_obra']);
+    }
+    function isToolOperationalUpdate() {
+      return isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'currentObraId',
+          'currentObraName',
+          'storageLocation',
+          'logisticsStatus',
+          'pendingTransferId',
+          'pendingDestinationObraId',
+          'pendingDestinationName',
+          'lastMovementAt',
+          'lastConfirmedAt',
+          'lastConfirmedBy',
+          'maintenanceStatusUpdatedAt',
+          'lastMaintenanceId',
+          'lostAt',
+          'updatedAt'
+        ]);
     }
     function isOperator() {
       return isAuthenticated();
@@ -34,7 +62,8 @@ service cloud.firestore {
 
     match /artifacts/casais-rfid/public/data/tools/{toolId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isToolOperationalUpdate();
     }
 
     match /artifacts/casais-rfid/public/data/tool_sessions/{sessionId} {
@@ -57,8 +86,7 @@ service cloud.firestore {
     match /artifacts/casais-rfid/public/data/tool_maintenance/{recordId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAdmin() ||
-        (isAuthenticated() && request.auth.uid == resource.data.reportedBy);
+      allow update: if isAuthenticated();
       allow delete: if isAdmin();
     }
 
@@ -66,6 +94,12 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update, delete: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/tool_transfers/{transferId} {
+      allow read: if isAuthenticated();
+      allow create, update: if canManageLogistics();
+      allow delete: if isAdmin();
     }
 
     // ============================================
