@@ -1357,7 +1357,7 @@ const ConfiguracoesView = () => {
                   </div>
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">Gestor Financeiro</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Custos, tarifários e relatórios</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Valor de inventário, perdas e relatórios</p>
                   </div>
                   {currentUser?.systemRole === 'gestor_financeiro' && (
                     <Badge variant="success" className="ml-auto">Ativo</Badge>

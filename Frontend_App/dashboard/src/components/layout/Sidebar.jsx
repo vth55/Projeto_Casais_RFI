@@ -38,12 +38,7 @@ const navigation = [
     ],
   },
   { id: 'estaleiro',   label: 'Armazém',        icon: Warehouse },
-  { id: 'financeiro',  label: 'Financeiro',    icon: Wallet,
-    submenu: [
-      { id: 'financeiro-tarifarios', label: 'Tarifários' },
-      { id: 'financeiro-custos',     label: 'Custos' },
-    ],
-  },
+  { id: 'financeiro',  label: 'Financeiro',    icon: Wallet },
   { id: 'analises',    label: 'Análises',      icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',    icon: FileText },
   { id: 'catalogo',    label: 'Catálogo',       icon: BookOpen },

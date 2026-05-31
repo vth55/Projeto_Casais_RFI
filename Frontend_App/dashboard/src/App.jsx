@@ -394,8 +394,8 @@ export default function App() {
       </Layout>
       {/* NFC global overlay — aparece em qualquer vista quando tag é lida */}
       <NfcOverlay />
-      {/* DevTools — apenas para roles com showDevTools: true (admin, it) */}
-      {currentRole?.showDevTools && (
+      {/* DevTools ficam disponíveis localmente, mas nunca poluem a PWA publicada. */}
+      {import.meta.env.DEV && currentRole?.showDevTools && (
         <Suspense fallback={null}>
           <DevTools />
         </Suspense>

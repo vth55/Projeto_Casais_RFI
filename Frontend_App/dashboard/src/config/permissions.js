@@ -171,7 +171,7 @@ export const DEFAULT_ROLES = {
   gestor_financeiro: {
     id: 'gestor_financeiro',
     name: 'Gestor Financeiro',
-    description: 'Acesso a custos, tarifários e relatórios financeiros',
+    description: 'Acesso a valor de inventário, perdas e relatórios financeiros',
     color: 'emerald',
     icon: 'Wallet',
     level: ROLE_LEVELS.GESTOR,
@@ -531,8 +531,8 @@ export const PERMISSION_CATEGORIES = {
     label: 'Financeiro',
     permissions: [
       { id: PERMISSIONS.FINANCIAL_VIEW, label: 'Ver Financeiro' },
-      { id: PERMISSIONS.FINANCIAL_TARIFFS, label: 'Gerir Tarifários' },
-      { id: PERMISSIONS.FINANCIAL_COSTS, label: 'Ver Custos' },
+      { id: PERMISSIONS.FINANCIAL_TARIFFS, label: 'Gerir valores de substituição' },
+      { id: PERMISSIONS.FINANCIAL_COSTS, label: 'Ver perdas e substituições' },
       { id: PERMISSIONS.FINANCIAL_EXPORT, label: 'Exportar Financeiro' },
     ],
   },
