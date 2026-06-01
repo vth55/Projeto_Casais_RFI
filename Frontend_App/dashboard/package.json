@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/clean-generated-assets.mjs && vite build",
     "build:android": "vite build --outDir dist --emptyOutDir",
     "deploy": "npm run build && cd ../../Backend_Cloud && firebase deploy --only hosting",
     "test": "vitest run",

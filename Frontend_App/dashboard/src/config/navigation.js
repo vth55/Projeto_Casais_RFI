@@ -159,11 +159,11 @@ export const navigationStructure = [
         description: 'Inspecoes e alertas pendentes',
       },
       {
-        id: 'manutencao-calendario',
-        label: 'Calendario',
+        id: 'manutencao-historico',
+        label: 'Historico',
         icon: Calendar,
-        path: '/manutencao/calendario',
-        description: 'Agendamentos',
+        path: '/manutencao/historico',
+        description: 'Registos de manutencao',
       },
       {
         id: 'manutencao-avarias',

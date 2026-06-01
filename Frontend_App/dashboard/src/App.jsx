@@ -3,13 +3,11 @@ import { getDocs, collection } from 'firebase/firestore';
 import { db, projectId } from './config/firebase';
 import { createAllMockData } from './utils/mockData';
 import useStore from './store/useStore';
-import useLegacyMachinesStore from './store/legacy/machinesStore';
 import useThemeStore from './store/useThemeStore';
 import { Layout } from './components/layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAPrompt from './components/PWAPrompt';
 import useAuthStore from './store/useAuthStore';
-import useAvariasStore from './store/useAvariasStore';
 import useNfcStore from './store/useNfcStore';
 import NfcOverlay from './components/NfcOverlay';
 // Capacitor: import estático para o listener appUrlOpen estar pronto antes de qualquer warm start
@@ -26,8 +24,8 @@ const ViewLoader = () => (
   </div>
 );
 
-// DevTools
-const DevTools = lazy(() => import('./dev/DevTools'));
+// DevTools nunca entram no bundle publicado.
+const DevTools = import.meta.env.DEV ? lazy(() => import('./dev/DevTools')) : null;
 
 // Página de Login
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -109,6 +107,7 @@ export default function App() {
     const PATH_TO_VIEW = {
       '/': 'maquinas-lista',
       '/equipamentos': 'maquinas-lista',
+      '/equipamentos/categorias': 'maquinas-categorias',
       '/dashboard': 'dashboard',
       '/obras': 'obras-todas',
       '/sessoes': 'sessoes-historico',
@@ -119,8 +118,13 @@ export default function App() {
       '/operadores': 'operadores',
       '/manutencao': 'manutencao-alertas',
       '/alertas': 'manutencao-alertas',
+      '/manutencao/historico': 'manutencao-historico',
+      '/manutencao/calendario': 'manutencao-historico',
+      '/manutencao/avarias': 'manutencao-avarias',
+      '/estaleiro': 'estaleiro',
       '/financeiro': 'financeiro-custos',
       '/analises': 'analises-geral',
+      '/analises/custos': 'analises-custos',
       '/relatorios': 'relatorios',
       '/configuracoes': 'configuracoes',
       '/mapa': 'mapa',
@@ -218,6 +222,13 @@ export default function App() {
   }, [initAuth]);
 
   useEffect(() => {
+    if (!isAuthenticated || window.location.pathname !== '/login') return;
+
+    window.history.replaceState({}, '', '/equipamentos');
+    setActiveView('maquinas-lista');
+  }, [isAuthenticated, setActiveView]);
+
+  useEffect(() => {
     // Só inicializar dados após o utilizador estar autenticado
     if (!isAuthenticated) return;
 
@@ -249,12 +260,9 @@ export default function App() {
 
       // Inicializar listeners Firestore
       const cleanup = initializeListeners();
-      const cleanupAvarias = useAvariasStore.getState().initializeListener();
-      // LEGACY — heavy machines/sessions para Procore sync e DashboardView
-      const cleanupLegacy = useLegacyMachinesStore.getState().initializeLegacyListeners();
       setLoading(false);
 
-      return () => { cleanup(); cleanupAvarias(); cleanupLegacy(); };
+      return () => cleanup();
     };
 
     let cleanup;
@@ -262,6 +270,34 @@ export default function App() {
 
     return () => cleanup?.();
   }, [isAuthenticated, initializeListeners, setLoading]);
+
+  useEffect(() => {
+    if (!isAuthenticated || (activeView !== 'dashboard' && !import.meta.env.DEV)) return;
+
+    // LEGACY — apenas para a reconciliação Procore do dashboard e DevTools local.
+    let cleanup;
+    let cancelled = false;
+    import('./store/legacy/machinesStore').then(({ default: useLegacyMachinesStore }) => {
+      const stopListeners = useLegacyMachinesStore.getState().initializeLegacyListeners();
+      if (cancelled) stopListeners();
+      else cleanup = stopListeners;
+    });
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [isAuthenticated, activeView]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !import.meta.env.DEV) return;
+
+    // LEGACY — necessário apenas para cenários heavy-machine no DevTools local.
+    let cleanup;
+    import('./store/useAvariasStore').then(({ default: useAvariasStore }) => {
+      cleanup = useAvariasStore.getState().initializeListener();
+    });
+    return () => cleanup?.();
+  }, [isAuthenticated]);
 
   // Memoizar renderView para evitar re-renders desnecessários
   const renderView = useCallback(() => {
@@ -364,7 +400,7 @@ export default function App() {
       {/* NFC global overlay — aparece em qualquer vista quando tag é lida */}
       <NfcOverlay />
       {/* DevTools ficam disponíveis localmente, mas nunca poluem a PWA publicada. */}
-      {import.meta.env.DEV && currentRole?.showDevTools && (
+      {import.meta.env.DEV && currentRole?.showDevTools && DevTools && (
         <Suspense fallback={null}>
           <DevTools />
         </Suspense>

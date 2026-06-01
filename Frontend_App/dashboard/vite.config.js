@@ -1,25 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { rmSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-const cleanGeneratedAssets = () => ({
-  name: 'clean-generated-assets',
-  apply: 'build',
-  buildStart() {
-    // Vite does not reliably clear an outDir outside this package root.
-    rmSync(resolve(import.meta.dirname, '../../Backend_Cloud/public/assets'), {
-      recursive: true,
-      force: true,
-    })
-  },
-})
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    cleanGeneratedAssets(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

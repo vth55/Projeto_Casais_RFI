@@ -5,9 +5,9 @@ import {
 } from 'recharts';
 import {
   Activity, Truck, Clock, Fuel, Leaf, AlertTriangle,
-  Wrench, TrendingUp, ArrowRight, Play, User, Zap, ChevronRight,
+  Wrench, TrendingUp, ArrowRight, Play, User, Zap,
   RefreshCw, Building2, CheckCircle2, XCircle, Link2, CalendarDays, X,
-  Sparkles, Brain, ShieldAlert, Package,
+  Package,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useLegacyMachinesStore from '../store/legacy/machinesStore';
@@ -819,96 +819,6 @@ const MobileDashboard = ({ kpis, activeSessions, machines, operators, chartData 
         </ResponsiveContainer>
       </Card>
     </div>
-  );
-};
-
-// ============================================================
-// WORK FOCUS — painel de atenção prioritária (Sede)
-// ============================================================
-const WorkFocusPanel = ({ machines, avarias }) => {
-  const { getSmartMaintenancePrediction, setActiveView } = useStore();
-
-  const predictions = useMemo(() => {
-    return machines
-      .filter(m => (m.partialHours || 0) >= 50)
-      .map(m => ({ machine: m, prediction: getSmartMaintenancePrediction(m) }))
-      .filter(p => p.prediction.daysLeft <= 30)
-      .sort((a, b) => a.prediction.daysLeft - b.prediction.daysLeft)
-      .slice(0, 3);
-  }, [machines, getSmartMaintenancePrediction]);
-
-  const recentAvarias = useMemo(() => {
-    return (avarias || [])
-      .filter(a => a.status === 'pendente')
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 2);
-  }, [avarias]);
-
-  if (predictions.length === 0 && recentAvarias.length === 0) return null;
-
-  return (
-    <Card className="border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-white to-amber-50/50 dark:from-slate-800 dark:to-amber-900/10">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-          <Brain className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Work Focus</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Atenção prioritária sugerida pela IA</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Top equipamentos iminentes */}
-        {predictions.map(({ machine, prediction }) => (
-          <button
-            key={machine.id}
-            onClick={() => setActiveView('manutencao')}
-            className="flex items-center gap-3 p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800 hover:shadow-md transition-all text-left"
-          >
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-              prediction.daysLeft <= 3 ? 'bg-red-100 dark:bg-red-900/30' :
-                prediction.daysLeft <= 7 ? 'bg-amber-100 dark:bg-amber-900/30' :
-                  'bg-blue-100 dark:bg-blue-900/30'
-            }`}>
-              <Sparkles className={`w-4 h-4 ${
-                prediction.daysLeft <= 3 ? 'text-red-600' :
-                  prediction.daysLeft <= 7 ? 'text-amber-600' : 'text-blue-600'
-              }`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{machine.name}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Manutenção prevista em <span className={`font-bold ${prediction.daysLeft <= 3 ? 'text-red-600' : prediction.daysLeft <= 7 ? 'text-amber-600' : 'text-blue-600'}`}>
-                  {prediction.daysLeft} dias
-                </span> • {prediction.remaining}h restantes
-              </p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-          </button>
-        ))}
-
-        {/* Últimas avarias pendentes */}
-        {recentAvarias.map(a => (
-          <button
-            key={a.id}
-            onClick={() => setActiveView('manutencao-avarias')}
-            className="flex items-center gap-3 p-3 rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 hover:shadow-md transition-all text-left"
-          >
-            <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <ShieldAlert className="w-4 h-4 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">Avaria: {a.toolName || a.toolId || a.machineId}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{a.descricao}</p>
-            </div>
-            {a.maquinaParada && (
-              <span className="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded flex-shrink-0">PARADA</span>
-            )}
-          </button>
-        ))}
-      </div>
-    </Card>
   );
 };
 
