@@ -209,6 +209,30 @@ export default function ReporteAvariaView() {
   }, [initialToolId, tools]);
 
   const selectedTool = tools.find(t => t.id === toolId);
+  const loginUrl = `/login?returnTo=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`;
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <AppHeader />
+        <div className="px-5 py-10 max-w-md mx-auto text-center">
+          <div className="w-14 h-14 rounded-2xl bg-primary-100 text-primary-600 flex items-center justify-center mx-auto mb-4">
+            <AlertOctagon className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Inicia sessão para reportar uma avaria</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            A autenticação identifica quem reportou o problema e mantém o equipamento selecionado.
+          </p>
+          <a
+            href={loginUrl}
+            className="inline-flex mt-6 px-5 py-3 rounded-xl bg-primary-600 text-white text-sm font-bold shadow-sm hover:bg-primary-700"
+          >
+            Ir para login
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   async function scanToolTagForReport() {
     if (!('NDEFReader' in window)) {

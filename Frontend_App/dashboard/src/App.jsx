@@ -224,6 +224,12 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated || window.location.pathname !== '/login') return;
 
+    const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) {
+      window.location.replace(returnTo);
+      return;
+    }
+
     window.history.replaceState({}, '', '/equipamentos');
     setActiveView('maquinas-lista');
   }, [isAuthenticated, setActiveView]);
