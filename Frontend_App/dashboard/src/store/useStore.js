@@ -54,7 +54,7 @@ const useStore = create((set, get) => ({
   operators: [],
   obras: [],
   // NOTE: maintenanceRecords (legacy heavy machines) movido para machinesStore.js (C1)
-  locationCards: [], // Cartões RFID de localização
+  locationCards: [], // LEGACY — cartões RFID, carregados apenas por DevTools local
   // Procore — subcoleções sincronizadas via runFullSync (read-only mirror)
   // Path: artifacts/{projectId}/public/data/integrations/procore/{projects,directory,equipment}
   procoreProjects: [],
@@ -194,13 +194,15 @@ const useStore = create((set, get) => ({
       createObrasListener((data) => set({ obras: data }))
     );
 
-    // Location Cards listener (cartões RFID de localização)
-    const createLocationCardsListener = createCollectionListener(db, `${basePath}/location_cards`, {
-      onError: (msg, error) => console.error('Erro location_cards:', error),
-    });
-    unsubscribers.push(
-      createLocationCardsListener((data) => set({ locationCards: data }))
-    );
+    // LEGACY — cartões RFID são úteis apenas no DevTools local.
+    if (import.meta.env.DEV) {
+      const createLocationCardsListener = createCollectionListener(db, `${basePath}/location_cards`, {
+        onError: (msg, error) => console.error('Erro location_cards:', error),
+      });
+      unsubscribers.push(
+        createLocationCardsListener((data) => set({ locationCards: data }))
+      );
+    }
 
     // ============================================
     // PROCORE — subcoleções espelho (read-only)

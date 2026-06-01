@@ -298,37 +298,11 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 };
 
 // Vista detalhada da Obra
-const ObraDetailView = ({ obra, tools, operators, toolSessions, locationCards, onBack, onEdit, onOpenMap, onAddLocationCard, onDeleteLocationCard, onDelete }) => {
-  const [newCardId, setNewCardId] = useState('');
-  const [creatingCard, setCreatingCard] = useState(false);
-
-  // Cartões de localização desta obra
-  const obraLocationCards = useMemo(() => {
-    return locationCards.filter(card => card.obraId === obra.id);
-  }, [locationCards, obra.id]);
-
+const ObraDetailView = ({ obra, tools, operators, toolSessions, onBack, onEdit, onOpenMap, onDelete }) => {
   // Equipamentos atribuídos a esta obra
   const toolsInObra = useMemo(() => {
     return tools.filter(t => t.currentObraId === obra.id);
   }, [tools, obra.id]);
-
-  // Criar novo cartão de localização
-  const handleCreateCard = async () => {
-    if (!newCardId.trim()) return;
-
-    setCreatingCard(true);
-    const result = await onAddLocationCard({
-      cardId: newCardId.trim(),
-      obraId: obra.id,
-      obraName: obra.name,
-      gps: obra.gps || null,
-    });
-
-    if (result.success) {
-      setNewCardId('');
-    }
-    setCreatingCard(false);
-  };
 
   // Operadores atribuídos a esta obra
   const operatorsInObra = useMemo(() => {
@@ -736,9 +710,6 @@ const ObrasView = () => {
     loading,
     updateObra,
     deleteObra,
-    locationCards,
-    addLocationCard,
-    deleteLocationCard,
     matchObraToProcore,
     getToolsByObraId,
     getToolSessionsByObraId,
@@ -830,15 +801,12 @@ const ObrasView = () => {
           tools={tools}
           operators={operators}
           toolSessions={toolSessions}
-          locationCards={locationCards || []}
           onBack={() => setViewingObra(null)}
           onEdit={(obra) => {
             setEditingObra(obra);
             setShowModal(true);
           }}
           onOpenMap={handleOpenMap}
-          onAddLocationCard={addLocationCard}
-          onDeleteLocationCard={deleteLocationCard}
           onDelete={isAdmin() ? handleRequestDelete : null}
         />
         <Modal

@@ -38,12 +38,6 @@ const ValidationPage = lazy(() => import('./pages/ValidationPage'));
 // Reporte de Avaria (standalone mobile - acesso via QR Code)
 const ReporteAvariaView = lazy(() => import('./views/ReporteAvariaView'));
 
-// Mobile Hub - Smartphone-as-Machine (standalone fullscreen)
-const MobileHubView = lazy(() => import('./views/MobileHubView'));
-
-// Machine QR View - standalone page via QR Code (/m/:machineId)
-const MachineQrView = lazy(() => import('./views/MachineQrView'));
-
 // Tool Tag Page - import estático (cold start NFC: não pode ter lazy loading overhead)
 import ToolTagPage from './pages/ToolTagPage';
 
@@ -82,8 +76,6 @@ export default function App() {
   // Verificar se é página de validação ou reporte avaria (standalone routes)
   const [validationToken, setValidationToken] = useState(null);
   const [isReporteAvaria, setIsReporteAvaria] = useState(false);
-  const [isMobileHub, setIsMobileHub] = useState(false);
-  const [isMachineQr, setIsMachineQr] = useState(false);
   const [isToolTag, setIsToolTag] = useState(false);
 
   useEffect(() => {
@@ -101,14 +93,11 @@ export default function App() {
       setIsReporteAvaria(true);
     }
 
-    // Rota Mobile Hub - Smartphone-as-Machine
-    if (window.location.href.includes('/mobile-hub')) {
-      setIsMobileHub(true);
-    }
-
-    // Rota Machine QR (/m/:machineId)
-    if (/\/m\/[^/]+/.test(path)) {
-      setIsMachineQr(true);
+    // Links do protótipo heavy-machine deixam de abrir fluxos RFID antigos.
+    // Mantemos um redirect neutro para não expor UI legacy em bookmarks/QRs.
+    if (path === '/mobile-hub' || /\/m\/[^/]+/.test(path)) {
+      window.history.replaceState({}, '', '/equipamentos');
+      setActiveView('maquinas-lista');
     }
 
     // Rota Tool Tag NFC (/t/:tagId)
@@ -295,28 +284,8 @@ export default function App() {
     return <DashboardRouter DefaultDashboard={DashboardView} />;
   }, [activeView, currentUser?.systemRole]);
 
-  // Rotas standalone: acessíveis sem login (Mobile Hub e Reporte de Avaria)
+  // Rotas standalone: acessíveis sem login (tag NFC e reporte de avaria)
   // IMPORTANTE: verificar ANTES do loading para não bloquear o operador móvel
-  if (isMobileHub) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<ViewLoader />}>
-          <MobileHubView />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  if (isMachineQr) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<ViewLoader />}>
-          <MachineQrView />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
   if (isToolTag) {
     return (
       <ErrorBoundary>

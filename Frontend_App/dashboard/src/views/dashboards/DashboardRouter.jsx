@@ -4,9 +4,9 @@
  * Em vez de esconder menus, cada perfil vê um dashboard "feito para ele":
  * - Admin: Dashboard global (KPIs financeiros, todas as obras)
  * - IT: Dashboard técnico (APIs, logs, integrações)
- * - Manutenção: Dashboard de saúde de equipamentos
+ * - Manutenção: Dashboard global de equipamentos enquanto o painel dedicado é migrado
  * - Encarregado: Dashboard da sua obra
- * - Operador: Mobile Hub (scan, reportar avaria)
+ * - Operador: painel de terreno com NFC global pronto e reporte de avaria
  * - Outros: Dashboard global (fallback)
  */
 
@@ -14,7 +14,6 @@ import React, { lazy, Suspense } from 'react';
 import useAuthStore from '../../store/useAuthStore';
 
 // Lazy load dashboards específicos
-const DashboardManutencao = lazy(() => import('./DashboardManutencao'));
 const DashboardOperador = lazy(() => import('./DashboardOperador'));
 
 // Fallback simples
@@ -35,11 +34,7 @@ const DashboardRouter = ({ DefaultDashboard }) => {
   // Decidir qual dashboard renderizar
   switch (dashboardType) {
     case 'manutencao':
-      return (
-        <Suspense fallback={<Loader />}>
-          <DashboardManutencao />
-        </Suspense>
-      );
+      return <DefaultDashboard />;
     case 'operador':
       return (
         <Suspense fallback={<Loader />}>

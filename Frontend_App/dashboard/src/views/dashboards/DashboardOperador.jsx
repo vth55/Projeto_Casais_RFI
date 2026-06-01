@@ -2,7 +2,7 @@
  * DashboardOperador - Dashboard otimizado para operadores de campo
  * 
  * O operador quer:
- * 1. Scan rápido (Mobile Hub)
+ * 1. Leitura NFC pronta sem abrir um fluxo separado
  * 2. Ver a sua sessão ativa (se existe)
  * 3. Reportar avaria rápido
  * 4. Validar anomalias pendentes
@@ -67,11 +67,6 @@ const DashboardOperador = () => {
     { label: 'Tempo médio', value: formatHours(stats.avgDuration) },
   ];
 
-  const openMobileHub = () => {
-    window.location.hash = '/mobile-hub';
-    window.location.reload();
-  };
-
   const openReporteAvaria = () => {
     window.location.hash = '/reporte-avaria';
     window.location.reload();
@@ -90,19 +85,16 @@ const DashboardOperador = () => {
 
       {/* Ações rápidas */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Scan RFID / NFC */}
-        <button
-          onClick={openMobileHub}
-          className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 border-2 border-primary-200 dark:border-primary-700 rounded-2xl hover:shadow-lg hover:scale-[1.02] transition-all"
-        >
+        {/* O leitor NFC global já está ativo; não exige uma ação adicional. */}
+        <div className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 border-2 border-primary-200 dark:border-primary-700 rounded-2xl">
           <div className="w-14 h-14 bg-primary-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25">
             <Smartphone className="w-7 h-7 text-white" />
           </div>
           <div className="text-center">
-            <p className="font-bold text-primary-700 dark:text-primary-300">Mobile Hub</p>
-            <p className="text-xs text-primary-600/70 dark:text-primary-400/70 mt-0.5">Scan RFID / NFC</p>
+            <p className="font-bold text-primary-700 dark:text-primary-300">NFC pronto</p>
+            <p className="text-xs text-primary-600/70 dark:text-primary-400/70 mt-0.5">Aproxime a tag do equipamento</p>
           </div>
-        </button>
+        </div>
 
         {/* Reportar Avaria */}
         <button
@@ -114,7 +106,7 @@ const DashboardOperador = () => {
           </div>
           <div className="text-center">
             <p className="font-bold text-red-700 dark:text-red-300">Reportar Avaria</p>
-            <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">Problema na equipamento</p>
+            <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">Problema no equipamento</p>
           </div>
         </button>
       </div>

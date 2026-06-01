@@ -1,1 +1,0 @@
-const t=(e,r="Equipamento")=>e?typeof e=="string"?e:typeof e=="object"&&(e.name||e.id)||r:r,n=(e,r="")=>e?typeof e=="string"?e:typeof e=="object"&&(e.workName||e.workId)||r:r,u=e=>e?typeof e=="string"?e:typeof e=="object"&&e.id||"":"";export{n as a,u as b,t as g};
