@@ -7,7 +7,7 @@
  * Consome: tools, toolMaintenance, updateToolMaintenance, resolveToolMaintenance
  * Semântica: inspeção / avaria / reparação / calibração / substituição / perda
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Wrench, Search, X, ChevronRight, AlertTriangle, CheckCircle,
   Clock, Euro, ClipboardList, ShieldAlert, RotateCcw, Gauge,
@@ -310,9 +310,15 @@ const DetailDrawer = ({ record, toolName, onClose, onMarkInProgress, onOpenResol
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Fotos ({record.photos.length})</p>
               <div className="grid grid-cols-3 gap-2">
                 {record.photos.map((p, i) => (
-                  <div key={i} className="aspect-square rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400">
-                    #{i + 1}
-                  </div>
+                  p.url ? (
+                    <a key={p.id || i} href={p.url} target="_blank" rel="noreferrer">
+                      <img src={p.url} alt={`Foto ${i + 1}`} className="aspect-square w-full rounded-xl object-cover" />
+                    </a>
+                  ) : (
+                    <div key={p.id || i} className="aspect-square rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400">
+                      #{i + 1}
+                    </div>
+                  )
                 ))}
               </div>
             </div>
@@ -348,7 +354,7 @@ const DetailDrawer = ({ record, toolName, onClose, onMarkInProgress, onOpenResol
 // ─── MAIN VIEW ────────────────────────────────────────────────────────────────
 
 export default function ManutencaoView() {
-  const { tools = [], toolMaintenance = [], updateToolMaintenance, resolveToolMaintenance } = useStore();
+  const { activeView, tools = [], toolMaintenance = [], updateToolMaintenance, resolveToolMaintenance } = useStore();
   const { currentUser } = useAuthStore();
 
   const [typeFilter,   setTypeFilter]   = useState('all');
@@ -356,6 +362,11 @@ export default function ManutencaoView() {
   const [search,       setSearch]       = useState('');
   const [selected,     setSelected]     = useState(null);   // detail drawer
   const [resolving,    setResolving]    = useState(null);   // resolve drawer
+
+  useEffect(() => {
+    setTypeFilter(activeView === 'manutencao-avarias' ? TOOL_MAINTENANCE_TYPES.DAMAGE : 'all');
+    setStatusFilter(activeView === 'manutencao-historico' ? 'DONE' : 'all');
+  }, [activeView]);
 
   // Enrich each record with tool name
   const enriched = useMemo(() => {

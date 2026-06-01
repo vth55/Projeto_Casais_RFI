@@ -134,11 +134,13 @@ const TypePicker = ({ value, onChange }) => (
   </div>
 );
 
-const PhotoCapture = ({ photos, onCapture, onRemove }) => {
+const PhotoCapture = ({ photos, onCapture, onRemove, required = false }) => {
   const fileInputRef = useRef(null);
   return (
     <div className="px-5">
-      <label className="block text-sm font-semibold text-slate-700 mb-2">Fotos (opcional)</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">
+        Fotos {required ? '(obrigatório)' : '(opcional)'}
+      </label>
       <input
         ref={fileInputRef}
         type="file"
@@ -180,7 +182,13 @@ const PhotoCapture = ({ photos, onCapture, onRemove }) => {
 };
 
 export default function ReporteAvariaView() {
-  const { tools = [], reportToolMaintenance } = useStore();
+  const {
+    tools = [],
+    systemSettings = {},
+    reportToolMaintenance,
+    updateToolMaintenance,
+    uploadMaintenancePhoto,
+  } = useStore();
   const { currentUser } = useAuthStore();
 
   // Aceitar URL param ?tool=<id> (novo) ou ?machine=<id> (legacy, fallback só para não crashar).
@@ -197,6 +205,7 @@ export default function ReporteAvariaView() {
   const [submitting, setSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [done, setDone] = useState(false);
+  const [submissionWarning, setSubmissionWarning] = useState(null);
   const [error, setError] = useState(null);
 
   // Se URL passou um id que existe em tools, confirmar; senão mantém para o picker mostrar nada e o utilizador escolher.
@@ -275,14 +284,14 @@ export default function ReporteAvariaView() {
 
   async function submit() {
     if (!toolId || !type) { setError('Seleciona o equipamento e o tipo de problema'); return; }
+    if (systemSettings.toolReportRequiresPhoto && photos.length === 0) {
+      setError('Adiciona pelo menos uma foto antes de submeter o reporte');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      // Photos: nesta fase enviamos só URLs locais (objectURL). Upload real para Storage
-      // fica para fase seguinte — manter compat com schema que aceita array de strings.
-      const photoRefs = photos.map(p => p.id); // placeholder; quando integrar Storage substituir por download URL
-
-      await reportToolMaintenance({
+      const maintenanceId = await reportToolMaintenance({
         toolId,
         type,
         status: 'OPEN',
@@ -294,8 +303,17 @@ export default function ReporteAvariaView() {
           notes.trim(),
           usable ? '[Utilizável]' : '[Inutilizável]',
         ].filter(Boolean).join(' '),
-        photos: photoRefs,
+        photos: [],
       });
+
+      const uploads = await Promise.all(photos.map(photo => uploadMaintenancePhoto(photo.file, maintenanceId)));
+      const uploadedPhotos = uploads.filter(result => result.success).map(result => result.photo);
+      if (uploadedPhotos.length > 0) {
+        await updateToolMaintenance(maintenanceId, { photos: uploadedPhotos });
+      }
+      if (uploads.some(result => !result.success)) {
+        setSubmissionWarning('O reporte foi guardado, mas não foi possível enviar todas as fotografias.');
+      }
       setDone(true);
     } catch (err) {
       setError(err.message || 'Erro ao submeter reporte');
@@ -314,6 +332,7 @@ export default function ReporteAvariaView() {
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Reporte enviado</h2>
           <p className="text-slate-500 text-sm max-w-xs">A equipa de manutenção vai analisar o problema. Obrigado.</p>
+          {submissionWarning && <p className="text-amber-700 text-sm max-w-xs">{submissionWarning}</p>}
           <a href="/" className="mt-4 px-6 py-3 bg-primary-500 text-white rounded-2xl font-bold text-sm">Voltar à app</a>
         </div>
       </div>
@@ -372,7 +391,12 @@ export default function ReporteAvariaView() {
         <PhotoCapture
           photos={photos}
           onCapture={p => setPhotos(prev => [...prev, p])}
-          onRemove={id => setPhotos(prev => prev.filter(p => p.id !== id))}
+          onRemove={id => setPhotos(prev => {
+            const photo = prev.find(p => p.id === id);
+            if (photo?.url) URL.revokeObjectURL(photo.url);
+            return prev.filter(p => p.id !== id);
+          })}
+          required={systemSettings.toolReportRequiresPhoto}
         />
 
         {error && (

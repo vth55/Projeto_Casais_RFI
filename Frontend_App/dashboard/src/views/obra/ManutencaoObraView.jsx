@@ -302,9 +302,15 @@ const DetailDrawer = ({ record, toolName, onClose, onMarkInProgress, onOpenResol
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Fotos ({record.photos.length})</p>
               <div className="grid grid-cols-3 gap-2">
                 {record.photos.map((p, i) => (
-                  <div key={i} className="aspect-square rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400">
-                    #{i + 1}
-                  </div>
+                  p.url ? (
+                    <a key={p.id || i} href={p.url} target="_blank" rel="noreferrer">
+                      <img src={p.url} alt={`Foto ${i + 1}`} className="aspect-square w-full rounded-xl object-cover" />
+                    </a>
+                  ) : (
+                    <div key={p.id || i} className="aspect-square rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400">
+                      #{i + 1}
+                    </div>
+                  )
                 ))}
               </div>
             </div>
