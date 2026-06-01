@@ -1582,8 +1582,9 @@ exports.sapBridge                   = sapBridge;
 exports.onToolSessionCreatedToSap   = onToolSessionCreatedToSap;
 exports.onToolSessionClosedToSap    = onToolSessionClosedToSap;
 
-// Equipment Model triggers (Fase 6 pivot 2026-05)
+// Equipment Model triggers + reconciliation (Fase 6 pivot 2026-05)
 const equipmentModelTriggers = require('./equipmentModelTriggers');
-exports.onToolCreated = equipmentModelTriggers.onToolCreated;
-exports.onToolDeleted = equipmentModelTriggers.onToolDeleted;
-exports.onToolUpdated = equipmentModelTriggers.onToolUpdated;
+exports.onToolCreated          = equipmentModelTriggers.onToolCreated;
+exports.onToolDeleted          = equipmentModelTriggers.onToolDeleted;
+exports.onToolUpdated          = equipmentModelTriggers.onToolUpdated;
+exports.reconcileUnitCounts    = equipmentModelTriggers.reconcileUnitCounts;

@@ -198,7 +198,18 @@
  * @property {Timestamp} [receivedAt]
  * @property {string} [receivedBy]
  * @property {string} [notes]
- * @property {{sourceSystem:string,externalRefs:Object,sapSynced:boolean,procoreSynced:boolean,sapDocumentId?:string,procoreProjectId?:string}} externalSync
+ * @property {{
+ *   sourceSystem: string,
+ *   externalRefs: Object,
+ *   sapSynced: boolean,
+ *   procoreSynced: boolean,
+ *   sapDocumentId?: string,
+ *   procoreProjectId?: string,
+ *   syncStatus: 'pending'|'synced'|'failed',
+ *   retryCount: number,
+ *   lastError: string|null,
+ *   updatedAt: import('firebase/firestore').Timestamp|null
+ * }} externalSync
  * @property {{action:string,by:string,at:Timestamp,notes?:string}[]} auditLog
  */
 

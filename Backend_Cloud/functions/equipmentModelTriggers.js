@@ -5,9 +5,14 @@
  * Denormalized cache:
  * - unitCount: total tools referencing the modelId
  * - activeUnitCount: total tools excluding status RETIRED
+ *
+ * recomputeModelCounts é a fonte de verdade — NÃO substituir por FieldValue.increment.
+ * reconcileUnitCounts (scheduled) é uma rede de segurança adicional que detecta e
+ * corrige desvios acumulados sem recriar estado.
  */
 
 const { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 
 const APP_ID = process.env.GCLOUD_PROJECT || 'casais-rfid';
@@ -78,3 +83,74 @@ exports.onToolUpdated = onDocumentUpdated(`${TOOLS_PATH}/{toolId}`, async (event
     console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} changed retirement status without modelId`);
   }
 });
+
+// ──────────────────────────────────────────────────────────
+// Scheduled: reconcileUnitCounts
+// Corre uma vez por dia às 23:00 UTC.
+// Fonte de verdade: recomputeModelCounts (não FieldValue.increment).
+// Idempotente — correr duas vezes não causa problemas.
+// ──────────────────────────────────────────────────────────
+exports.reconcileUnitCounts = onSchedule(
+  {
+    schedule: '0 23 * * *',   // todos os dias às 23:00 UTC
+    timeZone: 'UTC',
+    region: 'europe-west1',
+  },
+  async (_event) => {
+    const db = admin.firestore();
+    const modelsSnap = await db.collection(MODELS_PATH).get();
+
+    if (modelsSnap.empty) {
+      console.log('[reconcileUnitCounts] Nenhum modelo encontrado — nada a reconciliar.');
+      return;
+    }
+
+    let fixed = 0;
+    let checked = 0;
+    const log = [];
+
+    for (const modelDoc of modelsSnap.docs) {
+      const modelId = modelDoc.id;
+      const modelData = modelDoc.data();
+      checked++;
+
+      // Contar tools por modelId no Firestore
+      const toolsSnap = await db.collection(TOOLS_PATH)
+        .where('modelId', '==', modelId)
+        .get();
+
+      const tools = toolsSnap.docs.map(d => d.data());
+      const expectedUnitCount = tools.length;
+      const expectedActiveUnitCount = tools.filter(t => t.status !== 'RETIRED').length;
+
+      const currentUnitCount = modelData.unitCount ?? null;
+      const currentActiveUnitCount = modelData.activeUnitCount ?? null;
+
+      const needsFix =
+        currentUnitCount !== expectedUnitCount ||
+        currentActiveUnitCount !== expectedActiveUnitCount;
+
+      const entry = {
+        modelId,
+        expected: { unitCount: expectedUnitCount, activeUnitCount: expectedActiveUnitCount },
+        actual:   { unitCount: currentUnitCount,  activeUnitCount: currentActiveUnitCount },
+        fixed: needsFix,
+      };
+      log.push(entry);
+
+      if (needsFix) {
+        await modelDoc.ref.update({
+          unitCount: expectedUnitCount,
+          activeUnitCount: expectedActiveUnitCount,
+          updatedAt: admin.firestore.Timestamp.now(),
+        });
+        fixed++;
+        console.log(`[reconcileUnitCounts] Fixed ${modelId}: unitCount ${currentUnitCount}→${expectedUnitCount}, activeUnitCount ${currentActiveUnitCount}→${expectedActiveUnitCount}`);
+      }
+    }
+
+    console.log(`[reconcileUnitCounts] Done — checked: ${checked}, fixed: ${fixed}`);
+    console.log('[reconcileUnitCounts] Detail:', JSON.stringify(log));
+    return { checked, fixed, log };
+  }
+);

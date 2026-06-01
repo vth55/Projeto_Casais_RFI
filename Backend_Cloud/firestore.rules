@@ -1,3 +1,28 @@
+/*
+ * MIGRATION PROPOSAL: alerts/ legacy collection
+ *
+ * WHY NOT CHANGING NOW:
+ * The `alerts/` collection is accessed by a token-gated flow:
+ *   - `autoCloseStuckSessions` and `checkLongSessions` in index.js write to `alerts/`
+ *   - `useAlertsStore.js` reads/updates `alerts/` directly from the frontend (allow read: if true)
+ *   - `ValidationPage.jsx` reads token from URL and queries `tool_alerts` (new) OR `alerts` (legacy)
+ *     depending on the alert's collection flag
+ *   - `resendAlertEmail` HTTP endpoint validates alert token server-side and updates `alerts/`
+ * Changing `allow read: if true` to authenticated-only would break the public email validation
+ * links before the legacy flow is fully migrated.
+ *
+ * SAFE MIGRATION SEQUENCE:
+ * Step 1: Add `collectionType` field ('legacy' | 'tool') to new alerts written by Cloud Functions
+ * Step 2: Migrate `ValidationPage.jsx` to handle both collections (already partially done)
+ * Step 3: Migrate `autoCloseStuckSessions` and `checkLongSessions` to write to `tool_alerts`
+ * Step 4: Migrate `useAlertsStore.js` to read from `tool_alerts` instead of `alerts`
+ * Step 5: Once no new docs are written to `alerts/`, tighten rules to `allow read: if isAuthenticated()`
+ * Step 6: Archive/delete legacy `alerts/` documents
+ *
+ * BLOCKER: Steps 3-4 require coordinated deploy of both Functions and Frontend. Until then,
+ * `allow read: if true` and `allow update: if true` on `alerts/` must remain.
+ */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -42,6 +67,20 @@ service cloud.firestore {
     }
     function isOperator() {
       return isAuthenticated();
+    }
+
+    // Returns true when the update touches ONLY personal fields (no privilege escalation)
+    function isPersonalProfileUpdate() {
+      let touched = request.resource.data.diff(resource.data).affectedKeys();
+      let allowed  = ['displayName', 'photoURL', 'lastSeenAt', 'notificationPrefs', 'theme'];
+      let blocked  = ['systemRole', 'permissions', 'roleId', 'level', 'assignedObraId',
+                      'isActive', 'createdAt', 'createdBy'];
+      return touched.hasOnly(allowed) && !touched.hasAny(blocked);
+    }
+
+    // Returns true when caller is gestor_frota, admin, or it (level <= 1)
+    function canReadAllUsers() {
+      return hasSystemRole(['admin', 'it', 'gestor_frota']);
     }
 
     // ============================================
@@ -122,12 +161,22 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Users (perfil systemRole)
+    // Users (perfil systemRole) — RBAC granular
     // ============================================
     match /artifacts/casais-rfid/public/data/users/{userId} {
-      allow read: if isAuthenticated();
-      allow update: if isAdmin() || request.auth.uid == userId;
+      // Leitura do próprio perfil: sempre permitida a qualquer auth
+      // Leitura de outros perfis: apenas gestor_frota, admin, it
+      allow read: if request.auth.uid == userId || canReadAllUsers();
+
+      // Criação e deleção: apenas admin
       allow create, delete: if isAdmin();
+
+      // Update pelo próprio utilizador: APENAS campos pessoais (sem privilege escalation)
+      // Update por admin/it: quaisquer campos incluindo privilegiados
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+         request.auth.uid == userId &&
+         isPersonalProfileUpdate());
     }
 
     // ============================================
@@ -144,7 +193,7 @@ service cloud.firestore {
     }
 
     match /artifacts/casais-rfid/public/data/alerts/{alertId} {
-      // Acesso via token público (validação por email)
+      // Acesso via token público (validação por email) — ver MIGRATION PROPOSAL no topo
       allow read: if true;
       allow update: if true; // token-gated no backend
       allow create, delete: if isAdmin();

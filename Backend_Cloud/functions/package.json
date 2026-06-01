@@ -15,7 +15,8 @@
     "seed:all": "npm run seed:machines && npm run seed:operators && npm run seed:obras",
     "test:sprint0": "node scripts/tests/sprint0_test.js",
     "test:sprint1": "node scripts/tests/sprint1_test.js",
-    "test:sprint4": "node scripts/tests/sprint4_test.js"
+    "test:sprint4": "node scripts/tests/sprint4_test.js",
+    "test": "jest --testPathPatterns=sap/"
   },
   "engines": {
     "node": "22"
@@ -28,7 +29,12 @@
     "nodemailer": "^6.10.1"
   },
   "devDependencies": {
-    "firebase-functions-test": "^3.4.1"
+    "firebase-functions-test": "^3.4.1",
+    "jest": "^30.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/*.test.js"]
   },
   "private": true
 }

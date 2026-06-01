@@ -114,14 +114,29 @@ async function sendToSap(payload, apiKey) {
 
 /**
  * Lógica partilhada: formata payload, envia, regista resultado, actualiza sessão.
+ * Idempotente: chave determinística `${sessionId}:${eventType}` evita duplicados.
  */
 async function processToolSession(sessionId, sessionData, eventType, apiKey) {
   const db = admin.firestore();
+  const idempotencyKey = `${sessionId}:${eventType}`;
+
+  // Verificar se já existe entrada com esta chave (idempotência)
+  const existingSnap = await db.collection(SAP_LOG_PATH)
+    .where('idempotencyKey', '==', idempotencyKey)
+    .limit(1)
+    .get();
+
+  if (!existingSnap.empty) {
+    console.log(`[sapBridge] Idempotency hit — skipping duplicate: ${idempotencyKey}`);
+    return existingSnap.docs[0].data().result;
+  }
+
   const payload = buildSapNotificationPayload({ ...sessionData, id: sessionId }, eventType);
   const result = await sendToSap(payload, apiKey);
 
   // Regista no log SAP (para demo / auditoria)
   await db.collection(SAP_LOG_PATH).add({
+    idempotencyKey,
     sessionId,
     eventType,
     payload,

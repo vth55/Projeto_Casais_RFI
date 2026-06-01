@@ -9,7 +9,21 @@ service firebase.storage {
       return isAuthenticated() &&
         firestore.get(
           /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
+        ).data.systemRole in ['admin', 'it'];
+    }
+
+    function isFleetManager() {
+      return isAuthenticated() &&
+        firestore.get(
+          /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
         ).data.systemRole in ['admin', 'it', 'gestor', 'gestor_frota'];
+    }
+
+    function isMaintenanceTech() {
+      return isAuthenticated() &&
+        firestore.get(
+          /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
+        ).data.systemRole in ['admin', 'it', 'tecnico_manutencao'];
     }
 
     function isValidImage() {
@@ -18,16 +32,23 @@ service firebase.storage {
         request.resource.contentType.matches('image/.*');
     }
 
+    // maintenance/{maintenanceId}/{fileName}
+    // create: qualquer autenticado (imagem <= 10 MB, content-type image/*)
+    // delete: admin e tecnico_manutencao
+    // Nota: NÃO criar path tools/{toolId} — instrução explícita
     match /maintenance/{maintenanceId}/{fileName} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidImage();
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if isMaintenanceTech();
     }
 
+    // equipment_models/{modelId}/{fileName}
+    // create/update: admin e gestor_frota
+    // delete: apenas admin (it incluído via isAdmin)
     match /equipment_models/{modelId}/{fileName} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdmin() && isValidImage();
+      allow create, update: if isFleetManager() && isValidImage();
       allow delete: if isAdmin();
     }
   }

@@ -1194,6 +1194,10 @@ const useStore = create((set, get) => ({
         procoreSynced: false,
         sapDocumentId: externalRefs.sapDocumentId || null,
         procoreProjectId: externalRefs.procoreProjectId || null,
+        syncStatus: 'pending',
+        retryCount: 0,
+        lastError: null,
+        updatedAt: now,
       },
     });
     return ref.id;
