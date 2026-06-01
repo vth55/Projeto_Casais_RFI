@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        firestore.get(
+          /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
+        ).data.systemRole in ['admin', 'it', 'gestor', 'gestor_frota'];
+    }
+
+    function isValidImage() {
+      return request.resource != null &&
+        request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    match /maintenance/{maintenanceId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidImage();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /equipment_models/{modelId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+  }
+}
