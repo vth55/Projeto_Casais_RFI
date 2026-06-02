@@ -105,6 +105,22 @@
         { "fieldPath": "toolId", "order": "ASCENDING" },
         { "fieldPath": "movedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "sap_transfer_queue",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "processAfter", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sap_transfer_queue",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "leaseExpiry", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

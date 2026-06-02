@@ -1582,6 +1582,21 @@ exports.sapBridge                   = sapBridge;
 exports.onToolSessionCreatedToSap   = onToolSessionCreatedToSap;
 exports.onToolSessionClosedToSap    = onToolSessionClosedToSap;
 
+// ──────────────────────────────────────────────────────────────────────────────
+// SAP Transfer Bridge — tool_transfers (guias logísticas) → SAP PM
+// Queue: sap_transfer_queue/{transferId}_{eventType}
+// Eventos: DISPATCHED + RECEIVED — nunca DRAFT
+// ──────────────────────────────────────────────────────────────────────────────
+const {
+    onToolTransferWritten,
+    processSapTransferQueue,
+    reconcileSapTransfers,
+} = require('./sap/sapTransferBridge');
+
+exports.onToolTransferWritten   = onToolTransferWritten;
+exports.processSapTransferQueue = processSapTransferQueue;
+exports.reconcileSapTransfers   = reconcileSapTransfers;
+
 // Equipment Model triggers + reconciliation (Fase 6 pivot 2026-05)
 const equipmentModelTriggers = require('./equipmentModelTriggers');
 exports.onToolCreated          = equipmentModelTriggers.onToolCreated;
