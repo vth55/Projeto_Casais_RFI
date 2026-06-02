@@ -35,7 +35,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() &&
         get(/databases/$(database)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid))
-          .data.systemRole in ['admin', 'it', 'gestor', 'gestor_frota'];
+          .data.systemRole in ['admin', 'it'];
     }
     function hasSystemRole(roles) {
       return isAuthenticated() &&
@@ -44,6 +44,12 @@ service cloud.firestore {
     }
     function canManageLogistics() {
       return hasSystemRole(['admin', 'it', 'gestor', 'gestor_frota', 'logistica', 'encarregado_obra']);
+    }
+    function canManageEquipment() {
+      return hasSystemRole(['admin', 'it', 'gestor', 'gestor_frota']);
+    }
+    function canManageMaintenance() {
+      return hasSystemRole(['admin', 'it', 'gestor', 'gestor_frota', 'tecnico_manutencao']);
     }
     function isToolOperationalUpdate() {
       return isAuthenticated() &&
@@ -65,10 +71,6 @@ service cloud.firestore {
           'updatedAt'
         ]);
     }
-    function isOperator() {
-      return isAuthenticated();
-    }
-
     // Returns true when the update touches ONLY personal fields (no privilege escalation)
     function isPersonalProfileUpdate() {
       let touched = request.resource.data.diff(resource.data).affectedKeys();
@@ -84,25 +86,17 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Artefactos públicos (modelo casais-rfid)
-    // ============================================
-    match /artifacts/casais-rfid/public/data/{document=**} {
-      // Leitura: qualquer authenticated
-      allow read: if isAuthenticated();
-    }
-
-    // ============================================
     // Colecções primárias do pivot (escritas controladas)
     // ============================================
     match /artifacts/casais-rfid/public/data/equipment_models/{modelId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if canManageEquipment();
     }
 
     match /artifacts/casais-rfid/public/data/tools/{toolId} {
       allow read: if isAuthenticated();
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() || isToolOperationalUpdate();
+      allow create, delete: if canManageEquipment();
+      allow update: if canManageEquipment() || isToolOperationalUpdate();
     }
 
     match /artifacts/casais-rfid/public/data/tool_sessions/{sessionId} {
@@ -111,34 +105,34 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.operatorId == request.auth.uid;
       allow update: if isAuthenticated() &&
-        (resource.data.operatorId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
+        (resource.data.operatorId == request.auth.uid || canManageMaintenance());
+      allow delete: if canManageEquipment();
     }
 
     match /artifacts/casais-rfid/public/data/tool_alerts/{alertId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated(); // qualquer auth pode criar alerta
       allow update: if isAuthenticated(); // todos podem actualizar (audit log append)
-      allow delete: if isAdmin();
+      allow delete: if canManageMaintenance();
     }
 
     match /artifacts/casais-rfid/public/data/tool_maintenance/{recordId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
-      allow delete: if isAdmin();
+      allow delete: if canManageMaintenance();
     }
 
     match /artifacts/casais-rfid/public/data/tool_movements/{movementId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow update, delete: if canManageLogistics();
     }
 
     match /artifacts/casais-rfid/public/data/tool_transfers/{transferId} {
       allow read: if isAuthenticated();
       allow create, update: if canManageLogistics();
-      allow delete: if isAdmin();
+      allow delete: if canManageLogistics();
     }
 
     // ============================================
@@ -146,18 +140,18 @@ service cloud.firestore {
     // ============================================
     match /artifacts/casais-rfid/public/data/obras/{obraId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if canManageEquipment();
     }
 
     match /artifacts/casais-rfid/public/data/operators/{operatorId} {
       allow read: if isAuthenticated();
-      allow update: if isAdmin() || request.auth.uid == operatorId;
-      allow create, delete: if isAdmin();
+      allow update: if canManageEquipment();
+      allow create, delete: if canManageEquipment();
     }
 
     match /artifacts/casais-rfid/public/data/settings/{document} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if canManageEquipment();
     }
 
     // ============================================
@@ -179,17 +173,75 @@ service cloud.firestore {
          isPersonalProfileUpdate());
     }
 
+    match /artifacts/casais-rfid/public/data/maintenance_schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if canManageMaintenance();
+    }
+
+    match /artifacts/casais-rfid/public/data/location_cards/{cardId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if canManageLogistics();
+    }
+
+    match /artifacts/casais-rfid/public/data/scan_buffer/{documentId} {
+      allow read: if isAuthenticated();
+      allow write: if canManageLogistics();
+    }
+
+    // A raiz contém tokens OAuth. Apenas administração pode lê-la.
+    match /artifacts/casais-rfid/public/data/integrations/procore {
+      allow read, write: if isAdmin();
+    }
+
+    // Os mirrors não contêm tokens e alimentam a UI autenticada.
+    match /artifacts/casais-rfid/public/data/integrations/procore/projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/integrations/procore/directory/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/integrations/procore/equipment/{equipmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /artifacts/casais-rfid/public/data/sap_sync_log/{logId} {
+      allow read: if isAdmin();
+    }
+
     // ============================================
     // Procore legacy (mantidas)
     // ============================================
     match /artifacts/casais-rfid/public/data/sessions/{sessionId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if canManageEquipment();
     }
 
     match /artifacts/casais-rfid/public/data/machines/{machineId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if canManageEquipment();
+    }
+
+    // Legacy collections remain isolated while compatibility widgets and
+    // Procore reconciliation are still available.
+    match /artifacts/casais-rfid/public/data/maintenance/{recordId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if canManageMaintenance();
+    }
+
+    match /artifacts/casais-rfid/public/data/avarias/{recordId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if canManageMaintenance();
+    }
+
+    match /artifacts/casais-rfid/public/data/machineLocationEvents/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if canManageLogistics();
+      allow update, delete: if isAdmin();
     }
 
     match /artifacts/casais-rfid/public/data/alerts/{alertId} {

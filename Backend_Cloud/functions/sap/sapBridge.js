@@ -27,6 +27,9 @@ function getSapApiKey() {
 const APP_ID = 'casais-rfid';
 const TOOL_SESSIONS_PATH = `artifacts/${APP_ID}/public/data/tool_sessions`;
 const SAP_LOG_PATH = `artifacts/${APP_ID}/public/data/sap_sync_log`;
+const USERS_PATH = `artifacts/${APP_ID}/public/data/users`;
+const SAP_PROCESSING_TIMEOUT_MS = 10 * 60 * 1000;
+const SAP_INTERNAL_ROLES = ['admin', 'it'];
 
 // SAP Business Accelerator Hub — sandbox público
 const SAP_SANDBOX = {
@@ -119,30 +122,57 @@ async function sendToSap(payload, apiKey) {
 async function processToolSession(sessionId, sessionData, eventType, apiKey) {
   const db = admin.firestore();
   const idempotencyKey = `${sessionId}:${eventType}`;
+  const logRef = db.collection(SAP_LOG_PATH).doc(`${sessionId}__${eventType}`);
+  let previousResult = null;
+  let shouldProcess = false;
 
-  // Verificar se já existe entrada com esta chave (idempotência)
-  const existingSnap = await db.collection(SAP_LOG_PATH)
-    .where('idempotencyKey', '==', idempotencyKey)
-    .limit(1)
-    .get();
+  // Reservar antes do POST evita envios SAP duplicados sob concorrência.
+  await db.runTransaction(async (transaction) => {
+    const existingSnap = await transaction.get(logRef);
+    const existing = existingSnap.exists ? existingSnap.data() : null;
+    const updatedAtMs = existing?.updatedAt?.toMillis?.() || 0;
+    const isFreshProcessing =
+      existing?.status === 'PROCESSING' &&
+      Date.now() - updatedAtMs < SAP_PROCESSING_TIMEOUT_MS;
 
-  if (!existingSnap.empty) {
+    if (existing?.status === 'SYNCED' || isFreshProcessing) {
+      previousResult = existing.result || {
+        ok: true,
+        mode: 'queued',
+        skipped: true,
+        reason: 'already_processing',
+      };
+      return;
+    }
+
+    shouldProcess = true;
+    transaction.set(logRef, {
+      idempotencyKey,
+      sessionId,
+      eventType,
+      status: 'PROCESSING',
+      attemptCount: admin.firestore.FieldValue.increment(1),
+      createdAt: existing?.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+
+  if (!shouldProcess) {
     console.log(`[sapBridge] Idempotency hit — skipping duplicate: ${idempotencyKey}`);
-    return existingSnap.docs[0].data().result;
+    return previousResult;
   }
 
   const payload = buildSapNotificationPayload({ ...sessionData, id: sessionId }, eventType);
   const result = await sendToSap(payload, apiKey);
 
-  // Regista no log SAP (para demo / auditoria)
-  await db.collection(SAP_LOG_PATH).add({
-    idempotencyKey,
-    sessionId,
-    eventType,
+  // Completar a reserva mantém um único registo por sessão + evento.
+  await logRef.set({
+    status: result.ok ? 'SYNCED' : 'FAILED',
     payload,
     result,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    completedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
 
   // Actualiza a sessão com o estado de sync SAP
   await db.collection(TOOL_SESSIONS_PATH).doc(sessionId).set({
@@ -154,6 +184,29 @@ async function processToolSession(sessionId, sessionData, eventType, apiKey) {
   }, { merge: true });
 
   return result;
+}
+
+async function requireInternalUser(req, res) {
+  const authorization = req.get('authorization') || '';
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
+  if (!token) {
+    res.status(401).json({ ok: false, error: 'authentication required' });
+    return null;
+  }
+
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    const snap = await admin.firestore().collection(USERS_PATH).doc(decoded.uid).get();
+    const role = snap.exists ? snap.data().systemRole : null;
+    if (!SAP_INTERNAL_ROLES.includes(role)) {
+      res.status(403).json({ ok: false, error: 'insufficient permissions' });
+      return null;
+    }
+    return { uid: decoded.uid, role };
+  } catch (_error) {
+    res.status(401).json({ ok: false, error: 'invalid authentication token' });
+    return null;
+  }
 }
 
 // ──────────────────────────────────────────────────────────
@@ -221,6 +274,7 @@ exports.sapBridge = onRequest(
 
     // GET /log
     if (path.endsWith('/log')) {
+      if (!await requireInternalUser(req, res)) return;
       const snap = await db.collection(SAP_LOG_PATH)
         .orderBy('createdAt', 'desc')
         .limit(20)
@@ -232,9 +286,13 @@ exports.sapBridge = onRequest(
 
     // POST /sync
     if (req.method === 'POST' && path.endsWith('/sync')) {
+      if (!await requireInternalUser(req, res)) return;
       const { sessionId, eventType = 'checkout' } = req.body || {};
       if (!sessionId) {
         return res.status(400).json({ ok: false, error: 'sessionId required' });
+      }
+      if (!['checkout', 'checkin'].includes(eventType)) {
+        return res.status(400).json({ ok: false, error: 'eventType must be checkout or checkin' });
       }
       const doc = await db.collection(TOOL_SESSIONS_PATH).doc(sessionId).get();
       if (!doc.exists) {
@@ -247,3 +305,8 @@ exports.sapBridge = onRequest(
     return res.status(404).json({ ok: false, error: 'unknown path', path });
   }
 );
+
+exports.__test = {
+  buildSapNotificationPayload,
+  processToolSession,
+};

@@ -1588,3 +1588,7 @@ exports.onToolCreated          = equipmentModelTriggers.onToolCreated;
 exports.onToolDeleted          = equipmentModelTriggers.onToolDeleted;
 exports.onToolUpdated          = equipmentModelTriggers.onToolUpdated;
 exports.reconcileUnitCounts    = equipmentModelTriggers.reconcileUnitCounts;
+
+// Firebase Auth claims mirror for Storage RBAC.
+const authClaimsTriggers = require('./authClaimsTriggers');
+exports.onUserProfileWrittenSyncClaims = authClaimsTriggers.onUserProfileWrittenSyncClaims;

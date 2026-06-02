@@ -134,6 +134,21 @@ const upsertFirestoreProfile = async (uid, profile) => {
 };
 
 /**
+ * Espelha o perfil no token Firebase Auth usado pelas Storage Rules.
+ *
+ * @param {string} uid
+ * @param {string} systemRole
+ */
+const upsertAuthClaims = async (uid, systemRole) => {
+  const user = await auth.getUser(uid);
+  await auth.setCustomUserClaims(uid, {
+    ...(user.customClaims || {}),
+    systemRole,
+  });
+  console.log(`  [AUTH CLAIM] systemRole gravado -> ${systemRole}`);
+};
+
+/**
  * Executa a criação de todas as contas de teste.
  */
 const main = async () => {
@@ -153,6 +168,7 @@ const main = async () => {
     try {
       const uid = await createOrUpdateAuthUser(user);
       await upsertFirestoreProfile(uid, user);
+      await upsertAuthClaims(uid, user.systemRole);
       successCount++;
     } catch (err) {
       console.error(`  [ERRO] ${user.email}: ${err.message}`);

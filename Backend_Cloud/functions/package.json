@@ -13,10 +13,11 @@
     "seed:operators": "node scripts/reset/seed_operators.js",
     "seed:obras": "node scripts/reset/seed_obras.js",
     "seed:all": "npm run seed:machines && npm run seed:operators && npm run seed:obras",
+    "sync:auth-claims": "node scripts/sync-auth-role-claims.js",
     "test:sprint0": "node scripts/tests/sprint0_test.js",
     "test:sprint1": "node scripts/tests/sprint1_test.js",
     "test:sprint4": "node scripts/tests/sprint4_test.js",
-    "test": "jest --testPathPatterns=sap/"
+    "test": "jest --runInBand"
   },
   "engines": {
     "node": "22"
@@ -34,7 +35,8 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/*.test.js"]
+    "testMatch": ["**/*.test.js"],
+    "testPathIgnorePatterns": ["/node_modules/", "/Frontend_App/dashboard/"]
   },
   "private": true
 }

@@ -5,25 +5,21 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function hasSystemRole(roles) {
+      // Mirrored from users/{uid} by onUserProfileWrittenSyncClaims.
+      return isAuthenticated() && request.auth.token.systemRole in roles;
+    }
+
     function isAdmin() {
-      return isAuthenticated() &&
-        firestore.get(
-          /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
-        ).data.systemRole in ['admin', 'it'];
+      return hasSystemRole(['admin', 'it']);
     }
 
     function isFleetManager() {
-      return isAuthenticated() &&
-        firestore.get(
-          /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
-        ).data.systemRole in ['admin', 'it', 'gestor', 'gestor_frota'];
+      return hasSystemRole(['admin', 'it', 'gestor', 'gestor_frota']);
     }
 
     function isMaintenanceTech() {
-      return isAuthenticated() &&
-        firestore.get(
-          /databases/(default)/documents/artifacts/casais-rfid/public/data/users/$(request.auth.uid)
-        ).data.systemRole in ['admin', 'it', 'tecnico_manutencao'];
+      return hasSystemRole(['admin', 'it', 'tecnico_manutencao']);
     }
 
     function isValidImage() {

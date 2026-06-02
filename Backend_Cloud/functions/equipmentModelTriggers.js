@@ -6,9 +6,9 @@
  * - unitCount: total tools referencing the modelId
  * - activeUnitCount: total tools excluding status RETIRED
  *
- * recomputeModelCounts é a fonte de verdade — NÃO substituir por FieldValue.increment.
- * reconcileUnitCounts (scheduled) é uma rede de segurança adicional que detecta e
- * corrige desvios acumulados sem recriar estado.
+ * Eventos individuais aplicam deltas idempotentes com FieldValue.increment.
+ * reconcileUnitCounts (scheduled) continua como rede de seguranca para corrigir
+ * dados antigos ou falhas operacionais sem recriar estado.
  */
 
 const { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } = require('firebase-functions/v2/firestore');
@@ -18,6 +18,67 @@ const admin = require('firebase-admin');
 const APP_ID = process.env.GCLOUD_PROJECT || 'casais-rfid';
 const TOOLS_PATH = `artifacts/${APP_ID}/public/data/tools`;
 const MODELS_PATH = `artifacts/${APP_ID}/public/data/equipment_models`;
+const COUNTER_EVENTS_PATH = `artifacts/${APP_ID}/public/data/equipment_model_counter_events`;
+
+function buildCounterDeltas(before, after) {
+  const deltas = new Map();
+
+  const addDelta = (tool, multiplier) => {
+    if (!tool?.modelId) return;
+    const current = deltas.get(tool.modelId) || { unitCount: 0, activeUnitCount: 0 };
+    current.unitCount += multiplier;
+    if (tool.status !== 'RETIRED') current.activeUnitCount += multiplier;
+    deltas.set(tool.modelId, current);
+  };
+
+  addDelta(before, -1);
+  addDelta(after, 1);
+
+  return [...deltas.entries()]
+    .map(([modelId, delta]) => ({ modelId, ...delta }))
+    .filter(delta => delta.unitCount || delta.activeUnitCount);
+}
+
+async function applyCounterEvent(eventId, deltas) {
+  if (!eventId || !deltas.length) return;
+
+  const db = admin.firestore();
+  const eventRef = db.collection(COUNTER_EVENTS_PATH).doc(String(eventId).replaceAll('/', '_'));
+  const modelRefs = deltas.map(delta => db.collection(MODELS_PATH).doc(delta.modelId));
+
+  await db.runTransaction(async transaction => {
+    const eventSnap = await transaction.get(eventRef);
+    if (eventSnap.exists) return;
+
+    const modelSnaps = await transaction.getAll(...modelRefs);
+    const missingModelIds = [];
+
+    modelSnaps.forEach((modelSnap, index) => {
+      const delta = deltas[index];
+      if (!modelSnap.exists) {
+        missingModelIds.push(delta.modelId);
+        return;
+      }
+
+      transaction.update(modelSnap.ref, {
+        unitCount: admin.firestore.FieldValue.increment(delta.unitCount),
+        activeUnitCount: admin.firestore.FieldValue.increment(delta.activeUnitCount),
+        updatedAt: admin.firestore.Timestamp.now(),
+      });
+    });
+
+    transaction.create(eventRef, {
+      eventId,
+      deltas,
+      missingModelIds,
+      appliedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (missingModelIds.length) {
+      console.warn(`[equipmentModelTriggers] Missing models for counter event ${eventId}: ${missingModelIds.join(', ')}`);
+    }
+  });
+}
 
 async function recomputeModelCounts(modelId) {
   if (!modelId) {
@@ -48,7 +109,7 @@ async function recomputeModelCounts(modelId) {
 exports.onToolCreated = onDocumentCreated(`${TOOLS_PATH}/{toolId}`, async (event) => {
   const data = event.data?.data();
   if (data?.modelId) {
-    await recomputeModelCounts(data.modelId);
+    await applyCounterEvent(event.id, buildCounterDeltas(null, data));
   } else {
     console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} created without modelId`);
   }
@@ -57,7 +118,7 @@ exports.onToolCreated = onDocumentCreated(`${TOOLS_PATH}/{toolId}`, async (event
 exports.onToolDeleted = onDocumentDeleted(`${TOOLS_PATH}/{toolId}`, async (event) => {
   const data = event.data?.data();
   if (data?.modelId) {
-    await recomputeModelCounts(data.modelId);
+    await applyCounterEvent(event.id, buildCounterDeltas(data, null));
   } else {
     console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} deleted without modelId`);
   }
@@ -68,18 +129,10 @@ exports.onToolUpdated = onDocumentUpdated(`${TOOLS_PATH}/{toolId}`, async (event
   const after = event.data?.after?.data();
   if (!before || !after) return;
 
-  const modelChanged = before.modelId !== after.modelId;
-  const retirementChanged = (before.status === 'RETIRED') !== (after.status === 'RETIRED');
-
-  if (modelChanged) {
-    if (before.modelId) await recomputeModelCounts(before.modelId);
-    else console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} had no previous modelId`);
-
-    if (after.modelId) await recomputeModelCounts(after.modelId);
-    else console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} updated without modelId`);
-  } else if (retirementChanged && after.modelId) {
-    await recomputeModelCounts(after.modelId);
-  } else if (retirementChanged) {
+  const deltas = buildCounterDeltas(before, after);
+  if (deltas.length) {
+    await applyCounterEvent(event.id, deltas);
+  } else if ((before.status === 'RETIRED') !== (after.status === 'RETIRED') && !after.modelId) {
     console.warn(`[equipmentModelTriggers] Tool ${event.params.toolId} changed retirement status without modelId`);
   }
 });
@@ -154,3 +207,8 @@ exports.reconcileUnitCounts = onSchedule(
     return { checked, fixed, log };
   }
 );
+
+exports.__test = {
+  buildCounterDeltas,
+  applyCounterEvent,
+};
