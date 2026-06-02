@@ -14,6 +14,7 @@ const ANOMALY_META = {
   NO_LOCATION:        { label: 'Sem localização',    icon: MapPin,       iconCls: 'text-slate-600', labelCls: 'text-slate-700' },
   NO_OPERATOR:        { label: 'Sem operador',       icon: User,         iconCls: 'text-slate-600', labelCls: 'text-slate-700' },
   DAMAGED:            { label: 'Avaria reportada',   icon: Wrench,       iconCls: 'text-red-600',   labelCls: 'text-red-700'   },
+  SAP_SYNC_FAILURE:   { label: 'Falha de sincronização SAP', icon: AlertTriangle, iconCls: 'text-red-600', labelCls: 'text-red-700' },
 };
 
 const STATUS_META = {
@@ -55,7 +56,7 @@ export default function AlertsView() {
         tool,
         model,
         obraName: obra?.name || tool?.currentObraName || '—',
-        displayName: model?.displayName || tool?.name || a.toolId,
+        displayName: model?.displayName || tool?.name || a.toolName || (a.transferId ? `Guia ${a.transferId.slice(-8)}` : a.toolId),
         photoUrl: model?.photoUrl || null,
         brand: model?.brand || null,
         customNumber: tool?.customNumber || null,

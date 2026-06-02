@@ -140,7 +140,7 @@
  * @property {string} id
  * @property {string} toolId
  * @property {string} [toolSessionId]
- * @property {'TOOL_OVERDUE'|'TOOL_PRESUMED_LOST'|'NO_LOCATION'|'NO_OPERATOR'|'DAMAGED'} anomalyType
+ * @property {'TOOL_OVERDUE'|'TOOL_PRESUMED_LOST'|'NO_LOCATION'|'NO_OPERATOR'|'DAMAGED'|'SAP_SYNC_FAILURE'} anomalyType
  * @property {string} token                 32 chars — link único do email
  * @property {Timestamp} createdAt
  * @property {string} notifiedTo            operatorId ou email
@@ -208,7 +208,14 @@
  *   syncStatus: 'pending'|'synced'|'failed',
  *   retryCount: number,
  *   lastError: string|null,
- *   updatedAt: import('firebase/firestore').Timestamp|null
+ *   updatedAt: import('firebase/firestore').Timestamp|null,
+ *   sap?: Object<string, {
+ *     status: 'pending'|'mocked'|'synced'|'dead_letter',
+ *     retryCount: number,
+ *     lastError: string|null,
+ *     idempotencyKey: string,
+ *     mode?: 'mock'|'live'
+ *   }>
  * }} externalSync
  * @property {{action:string,by:string,at:Timestamp,notes?:string}[]} auditLog
  */
@@ -271,6 +278,7 @@ export const TOOL_ANOMALY_TYPES = Object.freeze({
   NO_LOCATION:    'NO_LOCATION',
   NO_OPERATOR:    'NO_OPERATOR',
   DAMAGED:        'DAMAGED',
+  SAP_SYNC_FAILURE: 'SAP_SYNC_FAILURE',
 });
 
 /** Status válidos para tool_sessions. */

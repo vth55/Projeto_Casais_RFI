@@ -160,6 +160,8 @@ const {
     buildSapTransferPayload,
     nextProcessAfter,
     queueDocId,
+    idempotencyKey,
+    sendToSap,
     MAX_RETRIES,
     LEASE_DURATION_MS,
     BACKOFF_BASE_MS,
@@ -222,6 +224,7 @@ beforeEach(() => {
   Object.keys(store).forEach(k => delete store[k]);
   addedDocs.length = 0;
   txQueue = Promise.resolve();
+  jest.restoreAllMocks();
 });
 
 // ─── 1. Idempotência concorrente ──────────────────────────────────────────────
@@ -237,6 +240,11 @@ describe('enqueueTransfer — idempotência', () => {
     const queueDoc = getDoc(QUEUE_PATH, queueDocId('transfer_abc', 'DISPATCHED'));
     expect(queueDoc).toBeDefined();
     expect(queueDoc.status).toBe('pending');
+    expect(queueDoc.idempotencyKey).toBe('transfer_abc:DISPATCHED');
+    expect(queueDoc.payload.PwaIdempotencyKey).toBe('transfer_abc:DISPATCHED');
+
+    const transferDoc = getDoc(TRANSFER_PATH, 'transfer_abc');
+    expect(transferDoc.externalSync.sap.DISPATCHED.status).toBe('pending');
 
     // Exactamente um enfileirou, o outro viu o doc existente
     const enqueuedCount = results.filter(Boolean).length;
@@ -283,6 +291,11 @@ describe('onToolTransferWritten — transições', () => {
     await onToolTransferWritten(mkEvent('DRAFT', 'DISPATCHED'));
     expect(getDoc(QUEUE_PATH, queueDocId('transfer_trg', 'DISPATCHED'))).toBeDefined();
     expect(getDoc(QUEUE_PATH, queueDocId('transfer_trg', 'RECEIVED'))).toBeUndefined();
+  });
+
+  test('criação directa como DISPATCHED também enfileira DISPATCHED', async () => {
+    await onToolTransferWritten(mkEvent(null, 'DISPATCHED'));
+    expect(getDoc(QUEUE_PATH, queueDocId('transfer_trg', 'DISPATCHED'))).toBeDefined();
   });
 
   test('DISPATCHED → RECEIVED enfileira RECEIVED (não re-enfileira DISPATCHED)', async () => {
@@ -425,12 +438,12 @@ describe('completeQueueItem — dead-letter', () => {
     expect(queueDoc.status).toBe('dead_letter');
     expect(queueDoc.retryCount).toBe(MAX_RETRIES);
 
-    // Alerta SAP_SYNC_FAILURE criado
-    const alert = addedDocs.find(d => d.collPath.includes('tool_alerts'));
+    // Alerta SAP_SYNC_FAILURE determinístico criado
+    const alert = getDoc(ALERTS_PATH, `sap_transfer_${queueDocId('transfer_dl', 'DISPATCHED')}`);
     expect(alert).toBeDefined();
-    expect(alert.data.anomalyType).toBe('SAP_SYNC_FAILURE');
-    expect(alert.data.transferId).toBe('transfer_dl');
-    expect(alert.data.eventType).toBe('DISPATCHED');
+    expect(alert.anomalyType).toBe('SAP_SYNC_FAILURE');
+    expect(alert.transferId).toBe('transfer_dl');
+    expect(alert.eventType).toBe('DISPATCHED');
   });
 
   test('dead-letter não é re-reclamável', async () => {
@@ -456,6 +469,7 @@ describe('buildSapTransferPayload', () => {
 
     expect(payload.NotificationType).toBe('M2');
     expect(payload.PwaEventType).toBe('DISPATCHED');
+    expect(payload.PwaIdempotencyKey).toBe('xfer_001:DISPATCHED');
     expect(payload.PwaTransferId).toBe('xfer_001');
     expect(payload.PwaTransferType).toBe('WAREHOUSE_TO_OBRA');
     expect(payload.PwaFromLocation).toBe('WAREHOUSE');
@@ -490,6 +504,25 @@ describe('buildSapTransferPayload', () => {
   });
 });
 
+describe('sendToSap — idempotência externa rastreável', () => {
+  test('envia Idempotency-Key no header e no payload', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ MaintenanceNotification: 'SAP-42' }),
+    });
+    const payload = buildSapTransferPayload('xfer_live', mkTransfer(), 'DISPATCHED');
+
+    const result = await sendToSap(payload, 'api-key', idempotencyKey('xfer_live', 'DISPATCHED'));
+
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      headers: expect.objectContaining({ 'Idempotency-Key': 'xfer_live:DISPATCHED' }),
+    }));
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(sentBody.PwaIdempotencyKey).toBe('xfer_live:DISPATCHED');
+  });
+});
+
 // ─── 12. Eventos independentes ────────────────────────────────────────────────
 
 describe('completeQueueItem — DISPATCHED e RECEIVED independentes', () => {
@@ -519,7 +552,7 @@ describe('completeQueueItem — DISPATCHED e RECEIVED independentes', () => {
     expect(transferDoc.externalSync.sap.DISPATCHED.status).toBe('synced');
     expect(transferDoc.externalSync.sap.DISPATCHED.sapNotificationId).toBe('SAP-100');
     // RECEIVED actualizado
-    expect(transferDoc.externalSync.sap.RECEIVED.status).toBe('synced');
+    expect(transferDoc.externalSync.sap.RECEIVED.status).toBe('mocked');
     expect(transferDoc.externalSync.sap.RECEIVED.sapNotificationId).toBe('SAP-200');
   });
 });

@@ -14,6 +14,11 @@
  *   externalSync.sap.RECEIVED.{  status, syncedAt, sapNotificationId, lastError, retryCount }
  *
  * Modo mock por defeito: sem SAP_API_KEY o payload é registado mas não enviado.
+ * Nesse caso o estado terminal é `mocked`, nunca `synced`.
+ *
+ * A chave enviada em `Idempotency-Key` e `PwaIdempotencyKey` permite deduplicação
+ * no adaptador SAP. Até o contrato SAP confirmar suporte, a entrega externa é
+ * rastreável e at-least-once, não exactamente-once.
  */
 
 const admin = require('firebase-admin');
@@ -43,6 +48,10 @@ const SAP_SANDBOX = {
 
 function queueDocId(transferId, eventType) {
   return `${transferId}_${eventType}`;
+}
+
+function idempotencyKey(transferId, eventType) {
+  return `${transferId}:${eventType}`;
 }
 
 /**
@@ -98,6 +107,7 @@ function buildSapTransferPayload(transferId, transfer, eventType) {
     // Campos específicos de guias — ausentes em tool_sessions
     PwaTransferId: transferId,
     PwaEventType: eventType,
+    PwaIdempotencyKey: idempotencyKey(transferId, eventType),
     PwaTransferType: transfer.type || 'UNKNOWN',
     PwaFromLocation: from.kind === 'OBRA' ? (from.obraId || '') : 'WAREHOUSE',
     PwaToLocation: to.kind === 'OBRA' ? (to.obraId || '') : 'WAREHOUSE',
@@ -110,7 +120,7 @@ function buildSapTransferPayload(transferId, transfer, eventType) {
 
 // ─── Envio SAP ────────────────────────────────────────────────────────────────
 
-async function sendToSap(payload, apiKey) {
+async function sendToSap(payload, apiKey, outboundIdempotencyKey = payload.PwaIdempotencyKey) {
   if (!apiKey) {
     // Modo mock por defeito — nunca assumir live sem credenciais explícitas
     return {
@@ -129,6 +139,7 @@ async function sendToSap(payload, apiKey) {
         'Content-Type': 'application/json',
         Accept: 'application/json',
         APIKey: apiKey,
+        'Idempotency-Key': outboundIdempotencyKey,
       },
       body: JSON.stringify(payload),
     });
@@ -164,7 +175,9 @@ async function sendToSap(payload, apiKey) {
 async function enqueueTransfer(transferId, eventType, transferData) {
   const db = admin.firestore();
   const queueRef = db.collection(SAP_QUEUE_PATH).doc(queueDocId(transferId, eventType));
+  const transferRef = db.collection(TOOL_TRANSFERS_PATH).doc(transferId);
   const now = admin.firestore.Timestamp.now();
+  const outboundIdempotencyKey = idempotencyKey(transferId, eventType);
   let enqueued = false;
 
   await db.runTransaction(async (tx) => {
@@ -176,12 +189,26 @@ async function enqueueTransfer(transferId, eventType, transferData) {
       eventType,
       status: 'pending',
       retryCount: 0,
+      idempotencyKey: outboundIdempotencyKey,
       createdAt: now,
       processAfter: now,
       leaseExpiry: null,
       lastError: null,
       payload: buildSapTransferPayload(transferId, transferData, eventType),
     });
+    tx.set(transferRef, {
+      externalSync: {
+        sap: {
+          [eventType]: {
+            status: 'pending',
+            queuedAt: now,
+            retryCount: 0,
+            lastError: null,
+            idempotencyKey: outboundIdempotencyKey,
+          },
+        },
+      },
+    }, { merge: true });
     enqueued = true;
   });
 
@@ -211,7 +238,7 @@ async function claimQueueItem(itemRef, nowMs = Date.now()) {
       const d = snap.data();
 
       // Terminais — não processar
-      if (d.status === 'synced' || d.status === 'dead_letter') throw new Error('terminal');
+      if (d.status === 'synced' || d.status === 'mocked' || d.status === 'dead_letter') throw new Error('terminal');
 
       // Lease activo — outro worker está a processar
       if (d.status === 'processing' && d.leaseExpiry != null && d.leaseExpiry.toMillis() > nowMs) {
@@ -254,13 +281,22 @@ async function completeQueueItem(itemRef, result, previousData) {
   const prefix = `externalSync.sap.${eventType}`;
 
   if (result.ok) {
-    await itemRef.update({ status: 'synced', leaseExpiry: null, lastError: null });
+    const terminalStatus = result.mode === 'mock' ? 'mocked' : 'synced';
+    await itemRef.update({
+      status: terminalStatus,
+      leaseExpiry: null,
+      lastError: null,
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      sapNotificationId: result.sapNotificationId || null,
+      mode: result.mode,
+    });
     await transferRef.update({
-      [`${prefix}.status`]: 'synced',
-      [`${prefix}.syncedAt`]: admin.firestore.FieldValue.serverTimestamp(),
+      [`${prefix}.status`]: terminalStatus,
+      [`${prefix}.completedAt`]: admin.firestore.FieldValue.serverTimestamp(),
       [`${prefix}.sapNotificationId`]: result.sapNotificationId || null,
       [`${prefix}.lastError`]: null,
       [`${prefix}.retryCount`]: prevRetry,
+      [`${prefix}.mode`]: result.mode,
     });
     return;
   }
@@ -271,17 +307,15 @@ async function completeQueueItem(itemRef, result, previousData) {
   if (newRetry >= MAX_RETRIES) {
     // Dead-letter: marcar e criar alerta operacional
     await itemRef.update({ status: 'dead_letter', leaseExpiry: null, lastError: errorMsg, retryCount: newRetry });
-    await transferRef.update({
-      [`${prefix}.status`]: 'dead_letter',
-      [`${prefix}.lastError`]: errorMsg,
-      [`${prefix}.retryCount`]: newRetry,
-    });
-    await db.collection(TOOL_ALERTS_PATH).add({
+    const alertRef = db.collection(TOOL_ALERTS_PATH).doc(`sap_transfer_${queueDocId(transferId, eventType)}`);
+    await alertRef.set({
       anomalyType: 'SAP_SYNC_FAILURE',
       type: 'SAP_SYNC_FAILURE',
       status: 'OPEN',
+      internal: true,
       transferId,
       eventType,
+      toolName: `Guia ${String(transferId).slice(-8)}`,
       lastError: errorMsg,
       retryCount: newRetry,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -289,9 +323,14 @@ async function completeQueueItem(itemRef, result, previousData) {
       auditLog: [{
         action: 'CREATED',
         by: 'sap_transfer_bridge',
-        at: admin.firestore.FieldValue.serverTimestamp(),
+        at: admin.firestore.Timestamp.now(),
         notes: `Dead-letter após ${MAX_RETRIES} tentativas: ${errorMsg}`,
       }],
+    }, { merge: true });
+    await transferRef.update({
+      [`${prefix}.status`]: 'dead_letter',
+      [`${prefix}.lastError`]: errorMsg,
+      [`${prefix}.retryCount`]: newRetry,
     });
   } else {
     // Retry com backoff exponencial
@@ -374,10 +413,15 @@ exports.processSapTransferQueue = onSchedule(
       const claimed = await claimQueueItem(doc.ref);
       if (!claimed) continue;
 
-      const result = await sendToSap(claimed.data.payload, apiKey);
-      await completeQueueItem(doc.ref, result, claimed.data);
+      try {
+        const result = await sendToSap(claimed.data.payload, apiKey, claimed.data.idempotencyKey);
+        await completeQueueItem(doc.ref, result, claimed.data);
 
-      console.log(`[sapTransfer] ${claimed.data.transferId}:${claimed.data.eventType} → ${result.ok ? 'ok' : `fail(${result.error || result.status})`}`);
+        console.log(`[sapTransfer] ${claimed.data.transferId}:${claimed.data.eventType} -> ${result.ok ? result.mode : `fail(${result.error || result.status})`}`);
+      } catch (err) {
+        // O lease expirado volta a disponibilizar este item. Nao abortar os restantes.
+        console.error(`[sapTransfer] worker error ${claimed.data.transferId}:${claimed.data.eventType}`, err);
+      }
     }
   },
 );
@@ -407,7 +451,7 @@ exports.reconcileSapTransfers = onSchedule(
       for (const eventType of expectedEvents) {
         const syncState = data.externalSync?.sap?.[eventType];
 
-        if (syncState?.status === 'synced') continue;       // já feito
+        if (syncState?.status === 'synced' || syncState?.status === 'mocked') continue; // já feito
         if (syncState?.status === 'dead_letter') continue;  // requer intervenção humana
 
         // Verificar se já há um item activo na queue
@@ -417,6 +461,21 @@ exports.reconcileSapTransfers = onSchedule(
 
         if (queueStatus === 'pending' || queueStatus === 'processing') continue;
 
+        if (queueStatus === 'synced' || queueStatus === 'mocked' || queueStatus === 'dead_letter') {
+          const prefix = `externalSync.sap.${eventType}`;
+          const queueData = queueSnap.data();
+          await transferDoc.ref.update({
+            [`${prefix}.status`]: queueStatus,
+            [`${prefix}.completedAt`]: queueData.completedAt || null,
+            [`${prefix}.sapNotificationId`]: queueData.sapNotificationId || null,
+            [`${prefix}.lastError`]: queueData.lastError || null,
+            [`${prefix}.retryCount`]: queueData.retryCount || 0,
+            [`${prefix}.mode`]: queueData.mode || null,
+          });
+          console.log(`[sapTransfer] reconcile: healed local state ${transferId}:${eventType} from queue=${queueStatus}`);
+          continue;
+        }
+
         // Re-enfileirar (novo ou reset de falha antiga)
         const nowTs = admin.firestore.Timestamp.now();
         await queueRef.set({
@@ -424,11 +483,19 @@ exports.reconcileSapTransfers = onSchedule(
           eventType,
           status: 'pending',
           retryCount: 0,
+          idempotencyKey: idempotencyKey(transferId, eventType),
           createdAt: queueSnap.exists ? queueSnap.data().createdAt : nowTs,
           processAfter: nowTs,
           leaseExpiry: null,
           lastError: null,
           payload: buildSapTransferPayload(transferId, data, eventType),
+        });
+        await transferDoc.ref.update({
+          [`externalSync.sap.${eventType}.status`]: 'pending',
+          [`externalSync.sap.${eventType}.queuedAt`]: nowTs,
+          [`externalSync.sap.${eventType}.retryCount`]: 0,
+          [`externalSync.sap.${eventType}.lastError`]: null,
+          [`externalSync.sap.${eventType}.idempotencyKey`]: idempotencyKey(transferId, eventType),
         });
 
         requeued++;
@@ -448,6 +515,8 @@ exports.__test = {
   buildSapTransferPayload,
   nextProcessAfter,
   queueDocId,
+  idempotencyKey,
+  sendToSap,
   SYNC_TRANSITIONS,
   MAX_RETRIES,
   LEASE_DURATION_MS,

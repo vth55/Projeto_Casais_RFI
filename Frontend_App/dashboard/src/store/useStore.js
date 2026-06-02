@@ -1198,6 +1198,7 @@ const useStore = create((set, get) => ({
         retryCount: 0,
         lastError: null,
         updatedAt: now,
+        sap: {},
       },
     });
     return ref.id;

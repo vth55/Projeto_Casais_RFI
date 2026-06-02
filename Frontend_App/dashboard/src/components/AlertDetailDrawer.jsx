@@ -12,6 +12,7 @@ const ANOMALY_LABELS = {
   NO_LOCATION: 'Sem localização',
   NO_OPERATOR: 'Sem operador',
   DAMAGED: 'Avaria reportada',
+  SAP_SYNC_FAILURE: 'Falha de sincronização SAP',
 };
 
 const STATUS_LABELS = {
@@ -46,6 +47,7 @@ export default function AlertDetailDrawer({ alertId, onClose }) {
 
   const uid = currentUser?.id || currentUser?.uid || 'anonymous';
   const isResolved = alertData.status === 'RESOLVED';
+  const hasTool = Boolean(alertData.toolId);
 
   const handle = async (action) => {
     setBusy(true);
@@ -121,7 +123,7 @@ export default function AlertDetailDrawer({ alertId, onClose }) {
               )}
             </div>
             {model?.brand && <p className="text-xs uppercase tracking-wide text-primary-700 font-semibold">{model.brand} · {model.category}</p>}
-            <h3 className="font-bold text-slate-900 mt-1">{model?.displayName || tool?.name || alertData.toolId}</h3>
+            <h3 className="font-bold text-slate-900 mt-1">{model?.displayName || tool?.name || alertData.toolName || alertData.toolId || `Guia ${alertData.transferId?.slice(-8)}`}</h3>
             {tool?.customNumber && <p className="text-sm text-slate-500">#{tool.customNumber}</p>}
             {tool?.nfcTagId && <p className="text-xs text-slate-400 font-mono mt-1">NFC: {tool.nfcTagId}</p>}
           </div>
@@ -145,9 +147,9 @@ export default function AlertDetailDrawer({ alertId, onClose }) {
             <div className="p-4 grid grid-cols-2 gap-2 border-b border-slate-100">
               <ActionBtn onClick={() => handle('resolve')} disabled={busy} icon={CheckCircle} label="Resolver" tone="emerald" />
               <ActionBtn onClick={() => handle('ignore')} disabled={busy} icon={EyeOff} label="Ignorar" tone="slate" />
-              <ActionBtn onClick={() => handle('returned')} disabled={busy} icon={Package} label="Devolvido" tone="blue" />
-              <ActionBtn onClick={() => handle('lost')} disabled={busy} icon={AlertOctagon} label="Perdido" tone="red" />
-              <ActionBtn onClick={() => setShowMaintForm(true)} disabled={busy} icon={Wrench} label="Reportar Avaria" tone="amber" className="col-span-2" />
+              {hasTool && <ActionBtn onClick={() => handle('returned')} disabled={busy} icon={Package} label="Devolvido" tone="blue" />}
+              {hasTool && <ActionBtn onClick={() => handle('lost')} disabled={busy} icon={AlertOctagon} label="Perdido" tone="red" />}
+              {hasTool && <ActionBtn onClick={() => setShowMaintForm(true)} disabled={busy} icon={Wrench} label="Reportar Avaria" tone="amber" className="col-span-2" />}
             </div>
           )}
 
