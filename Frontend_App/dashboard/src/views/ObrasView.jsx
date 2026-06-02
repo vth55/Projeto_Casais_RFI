@@ -408,7 +408,7 @@ const ObraDetailView = ({ obra, tools, operators, toolSessions, onBack, onEdit, 
           {toolsInObra.length === 0 ? (
             <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm">Nenhuma equipamento nesta obra</p>
+              <p className="text-sm">Nenhum equipamento nesta obra</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -575,7 +575,7 @@ const DeleteObraModal = ({ obra, isOpen, onClose, onConfirm, toolsCount, activeS
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <Package className="w-5 h-5 text-amber-600" />
                 <span className="text-sm text-amber-800">
-                  <strong>{toolsCount}</strong> equipamento{toolsCount > 1 ? 's' : ''} ainda atribuída{toolsCount > 1 ? 's' : ''} a esta obra
+                  <strong>{toolsCount}</strong> equipamento{toolsCount > 1 ? 's' : ''} ainda atribuído{toolsCount > 1 ? 's' : ''} a esta obra
                 </span>
               </div>
             )}

@@ -24,13 +24,27 @@ const admin = require('firebase-admin');
 
 const APPLY = process.argv.includes('--apply');
 
+const APP_ID = 'casais-rfid';
+const BASE = `artifacts/${APP_ID}/public/data`;
+
 if (!admin.apps.length) {
-  admin.initializeApp();
+  admin.initializeApp({ projectId: APP_ID });
 }
 
 const db = admin.firestore();
-const APP_ID = 'casais-rfid';
-const BASE = `artifacts/${APP_ID}/public/data`;
+
+function isValidCoordinatePair(latitude, longitude) {
+  return (
+    typeof latitude === 'number' &&
+    Number.isFinite(latitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    typeof longitude === 'number' &&
+    Number.isFinite(longitude) &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
 
 function resolveGps(data) {
   // Resolve coordinates from any legacy format.
@@ -43,7 +57,7 @@ function resolveGps(data) {
     data?.gps?.longitude ??
     data?.gps?.lng ??
     data?.lng;
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') return null;
+  if (!isValidCoordinatePair(latitude, longitude)) return null;
   return { latitude, longitude };
 }
 
@@ -54,7 +68,8 @@ function needsMigration(data) {
     typeof data?.gps?.longitude === 'number' &&
     typeof data?.gps?.source === 'string';
   const hasGpsStatus = typeof data?.gpsStatus === 'string';
-  return !(hasCanonicalGps && hasGpsStatus);
+  const isKnownMissing = data?.gpsStatus === 'missing' && !resolveGps(data);
+  return !(hasCanonicalGps && hasGpsStatus) && !isKnownMissing;
 }
 
 async function main() {
@@ -68,7 +83,7 @@ async function main() {
   let written = 0;
   let noGps = 0;
 
-  const batch = db.batch();
+  let batch = db.batch();
   let batchCount = 0;
 
   for (const docSnap of snap.docs) {
@@ -108,11 +123,13 @@ async function main() {
     if (APPLY) {
       batch.update(docSnap.ref, update);
       batchCount++;
+      written++;
 
       // Firestore batch limit is 500 writes.
       if (batchCount === 490) {
         await batch.commit();
         console.log(`[migrate-obras-gps] committed batch of ${batchCount}`);
+        batch = db.batch();
         batchCount = 0;
       }
     }
@@ -120,7 +137,6 @@ async function main() {
 
   if (APPLY && batchCount > 0) {
     await batch.commit();
-    written = toMigrate + noGps;
     console.log(`[migrate-obras-gps] committed final batch of ${batchCount}`);
   }
 

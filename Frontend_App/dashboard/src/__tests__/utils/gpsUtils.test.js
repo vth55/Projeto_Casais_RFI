@@ -57,4 +57,16 @@ describe('getObraCoords', () => {
   it('accepts negative coordinates', () => {
     expect(getObraCoords({ gps: { latitude: -23.5, longitude: -46.6 } })).toEqual([-23.5, -46.6]);
   });
+
+  it('returns null when latitude is outside the valid range', () => {
+    expect(getObraCoords({ gps: { latitude: 91, longitude: -8.6 } })).toBeNull();
+  });
+
+  it('returns null when longitude is outside the valid range', () => {
+    expect(getObraCoords({ gps: { latitude: 41.1, longitude: 181 } })).toBeNull();
+  });
+
+  it('returns null for non-finite coordinates', () => {
+    expect(getObraCoords({ gps: { latitude: Number.NaN, longitude: -8.6 } })).toBeNull();
+  });
 });

@@ -14,6 +14,15 @@ export function getObraCoords(obra) {
     obra?.gps?.longitude ??
     obra?.gps?.lng ?? // LEGACY transitional
     obra?.lng; // LEGACY root
-  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  if (
+    typeof lat !== 'number' ||
+    !Number.isFinite(lat) ||
+    lat < -90 ||
+    lat > 90 ||
+    typeof lng !== 'number' ||
+    !Number.isFinite(lng) ||
+    lng < -180 ||
+    lng > 180
+  ) return null;
   return [lat, lng];
 }
