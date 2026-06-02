@@ -20,6 +20,7 @@
 'use strict';
 
 const admin = require('firebase-admin');
+const { buildAuthClaims } = require('./authClaimsPolicy');
 
 // Inicializar Firebase Admin com Application Default Credentials
 // (funciona tanto com GOOGLE_APPLICATION_CREDENTIALS como com gcloud CLI)
@@ -134,18 +135,20 @@ const upsertFirestoreProfile = async (uid, profile) => {
 };
 
 /**
- * Espelha o perfil no token Firebase Auth usado pelas Storage Rules.
+ * Espelha o perfil no token Firebase Auth (systemRole + assignedObraId + restrictedToOwnObra).
  *
  * @param {string} uid
- * @param {string} systemRole
+ * @param {object} profile - Firestore user document data
  */
-const upsertAuthClaims = async (uid, systemRole) => {
+const upsertAuthClaims = async (uid, profile) => {
   const user = await auth.getUser(uid);
-  await auth.setCustomUserClaims(uid, {
-    ...(user.customClaims || {}),
-    systemRole,
-  });
-  console.log(`  [AUTH CLAIM] systemRole gravado -> ${systemRole}`);
+  const nextClaims = buildAuthClaims(profile, user.customClaims || {});
+  await auth.setCustomUserClaims(uid, nextClaims);
+  console.log(
+    `  [AUTH CLAIM] synced -> role=${nextClaims.systemRole}` +
+    ` obra=${nextClaims.assignedObraId || 'none'}` +
+    ` restricted=${nextClaims.restrictedToOwnObra}`
+  );
 };
 
 /**
@@ -168,7 +171,7 @@ const main = async () => {
     try {
       const uid = await createOrUpdateAuthUser(user);
       await upsertFirestoreProfile(uid, user);
-      await upsertAuthClaims(uid, user.systemRole);
+      await upsertAuthClaims(uid, user);
       successCount++;
     } catch (err) {
       console.error(`  [ERRO] ${user.email}: ${err.message}`);
