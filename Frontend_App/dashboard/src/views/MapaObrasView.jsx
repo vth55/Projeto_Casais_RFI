@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import useStore from '../store/useStore';
+import { getObraCoords } from '../utils/gpsUtils';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -17,12 +18,6 @@ function toDate(value) {
   return new Date(value);
 }
 
-function getObraCoords(obra) {
-  const lat = obra?.gps?.latitude ?? obra?.gps?.lat ?? obra?.lat;
-  const lng = obra?.gps?.longitude ?? obra?.gps?.lng ?? obra?.lng;
-  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-  return [lat, lng];
-}
 
 function getObraState(obra, tools, toolSessions) {
   const obraTools = tools.filter((tool) => tool.currentObraId === obra.id);
@@ -52,12 +47,13 @@ export default function MapaObrasView() {
     setActiveView,
   } = useStore();
 
-  const obrasWithCoords = useMemo(
-    () => obras
-      .map((obra) => ({ obra, coords: getObraCoords(obra) }))
-      .filter(({ coords }) => coords),
-    [obras],
-  );
+  const { obrasWithCoords, missingGpsCount } = useMemo(() => {
+    const mapped = obras.map((obra) => ({ obra, coords: getObraCoords(obra) }));
+    return {
+      obrasWithCoords: mapped.filter(({ coords }) => coords),
+      missingGpsCount: mapped.filter(({ coords }) => !coords).length,
+    };
+  }, [obras]);
 
   useEffect(() => {
     const container = mapNodeRef.current;
@@ -149,6 +145,11 @@ export default function MapaObrasView() {
         <p className="text-xs text-slate-600 dark:text-slate-300">
           Mapa por obra com base na última leitura NFC. Não é localização real-time dos equipamentos.
         </p>
+        {missingGpsCount > 0 && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            {missingGpsCount} obra{missingGpsCount !== 1 ? 's' : ''} sem coordenadas GPS (não aparecem no mapa)
+          </p>
+        )}
       </div>
       <div
         ref={mapNodeRef}

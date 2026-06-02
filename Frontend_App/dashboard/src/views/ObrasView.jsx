@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import {
   Building2,
   Search,
@@ -154,12 +155,16 @@ const ObraForm = ({ obra, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const latNum = parseFloat(formData.gps?.latitude);
+    const lngNum = parseFloat(formData.gps?.longitude);
+    const hasValidGps = Number.isFinite(latNum) && Number.isFinite(lngNum);
+    const now = Timestamp.now();
     onSave({
       ...formData,
-      gps: {
-        latitude: parseFloat(formData.gps?.latitude) || null,
-        longitude: parseFloat(formData.gps?.longitude) || null,
-      },
+      gps: hasValidGps
+        ? { latitude: latNum, longitude: lngNum, source: 'manual', confirmedAt: now, updatedAt: now }
+        : { latitude: null, longitude: null, source: null, confirmedAt: null, updatedAt: now },
+      gpsStatus: hasValidGps ? 'confirmed' : 'missing',
     });
   };
 

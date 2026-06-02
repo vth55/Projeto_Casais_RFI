@@ -244,7 +244,11 @@ export const createMockObras = async () => {
       gps: {
         latitude: obra.lat,
         longitude: obra.lng,
+        source: 'mock',
+        confirmedAt: null,
+        updatedAt: now,
       },
+      gpsStatus: 'unconfirmed',
       status: 'active',
       source: 'mock',
       createdAt: now,
