@@ -232,11 +232,11 @@
 
 /**
  * @typedef {Object} Operator
- * Colecção: `operators/{operatorId}` — utilizadores do sistema.
+ * Colecção: `operators/{operatorId}` — operador operacional / pessoa no terreno.
  * Schema inalterado. Semântica nova: "responsável por ferramentas em posse",
  * já não "condutor de máquina pesada".
  *
- * @property {string} id                    UID Firebase Auth
+ * @property {string} id                    Doc ID operacional (cardId ou id interno), não UID Firebase Auth
  * @property {string} name
  * @property {string} email
  * @property {string} [cardId]              RFID legacy — manter para retrocompat

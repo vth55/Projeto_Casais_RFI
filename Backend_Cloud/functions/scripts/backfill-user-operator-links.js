@@ -67,7 +67,9 @@ async function main() {
   // Ambiguous
   if (ambiguous.length > 0) {
     console.log(`\n[AMBIGUOUS] ${ambiguous.length} email(s) com múltiplos utilizadores — ignorados:`);
-    ambiguous.forEach(a => console.log(`  ${a.email} → ${a.candidateUids.join(', ')}`));
+    ambiguous.forEach(a => console.log(
+      `  ${a.email} → users: ${a.candidateUids.join(', ') || '-'} | operators: ${a.candidateOperatorIds.join(', ') || '-'}`
+    ));
   }
 
   // Conflicts
@@ -101,6 +103,7 @@ async function main() {
   // Write in batches of 200 ops (each link = 2 ops)
   const BATCH_PAIRS = 200;
   let written = 0;
+  let skippedAfterRecheck = 0;
   let batchOps = 0;
   let batch = db.batch();
 
@@ -110,8 +113,26 @@ async function main() {
   for (const { uid, operatorId } of proposed) {
     const userRef = usersRef.doc(uid);
     const operatorRef = operatorsRef.doc(operatorId);
-    const { userPatch, operatorPatch } = buildUserOperatorLinkPatch({ id: uid }, { id: operatorId });
+    const [freshUserSnap, freshOperatorSnap] = await Promise.all([
+      userRef.get(),
+      operatorRef.get(),
+    ]);
+    if (!freshUserSnap.exists || !freshOperatorSnap.exists) {
+      skippedAfterRecheck++;
+      console.warn(`  [SKIP] desapareceu antes do write: users/${uid} ou operators/${operatorId}`);
+      continue;
+    }
 
+    const freshUser = { id: freshUserSnap.id, ...freshUserSnap.data() };
+    const freshOperator = { id: freshOperatorSnap.id, ...freshOperatorSnap.data() };
+    const recheck = computeLinkProposals([freshOperator], [freshUser]);
+    if (recheck.proposed.length !== 1) {
+      skippedAfterRecheck++;
+      console.warn(`  [SKIP] já não é seguro escrever: users/${uid} ↔ operators/${operatorId}`);
+      continue;
+    }
+
+    const { userPatch, operatorPatch } = buildUserOperatorLinkPatch({ id: uid }, { id: operatorId });
     batch.update(userRef, userPatch);
     batch.update(operatorRef, operatorPatch);
     batchOps += 2;
@@ -129,6 +150,7 @@ async function main() {
   }
 
   console.log(`  written:          ${written}`);
+  console.log(`  skippedRecheck:   ${skippedAfterRecheck}`);
   console.log('\n' + '='.repeat(60));
   console.log('  Backfill concluído.');
   console.log('='.repeat(60));

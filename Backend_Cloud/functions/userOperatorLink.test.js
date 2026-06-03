@@ -117,6 +117,21 @@ describe('computeLinkProposals — ambíguo', () => {
     expect(ambiguous[0].email).toBe('alice@casais.pt');
     expect(ambiguous[0].candidateUids).toContain('uid-1');
     expect(ambiguous[0].candidateUids).toContain('uid-2');
+    expect(ambiguous[0].candidateOperatorIds).toEqual(['op-1']);
+  });
+
+  test('marks as ambiguous when multiple operators share the same email', () => {
+    const operators = [
+      { id: 'op-1', email: 'alice@casais.pt' },
+      { id: 'op-2', email: 'alice@casais.pt' },
+    ];
+    const users = [{ id: 'uid-1', email: 'alice@casais.pt' }];
+    const { proposed, ambiguous } = computeLinkProposals(operators, users);
+    expect(proposed).toHaveLength(0);
+    expect(ambiguous).toHaveLength(1);
+    expect(ambiguous[0].email).toBe('alice@casais.pt');
+    expect(ambiguous[0].candidateUids).toEqual(['uid-1']);
+    expect(ambiguous[0].candidateOperatorIds).toEqual(['op-1', 'op-2']);
   });
 });
 

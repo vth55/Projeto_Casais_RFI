@@ -48,7 +48,7 @@ function isUserOperatorLinkCurrent(userProfile, operatorDoc) {
  * Given a list of operators and users, computes all safe proposed links.
  * Matching is by normalised email only. Returns separate lists for:
  *   - proposed: safe to link (one match on each side, no existing conflict)
- *   - ambiguous: multiple candidates — do not link
+ *   - ambiguous: multiple candidates on either side — do not link
  *   - alreadyLinked: already correct on both sides
  *   - conflicts: existing link points elsewhere — do not overwrite
  *
@@ -56,7 +56,7 @@ function isUserOperatorLinkCurrent(userProfile, operatorDoc) {
  * @param {Array<{id:string, email?:string, operatorId?:string}>} users
  * @returns {{
  *   proposed: Array<{uid:string, operatorId:string, email:string}>,
- *   ambiguous: Array<{email:string, candidateUids:string[]}>,
+ *   ambiguous: Array<{email:string, candidateUids:string[], candidateOperatorIds:string[]}>,
  *   alreadyLinked: number,
  *   conflicts: Array<{uid:string, operatorId:string, existingUserId:string}>,
  * }}
@@ -76,18 +76,37 @@ function computeLinkProposals(operators, users) {
     usersByEmail.get(email).push(user);
   }
 
+  // Build email → operator index to reject duplicate operator candidates too.
+  const operatorsByEmail = new Map();
+  for (const operator of operators) {
+    const email = normaliseEmail(operator.email);
+    if (!email) continue;
+    if (!operatorsByEmail.has(email)) operatorsByEmail.set(email, []);
+    operatorsByEmail.get(email).push(operator);
+  }
+
+  const ambiguousEmails = new Set();
+  for (const [email, candidateUsers] of usersByEmail.entries()) {
+    const candidateOperators = operatorsByEmail.get(email) || [];
+    if (candidateUsers.length > 1 || candidateOperators.length > 1) {
+      ambiguousEmails.add(email);
+      ambiguous.push({
+        email,
+        candidateUids: candidateUsers.map(u => u.id),
+        candidateOperatorIds: candidateOperators.map(o => o.id),
+      });
+    }
+  }
+
   for (const operator of operators) {
     const opEmail = normaliseEmail(operator.email);
     if (!opEmail) continue;
 
+    if (ambiguousEmails.has(opEmail)) continue;
+
     const candidates = usersByEmail.get(opEmail) || [];
 
     if (candidates.length === 0) continue;
-
-    if (candidates.length > 1) {
-      ambiguous.push({ email: opEmail, candidateUids: candidates.map(u => u.id) });
-      continue;
-    }
 
     const user = candidates[0];
 
@@ -104,7 +123,12 @@ function computeLinkProposals(operators, users) {
 
     // Conflict: user already linked to a DIFFERENT operator
     if (user.operatorId && user.operatorId !== operator.id) {
-      conflicts.push({ uid: user.id, operatorId: operator.id, existingUserId: operator.userId || null });
+      conflicts.push({
+        uid: user.id,
+        operatorId: operator.id,
+        existingUserId: operator.userId || null,
+        existingOperatorId: user.operatorId,
+      });
       continue;
     }
 
