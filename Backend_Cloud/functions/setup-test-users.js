@@ -131,7 +131,9 @@ const upsertFirestoreProfile = async (uid, profile) => {
     },
     { merge: true } // preserva campos existentes não listados (ex: assignedObraId)
   );
+  const snap = await ref.get();
   console.log(`  [FIRESTORE]  perfil gravado -> systemRole: ${profile.systemRole}`);
+  return snap.data();
 };
 
 /**
@@ -170,8 +172,8 @@ const main = async () => {
     console.log(`Processando: ${user.email} [${user.systemRole}]`);
     try {
       const uid = await createOrUpdateAuthUser(user);
-      await upsertFirestoreProfile(uid, user);
-      await upsertAuthClaims(uid, user);
+      const profile = await upsertFirestoreProfile(uid, user);
+      await upsertAuthClaims(uid, profile);
       successCount++;
     } catch (err) {
       console.error(`  [ERRO] ${user.email}: ${err.message}`);
