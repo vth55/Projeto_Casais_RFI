@@ -85,6 +85,80 @@ service cloud.firestore {
       return hasSystemRole(['admin', 'it', 'gestor_frota']);
     }
 
+    function assignedObraId() {
+      return request.auth.token.assignedObraId;
+    }
+
+    function hasAssignedObraClaim() {
+      return isAuthenticated() &&
+        request.auth.token.assignedObraId is string &&
+        request.auth.token.assignedObraId != '';
+    }
+
+    function isRestrictedToOwnObra() {
+      return isAuthenticated() &&
+        request.auth.token.restrictedToOwnObra == true;
+    }
+
+    function canAccessObraId(obraId) {
+      return !isRestrictedToOwnObra() ||
+        (hasAssignedObraClaim() && obraId == assignedObraId());
+    }
+
+    function hasObraScope(data) {
+      return data.keys().hasAny(['obraScopeIds']) &&
+        data.obraScopeIds is list;
+    }
+
+    function canAccessObraScope(data) {
+      return !isRestrictedToOwnObra() ||
+        (hasAssignedObraClaim() &&
+         hasObraScope(data) &&
+         data.obraScopeIds.hasAny([assignedObraId()]));
+    }
+
+    function mapHasOwnObra(location) {
+      return location is map &&
+        location.keys().hasAny(['obraId']) &&
+        location.obraId == assignedObraId();
+    }
+
+    function transferTouchesOwnObra(data) {
+      return !isRestrictedToOwnObra() ||
+        (hasAssignedObraClaim() &&
+         (
+           (hasObraScope(data) && data.obraScopeIds.hasAny([assignedObraId()])) ||
+           (data.keys().hasAny(['from']) && mapHasOwnObra(data.from)) ||
+           (data.keys().hasAny(['to']) && mapHasOwnObra(data.to))
+         ));
+    }
+
+    function movementTouchesOwnObra(data) {
+      return !isRestrictedToOwnObra() ||
+        (hasAssignedObraClaim() &&
+         (
+           (hasObraScope(data) && data.obraScopeIds.hasAny([assignedObraId()])) ||
+           (data.keys().hasAny(['fromObraId']) && data.fromObraId == assignedObraId()) ||
+           (data.keys().hasAny(['toObraId']) && data.toObraId == assignedObraId())
+         ));
+    }
+
+    function canUpdateToolOperationally() {
+      return isToolOperationalUpdate() &&
+        (
+          !isRestrictedToOwnObra() ||
+          (
+            hasAssignedObraClaim() &&
+            (
+              resource.data.currentObraId == assignedObraId() ||
+              request.resource.data.currentObraId == assignedObraId() ||
+              resource.data.pendingDestinationObraId == assignedObraId() ||
+              request.resource.data.pendingDestinationObraId == assignedObraId()
+            )
+          )
+        );
+    }
+
     // ============================================
     // Colecções primárias do pivot (escritas controladas)
     // ============================================
@@ -96,20 +170,24 @@ service cloud.firestore {
     match /artifacts/casais-rfid/public/data/tools/{toolId} {
       allow read: if isAuthenticated();
       allow create, delete: if canManageEquipment();
-      allow update: if canManageEquipment() || isToolOperationalUpdate();
+      allow update: if canManageEquipment() || canUpdateToolOperationally();
     }
 
     match /artifacts/casais-rfid/public/data/tool_sessions/{sessionId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && canAccessObraId(resource.data.obraId);
       // Operador pode criar a sua própria sessão e fechá-la
       allow create: if isAuthenticated() &&
-        request.resource.data.operatorId == request.auth.uid;
+        request.resource.data.operatorId == request.auth.uid &&
+        canAccessObraId(request.resource.data.obraId);
       allow update: if isAuthenticated() &&
-        (resource.data.operatorId == request.auth.uid || canManageMaintenance());
+        (resource.data.operatorId == request.auth.uid || canManageMaintenance()) &&
+        canAccessObraId(resource.data.obraId);
       allow delete: if canManageEquipment();
     }
 
     match /artifacts/casais-rfid/public/data/tool_alerts/{alertId} {
+      // H2-2C: mantem global autenticado. tool_alerts ainda nao tem obraId canonico
+      // e SAP_SYNC_FAILURE e global. Apertar isto fica para a migracao H2-1 alerts.
       allow read: if isAuthenticated();
       allow create: if isAuthenticated(); // qualquer auth pode criar alerta
       allow update: if isAuthenticated(); // todos podem actualizar (audit log append)
@@ -117,29 +195,36 @@ service cloud.firestore {
     }
 
     match /artifacts/casais-rfid/public/data/tool_maintenance/{recordId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow read: if isAuthenticated() && canAccessObraId(resource.data.obraId);
+      allow create: if canManageMaintenance() ||
+        (
+          isAuthenticated() &&
+          request.resource.data.type == 'DAMAGE' &&
+          request.resource.data.reportedBy == request.auth.uid &&
+          canAccessObraId(request.resource.data.obraId)
+        );
+      allow update: if canManageMaintenance() && canAccessObraId(resource.data.obraId);
       allow delete: if canManageMaintenance();
     }
 
     match /artifacts/casais-rfid/public/data/tool_movements/{movementId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if canManageLogistics();
+      allow read: if isAuthenticated() && canAccessObraScope(resource.data);
+      allow create: if canManageLogistics() && movementTouchesOwnObra(request.resource.data);
+      allow update: if canManageLogistics() && movementTouchesOwnObra(request.resource.data);
+      allow delete: if canManageLogistics() && movementTouchesOwnObra(resource.data);
     }
 
     match /artifacts/casais-rfid/public/data/tool_transfers/{transferId} {
-      allow read: if isAuthenticated();
-      allow create, update: if canManageLogistics();
-      allow delete: if canManageLogistics();
+      allow read: if isAuthenticated() && transferTouchesOwnObra(resource.data);
+      allow create, update: if canManageLogistics() && transferTouchesOwnObra(request.resource.data);
+      allow delete: if canManageLogistics() && transferTouchesOwnObra(resource.data);
     }
 
     // ============================================
     // Colecções secundárias
     // ============================================
     match /artifacts/casais-rfid/public/data/obras/{obraId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && canAccessObraId(obraId);
       allow create, update, delete: if canManageEquipment();
     }
 
