@@ -896,6 +896,15 @@ const OperadoresView = () => {
                               Procore
                             </span>
                           )}
+                          {op.userId && (
+                            <span
+                              title="Conta Firebase Auth ligada"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            >
+                              <Key className="w-2.5 h-2.5" />
+                              Auth
+                            </span>
+                          )}
                           {!op.cardId && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                               <CreditCard className="w-2.5 h-2.5" />

@@ -242,6 +242,21 @@
  * @property {string} [cardId]              RFID legacy — manter para retrocompat
  * @property {string} systemRole            'admin'|'gestor'|'encarregado'|'operador'|...
  * @property {string} [assignedObraId]
+ * @property {string} [userId]              FK para users/{uid} — preenchido por backfill ou admin; nunca por heurística
+ */
+
+/**
+ * @typedef {Object} UserProfile
+ * Colecção: `users/{uid}` — perfil Firebase Auth + claims RBAC.
+ * `uid` é o doc ID. Gerido pelo sistema de auth; não criar manualmente.
+ *
+ * @property {string} [name]                Nome de display
+ * @property {string} [email]
+ * @property {string} systemRole            Papel de sistema (sincronizado para custom claims via authClaimsTriggers)
+ * @property {string} [assignedObraId]      Obra atribuída (sincronizada para custom claim)
+ * @property {string} [operatorId]          FK para operators/{operatorId} — preenchido por backfill ou admin
+ * @property {Timestamp} [updatedAt]
+ * @property {Timestamp} [createdAt]
  */
 
 /**
