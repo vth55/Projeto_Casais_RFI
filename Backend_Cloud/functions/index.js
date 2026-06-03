@@ -1607,3 +1607,8 @@ exports.reconcileUnitCounts    = equipmentModelTriggers.reconcileUnitCounts;
 // Firebase Auth claims mirror for Storage RBAC.
 const authClaimsTriggers = require('./authClaimsTriggers');
 exports.onUserProfileWrittenSyncClaims = authClaimsTriggers.onUserProfileWrittenSyncClaims;
+
+// RBAC scope fields — obraScopeIds em tool_movements e tool_transfers
+const obraScopeTriggers = require('./obraScopeTriggers');
+exports.onToolMovementWritten    = obraScopeTriggers.onToolMovementWritten;
+exports.onToolTransferScopeSync  = obraScopeTriggers.onToolTransferScopeSync;

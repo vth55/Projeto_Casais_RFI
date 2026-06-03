@@ -172,6 +172,9 @@
  * @property {Timestamp} movedAt
  * @property {'CHECKOUT'|'CHECKIN'|'MANUAL'|'TRANSFER'|'TRANSFER_DISPATCH'|'TRANSFER_RECEIPT'} triggeredBy
  * @property {string} [relatedSessionId]    tool_session que originou o movimento
+ * @property {string[]} [obraScopeIds]      IDs de obra envolvidas (calculado por trigger; WAREHOUSE e null excluídos)
+ * @property {1} [scopeVersion]             versão do algoritmo de cálculo de scope
+ * @property {Timestamp} [scopeUpdatedAt]   timestamp da última actualização de scope
  */
 
 /**
@@ -198,6 +201,9 @@
  * @property {Timestamp} [receivedAt]
  * @property {string} [receivedBy]
  * @property {string} [notes]
+ * @property {string[]} [obraScopeIds]      IDs de obra envolvidas (calculado por trigger; WAREHOUSE e null excluídos)
+ * @property {1} [scopeVersion]             versão do algoritmo de cálculo de scope
+ * @property {Timestamp} [scopeUpdatedAt]   timestamp da última actualização de scope
  * @property {{
  *   sourceSystem: string,
  *   externalRefs: Object,
