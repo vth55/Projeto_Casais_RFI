@@ -4,6 +4,8 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db, storage, projectId } from '../config/firebase';
 import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
 import { createCrudActions } from '../utils/firestoreCrud';
+import useAuthStore from './useAuthStore';
+import { PERMISSIONS } from '../config/permissions';
 
 // NOTE: useAvariasStore removido do import principal — getKPIs (legacy) moveu para machinesStore.
 // Se alguém precisar do mtbf em contexto legacy, usar useLegacyMachinesStore diretamente.
@@ -184,13 +186,17 @@ const useStore = create((set, get) => ({
       createOperatorsListener((data) => set({ operators: data }))
     );
 
-    // User profiles listener — carregado para o painel de ligação Auth↔operador
-    const createUserProfilesListener = createCollectionListener(db, `${basePath}/users`, {
-      onError: (msg, error) => console.debug('[users] listener off:', error?.code || error?.message),
-    });
-    unsubscribers.push(
-      createUserProfilesListener((data) => set({ userProfiles: data || [] }))
-    );
+    // User profiles listener — só admin/it pode alterar users/{uid} nas rules actuais.
+    if (useAuthStore.getState().can(PERMISSIONS.OPERATORS_LINK_AUTH)) {
+      const createUserProfilesListener = createCollectionListener(db, `${basePath}/users`, {
+        onError: (msg, error) => console.debug('[users] listener off:', error?.code || error?.message),
+      });
+      unsubscribers.push(
+        createUserProfilesListener((data) => set({ userProfiles: data || [] }))
+      );
+    } else {
+      set({ userProfiles: [] });
+    }
 
     // NOTE: maintenance (legacy heavy machines) listener movido para machinesStore.js (C1)
     // Não duplicar listener aqui.
@@ -694,6 +700,13 @@ const useStore = create((set, get) => ({
 
   unlinkUserFromOperator: async (uid, operatorId) => {
     if (!uid || !operatorId) return { success: false, error: 'uid e operatorId são obrigatórios' };
+    const { operators, userProfiles } = get();
+    const operator = operators.find(o => o.id === operatorId);
+    const user = userProfiles.find(u => u.id === uid);
+    if (!operator) return { success: false, error: 'Operador não encontrado' };
+    if (!user) return { success: false, error: 'Utilizador não encontrado' };
+    if (operator.userId !== uid || user.operatorId !== operatorId)
+      return { success: false, error: 'Ligação Auth↔operador inconsistente ou já removida' };
     try {
       const batch = writeBatch(db);
       batch.update(doc(db, `${basePath}/users`, uid), { operatorId: null });

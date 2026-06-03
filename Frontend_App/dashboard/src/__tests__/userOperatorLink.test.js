@@ -202,6 +202,19 @@ describe('unlinkUserFromOperator', () => {
     expect(r2.success).toBe(false);
   });
 
+  it('blocks stale unlink when both sides no longer match', async () => {
+    seed({
+      operators: [{ id: 'op-1', userId: 'uid-OTHER' }],
+      userProfiles: [{ id: 'uid-1', operatorId: 'op-1' }],
+    });
+
+    const result = await useStore.getState().unlinkUserFromOperator('uid-1', 'op-1');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/inconsistente/);
+    expect(mockWriteBatch).not.toHaveBeenCalled();
+  });
+
   it('propagates Firestore error as { success: false }', async () => {
     seed({
       operators: [{ id: 'op-1', userId: 'uid-1' }],
