@@ -30,6 +30,16 @@ describe('computeListenerScope', () => {
       .toEqual({ mode: 'global' });
   });
 
+  it('infers scoped for legacy cached encarregado_obra without restricted flag', () => {
+    expect(computeListenerScope({ systemRole: 'encarregado_obra', assignedObraId: 'obra-1' }))
+      .toEqual({ mode: 'scoped', assignedObraId: 'obra-1' });
+  });
+
+  it('infers empty for legacy cached operador without restricted flag and no obra', () => {
+    expect(computeListenerScope({ systemRole: 'operador', assignedObraId: null }))
+      .toEqual({ mode: 'empty' });
+  });
+
   it('returns global for admin-level user without restrictedToOwnObra', () => {
     expect(computeListenerScope({ systemRole: 'admin', assignedObraId: null }))
       .toEqual({ mode: 'global' });

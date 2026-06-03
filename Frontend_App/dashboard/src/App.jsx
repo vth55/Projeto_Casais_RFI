@@ -241,6 +241,9 @@ export default function App() {
     // Só inicializar dados após o utilizador estar autenticado
     if (!isAuthenticated) return;
 
+    let cleanup;
+    let cancelled = false;
+
     const initialize = async () => {
       // Verificar/criar dados mock
       if (db) {
@@ -267,17 +270,29 @@ export default function App() {
         }
       }
 
-      // Inicializar listeners Firestore
-      const cleanup = initializeListeners();
-      setLoading(false);
+      if (cancelled) return () => {};
 
-      return () => cleanup();
+      // Inicializar listeners Firestore
+      const stopListeners = initializeListeners();
+      if (!cancelled) {
+        setLoading(false);
+      }
+
+      return () => stopListeners();
     };
 
-    let cleanup;
-    initialize().then(fn => { cleanup = fn; });
+    initialize().then(fn => {
+      if (cancelled) {
+        fn?.();
+      } else {
+        cleanup = fn;
+      }
+    });
 
-    return () => cleanup?.();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [isAuthenticated, initializeListeners, setLoading, restrictedToOwnObra, assignedObraId]);
 
   useEffect(() => {

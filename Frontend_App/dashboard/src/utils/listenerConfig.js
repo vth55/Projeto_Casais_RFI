@@ -22,7 +22,9 @@
  * @returns {{ mode: 'global'|'scoped'|'empty', assignedObraId?: string }}
  */
 export function computeListenerScope(currentUser) {
-  const isRestricted = currentUser?.restrictedToOwnObra === true;
+  const restrictedRoles = new Set(['encarregado_obra', 'operador']);
+  const isRestricted = currentUser?.restrictedToOwnObra === true ||
+    (currentUser?.restrictedToOwnObra === undefined && restrictedRoles.has(currentUser?.systemRole));
 
   if (!isRestricted) return { mode: 'global' };
 
