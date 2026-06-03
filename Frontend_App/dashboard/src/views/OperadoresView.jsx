@@ -530,10 +530,15 @@ const AutoAssignSuggestionCard = ({ suggestions, onAccept, onDismiss }) => {
 };
 
 const OperadoresView = () => {
-  const { operators, toolSessions, obras, loading, addOperator, deleteOperator, updateOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
+  const { operators, userProfiles, toolSessions, obras, loading, addOperator, deleteOperator, updateOperator, linkUserToOperator, unlinkUserFromOperator, matchOperatorToProcore, procoreDirectory, subscribeScanBuffer } = useStore();
   const { can, getAssignableRoles, getAllRoles } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [editingOperator, setEditingOperator] = useState(null);
+  const [linkAuthOp, setLinkAuthOp] = useState(null);   // operator being linked
+  const [linkSelectedUid, setLinkSelectedUid] = useState('');
+  const [linkError, setLinkError] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [unlinkConfirmOp, setUnlinkConfirmOp] = useState(null); // operator being unlinked
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [obraFilter, setObraFilter] = useState('all');
@@ -549,8 +554,15 @@ const OperadoresView = () => {
 
   // Permissões
   const canAssignRoles = can(PERMISSIONS.OPERATORS_ASSIGN_ROLE);
+  const canLinkAuth = can(PERMISSIONS.OPERATORS_LINK_AUTH);
   const assignableRoles = useMemo(() => getAssignableRoles(), [getAssignableRoles]);
   const allSystemRoles = useMemo(() => getAllRoles(), [getAllRoles]);
+
+  // Utilizadores disponíveis para ligar (sem operatorId ou já ligados a este operador)
+  const availableUsers = useMemo(() => {
+    if (!linkAuthOp) return [];
+    return userProfiles.filter(u => !u.operatorId || u.operatorId === linkAuthOp.id);
+  }, [userProfiles, linkAuthOp]);
 
   const operatorStats = useMemo(() => {
     return operators.map(op => {
@@ -673,6 +685,39 @@ const OperadoresView = () => {
     });
     return stats;
   }, [operatorStats]);
+
+  const handleOpenLinkAuth = (op) => {
+    setLinkAuthOp(op);
+    setLinkSelectedUid(op.userId || '');
+    setLinkError('');
+  };
+
+  const handleCloseLinkAuth = () => {
+    setLinkAuthOp(null);
+    setLinkSelectedUid('');
+    setLinkError('');
+    setLinkLoading(false);
+  };
+
+  const handleConfirmLink = async () => {
+    if (!linkSelectedUid) return;
+    setLinkLoading(true);
+    setLinkError('');
+    const result = await linkUserToOperator(linkSelectedUid, linkAuthOp.id);
+    setLinkLoading(false);
+    if (result.success) {
+      handleCloseLinkAuth();
+    } else {
+      setLinkError(result.error);
+    }
+  };
+
+  const handleConfirmUnlink = async () => {
+    if (!unlinkConfirmOp) return;
+    const uid = unlinkConfirmOp.userId;
+    setUnlinkConfirmOp(null);
+    await unlinkUserFromOperator(uid, unlinkConfirmOp.id);
+  };
 
   const handleSave = async (data) => {
     let result;
@@ -953,6 +998,15 @@ const OperadoresView = () => {
                   </Table.Cell>
                   <Table.Cell align="right">
                     <div className="flex items-center justify-end gap-1">
+                      {canLinkAuth && (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          icon={Key}
+                          title={op.userId ? 'Gerir ligação de conta Auth' : 'Ligar conta Auth'}
+                          onClick={() => handleOpenLinkAuth(op)}
+                        />
+                      )}
                       <Button variant="ghost" size="xs" icon={Edit2} onClick={() => handleEdit(op)} />
                       <Button variant="ghost" size="xs" icon={Trash2} onClick={() => handleDelete(op)} />
                     </div>
@@ -978,7 +1032,7 @@ const OperadoresView = () => {
         }
       `}</style>
 
-      {/* Modal */}
+      {/* Modal — Editar/Criar Operador */}
       <Modal isOpen={showModal} onClose={handleCloseModal} title={editingOperator ? 'Editar Operador' : 'Novo Operador'} size="lg">
         <OperatorForm
           operator={editingOperator}
@@ -988,6 +1042,111 @@ const OperadoresView = () => {
           assignableRoles={assignableRoles}
           canAssignRoles={canAssignRoles}
         />
+      </Modal>
+
+      {/* Modal — Ligar/Desligar conta Auth */}
+      <Modal
+        isOpen={!!linkAuthOp}
+        onClose={handleCloseLinkAuth}
+        title={linkAuthOp?.userId ? 'Gerir conta Auth ligada' : 'Ligar conta Auth'}
+        size="sm"
+      >
+        {linkAuthOp && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Operador: <span className="font-medium text-slate-900 dark:text-white">{linkAuthOp.name}</span>
+            </p>
+
+            {linkAuthOp.userId ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Key className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 truncate">
+                      {userProfiles.find(u => u.id === linkAuthOp.userId)?.name || linkAuthOp.userId}
+                    </p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
+                      {userProfiles.find(u => u.id === linkAuthOp.userId)?.email || ''}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  icon={X}
+                  className="text-rose-600 hover:bg-rose-50 shrink-0"
+                  onClick={() => { handleCloseLinkAuth(); setUnlinkConfirmOp(linkAuthOp); }}
+                >
+                  Desligar
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Conta Firebase Auth
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={linkSelectedUid}
+                    onChange={e => { setLinkSelectedUid(e.target.value); setLinkError(''); }}
+                  >
+                    <option value="">Selecionar conta…</option>
+                    {availableUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name || u.email || u.id} {u.email && u.name ? `— ${u.email}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {availableUsers.length === 0 && (
+                    <p className="mt-1 text-xs text-slate-500">Nenhuma conta disponível sem operador ligado.</p>
+                  )}
+                </div>
+                {linkError && (
+                  <p className="text-sm text-rose-600 dark:text-rose-400">{linkError}</p>
+                )}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" onClick={handleCloseLinkAuth}>Cancelar</Button>
+                  <Button
+                    variant="primary"
+                    icon={Key}
+                    onClick={handleConfirmLink}
+                    disabled={!linkSelectedUid || linkLoading}
+                  >
+                    {linkLoading ? 'A ligar…' : 'Ligar conta'}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal — Confirmar desligação */}
+      <Modal
+        isOpen={!!unlinkConfirmOp}
+        onClose={() => setUnlinkConfirmOp(null)}
+        title="Desligar conta Auth"
+        size="sm"
+      >
+        {unlinkConfirmOp && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Confirmas que queres desligar a conta Auth do operador{' '}
+              <span className="font-medium text-slate-900 dark:text-white">{unlinkConfirmOp.name}</span>?
+            </p>
+            <p className="text-xs text-slate-500">Esta operação não elimina a conta nem o operador. Pode ser refeita a qualquer momento.</p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setUnlinkConfirmOp(null)}>Cancelar</Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmUnlink}
+              >
+                Desligar
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

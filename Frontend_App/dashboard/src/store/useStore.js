@@ -52,6 +52,7 @@ const useStore = create((set, get) => ({
   toolMovements: [],    // novo — auditoria de transferências obra↔armazém
   toolTransfers: [],    // novo — guias logísticas de transferência/receção por NFC
   operators: [],
+  userProfiles: [], // users/{uid} — perfis Firebase Auth; carregados para o painel de ligação Auth↔operador
   obras: [],
   // NOTE: maintenanceRecords (legacy heavy machines) movido para machinesStore.js (C1)
   locationCards: [], // LEGACY — cartões RFID, carregados apenas por DevTools local
@@ -181,6 +182,14 @@ const useStore = create((set, get) => ({
     });
     unsubscribers.push(
       createOperatorsListener((data) => set({ operators: data }))
+    );
+
+    // User profiles listener — carregado para o painel de ligação Auth↔operador
+    const createUserProfilesListener = createCollectionListener(db, `${basePath}/users`, {
+      onError: (msg, error) => console.debug('[users] listener off:', error?.code || error?.message),
+    });
+    unsubscribers.push(
+      createUserProfilesListener((data) => set({ userProfiles: data || [] }))
     );
 
     // NOTE: maintenance (legacy heavy machines) listener movido para machinesStore.js (C1)
@@ -657,6 +666,43 @@ const useStore = create((set, get) => ({
   updateOperator: async (id, data) => {
     const cleanData = sanitizeData(data);
     return operatorActions.update(id, cleanData);
+  },
+
+  linkUserToOperator: async (uid, operatorId) => {
+    if (!uid || !operatorId) return { success: false, error: 'uid e operatorId são obrigatórios' };
+    const { operators, userProfiles } = get();
+    const operator = operators.find(o => o.id === operatorId);
+    const user = userProfiles.find(u => u.id === uid);
+    if (!operator) return { success: false, error: 'Operador não encontrado' };
+    if (!user) return { success: false, error: 'Utilizador não encontrado' };
+    if (operator.userId && operator.userId !== uid)
+      return { success: false, error: `Operador já ligado à conta ${operator.userId}` };
+    if (user.operatorId && user.operatorId !== operatorId)
+      return { success: false, error: `Conta já ligada ao operador ${user.operatorId}` };
+    if (operator.userId === uid && user.operatorId === operatorId)
+      return { success: true }; // idempotente
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, `${basePath}/users`, uid), { operatorId });
+      batch.update(doc(db, `${basePath}/operators`, operatorId), { userId: uid });
+      await batch.commit();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  unlinkUserFromOperator: async (uid, operatorId) => {
+    if (!uid || !operatorId) return { success: false, error: 'uid e operatorId são obrigatórios' };
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, `${basePath}/users`, uid), { operatorId: null });
+      batch.update(doc(db, `${basePath}/operators`, operatorId), { userId: null });
+      await batch.commit();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   },
 
   // LEGACY — setMachineTariff movido para machinesStore.js (C1)

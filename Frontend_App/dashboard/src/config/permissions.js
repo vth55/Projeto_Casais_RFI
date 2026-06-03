@@ -32,6 +32,7 @@ export const PERMISSIONS = {
   OPERATORS_EDIT: 'operators:edit',
   OPERATORS_DELETE: 'operators:delete',
   OPERATORS_ASSIGN_ROLE: 'operators:assign_role',
+  OPERATORS_LINK_AUTH: 'operators:link_auth', // Ligar/desligar conta Firebase Auth ↔ operador
 
   // Tool Sessions (checkout/checkin NFC)
   TOOL_SESSIONS_VIEW: 'tool_sessions:view',
@@ -146,6 +147,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.OPERATORS_CREATE,
       PERMISSIONS.OPERATORS_EDIT,
       PERMISSIONS.OPERATORS_ASSIGN_ROLE,
+      PERMISSIONS.OPERATORS_LINK_AUTH,
       PERMISSIONS.TOOL_SESSIONS_VIEW,
       PERMISSIONS.TOOL_SESSIONS_VIEW_ALL,
       PERMISSIONS.TOOL_SESSIONS_EXPORT,
