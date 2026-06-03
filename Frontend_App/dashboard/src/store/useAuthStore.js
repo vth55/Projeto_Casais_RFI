@@ -12,8 +12,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  getIdTokenResult,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import {
   DEFAULT_ROLES,
@@ -78,53 +79,111 @@ const useAuthStore = create(
           return () => {};
         }
 
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        // profileUnsub tracks the per-user Firestore listener — replaced on each login
+        let profileUnsub = null;
+
+        const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+          // Clean up previous user's profile listener on any auth state change
+          if (profileUnsub) { profileUnsub(); profileUnsub = null; }
+
           if (firebaseUser) {
+            // Read JWT claims — authoritative for RBAC
+            let claims = {};
+            try {
+              const tokenResult = await getIdTokenResult(firebaseUser);
+              claims = tokenResult.claims || {};
+            } catch (err) {
+              console.debug('useAuthStore: erro ao ler claims:', err?.message);
+            }
+
             const cached = get().currentUser;
             if (cached?.id === firebaseUser.uid) {
-              // Perfil já em cache (zustand persist) — desbloquear imediatamente
               set({ isAuthenticated: true, authLoading: false });
-              // Refrescar perfil em background (sem bloquear a UI)
+              // Background refresh of Firestore profile
               fetchUserProfile(firebaseUser.uid).then(profile => {
                 const cur = get().currentUser;
                 if (!cur) return;
                 const role = get().getRole(profile.systemRole || 'operador');
+                const restrictedToOwnObra = Boolean(
+                  claims.restrictedToOwnObra ?? role?.restrictedToOwnObra
+                );
                 set({
                   currentUser: {
                     ...cur,
                     name: profile.name || cur.name,
                     systemRole: profile.systemRole || cur.systemRole,
-                    assignedObraId: profile.assignedObraId ?? cur.assignedObraId,
+                    assignedObraId: claims.assignedObraId ?? profile.assignedObraId ?? cur.assignedObraId ?? null,
                     cardId: profile.cardId ?? cur.cardId,
                     permissions: role?.permissions || cur.permissions,
+                    restrictedToOwnObra,
                   },
                 });
               }).catch(() => {});
             } else {
-              // Novo login ou utilizador diferente — buscar perfil (bloqueante)
               const profile = await fetchUserProfile(firebaseUser.uid);
               const role = get().getRole(profile.systemRole || 'operador');
+              const restrictedToOwnObra = Boolean(
+                claims.restrictedToOwnObra ?? role?.restrictedToOwnObra
+              );
               set({
                 currentUser: {
                   id: firebaseUser.uid,
                   email: firebaseUser.email,
                   name: profile.name || firebaseUser.displayName || firebaseUser.email,
                   systemRole: profile.systemRole || 'operador',
-                  assignedObraId: profile.assignedObraId || null,
+                  assignedObraId: claims.assignedObraId ?? profile.assignedObraId ?? null,
                   cardId: profile.cardId || null,
                   permissions: role?.permissions || [],
+                  restrictedToOwnObra,
                 },
                 isAuthenticated: true,
                 authLoading: false,
               });
             }
+
+            // Watch users/{uid} for admin-driven changes (systemRole / assignedObraId).
+            // When detected, force token refresh so new claims propagate immediately.
+            // Loop prevention: compare against currentUser before refreshing.
+            const profileRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
+            profileUnsub = onSnapshot(profileRef, async (snap) => {
+              if (!snap.exists()) return;
+              const profile = snap.data();
+              const cur = get().currentUser;
+              if (!cur) return;
+              const roleChanged = profile.systemRole !== cur.systemRole;
+              const obraChanged = (profile.assignedObraId ?? null) !== cur.assignedObraId;
+              if (!roleChanged && !obraChanged) return;
+              try {
+                const tokenResult = await getIdTokenResult(firebaseUser, /* forceRefresh */ true);
+                const newClaims = tokenResult.claims || {};
+                const role = get().getRole(profile.systemRole || cur.systemRole);
+                const restrictedToOwnObra = Boolean(
+                  newClaims.restrictedToOwnObra ?? role?.restrictedToOwnObra
+                );
+                set({
+                  currentUser: {
+                    ...cur,
+                    systemRole: profile.systemRole || cur.systemRole,
+                    assignedObraId: newClaims.assignedObraId ?? profile.assignedObraId ?? null,
+                    restrictedToOwnObra,
+                    permissions: role?.permissions || cur.permissions,
+                  },
+                });
+              } catch (err) {
+                console.debug('useAuthStore: erro no refresh de token:', err?.message);
+              }
+            }, (err) => {
+              console.debug('useAuthStore: profile listener off:', err?.code || err?.message);
+            });
           } else {
-            // Sem sessão activa
             set({ currentUser: null, isAuthenticated: false, authLoading: false });
           }
         });
 
-        return unsubscribe;
+        return () => {
+          unsubAuth();
+          if (profileUnsub) profileUnsub();
+        };
       },
 
       /**
@@ -138,8 +197,15 @@ const useAuthStore = create(
         const credential = await signInWithEmailAndPassword(auth, email, password);
         const firebaseUser = credential.user;
 
-        const profile = await fetchUserProfile(firebaseUser.uid);
+        const [profile, tokenResult] = await Promise.all([
+          fetchUserProfile(firebaseUser.uid),
+          getIdTokenResult(firebaseUser).catch(() => ({ claims: {} })),
+        ]);
+        const claims = tokenResult.claims || {};
         const role = get().getRole(profile.systemRole || 'operador');
+        const restrictedToOwnObra = Boolean(
+          claims.restrictedToOwnObra ?? role?.restrictedToOwnObra
+        );
 
         set({
           currentUser: {
@@ -147,9 +213,10 @@ const useAuthStore = create(
             email: firebaseUser.email,
             name: profile.name || firebaseUser.displayName || firebaseUser.email,
             systemRole: profile.systemRole || 'operador',
-            assignedObraId: profile.assignedObraId || null,
+            assignedObraId: claims.assignedObraId ?? profile.assignedObraId ?? null,
             cardId: profile.cardId || null,
             permissions: role?.permissions || [],
+            restrictedToOwnObra,
           },
           isAuthenticated: true,
         });

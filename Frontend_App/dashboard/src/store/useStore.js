@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, orderBy, where, getDocs, writeBatch, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, documentId, getDocs, writeBatch, doc, setDoc, deleteDoc, updateDoc, getDoc, addDoc, Timestamp, increment, arrayUnion } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, projectId } from '../config/firebase';
 import { createCollectionListener, createDocumentListener } from '../utils/firestoreListeners';
 import { createCrudActions } from '../utils/firestoreCrud';
 import useAuthStore from './useAuthStore';
 import { PERMISSIONS } from '../config/permissions';
+import { computeListenerScope } from '../utils/listenerConfig';
 
 // NOTE: useAvariasStore removido do import principal — getKPIs (legacy) moveu para machinesStore.
 // Se alguém precisar do mtbf em contexto legacy, usar useLegacyMachinesStore diretamente.
@@ -120,7 +121,20 @@ const useStore = create((set, get) => ({
     );
 
     // ============================================
-    // TOOLS + TOOL_SESSIONS — pivot 2026-05 (small tools NFC)
+    // RBAC scope — compute once per listener init
+    // ============================================
+    const scope = computeListenerScope(useAuthStore.getState().currentUser);
+
+    // Helper: build onSnapshot unsubscriber with uniform error handling
+    const snapListener = (q, stateKey, logTag) =>
+      onSnapshot(
+        q,
+        (snap) => set({ [stateKey]: snap.docs.map(d => ({ id: d.id, ...d.data() })) }),
+        (err) => console.debug(`[${logTag}] listener off:`, err?.code || err?.message)
+      );
+
+    // ============================================
+    // TOOLS — ALWAYS unfiltered (NFC nfcTagId lookup requires full collection)
     // ============================================
     const createToolsListener = createCollectionListener(db, `${basePath}/tools`, {
       onError: (msg, error) => console.debug('[tools] listener off:', error?.code || error?.message),
@@ -129,16 +143,31 @@ const useStore = create((set, get) => ({
       createToolsListener((data) => set({ tools: data || [] }))
     );
 
-    const createToolSessionsListener = createCollectionListener(db, `${basePath}/tool_sessions`, {
-      orderByField: 'startTime',
-      orderByDirection: 'desc',
-      onError: (msg, error) => console.debug('[tool_sessions] listener off:', error?.code || error?.message),
-    });
-    unsubscribers.push(
-      createToolSessionsListener((data) => set({ toolSessions: data || [] }))
-    );
+    // ============================================
+    // TOOL_SESSIONS — scoped by obraId for restricted users
+    // ============================================
+    if (scope.mode === 'empty') {
+      set({ toolSessions: [] });
+    } else if (scope.mode === 'scoped') {
+      // No composite index for (obraId, startTime) — orderBy omitted; sort client-side
+      unsubscribers.push(snapListener(
+        query(collection(db, `${basePath}/tool_sessions`), where('obraId', '==', scope.assignedObraId)),
+        'toolSessions', 'tool_sessions'
+      ));
+    } else {
+      const createToolSessionsListener = createCollectionListener(db, `${basePath}/tool_sessions`, {
+        orderByField: 'startTime',
+        orderByDirection: 'desc',
+        onError: (msg, error) => console.debug('[tool_sessions] listener off:', error?.code || error?.message),
+      });
+      unsubscribers.push(createToolSessionsListener((data) => set({ toolSessions: data || [] })));
+    }
 
-    // tool_alerts — anomalias TOOL_OVERDUE/NO_LOCATION/etc. (schema em src/types.js)
+    // ============================================
+    // TOOL_ALERTS — ALWAYS unfiltered (no obraId field in schema;
+    // SAP_SYNC_FAILURE has no obra. Restricted users see global alerts
+    // until firestore.rules are enforced — documented as intentional.)
+    // ============================================
     const createToolAlertsListener = createCollectionListener(db, `${basePath}/tool_alerts`, {
       orderByField: 'createdAt',
       orderByDirection: 'desc',
@@ -148,35 +177,73 @@ const useStore = create((set, get) => ({
       createToolAlertsListener((data) => set({ toolAlerts: data || [] }))
     );
 
-    // tool_maintenance — inspeção/dano/reparação/calibração/perda (schema em src/types.js)
-    const createToolMaintenanceListener = createCollectionListener(db, `${basePath}/tool_maintenance`, {
-      orderByField: 'reportedAt',
-      orderByDirection: 'desc',
-      onError: (msg, error) => console.debug('[tool_maintenance] listener off:', error?.code || error?.message),
-    });
-    unsubscribers.push(
-      createToolMaintenanceListener((data) => set({ toolMaintenance: data || [] }))
-    );
+    // ============================================
+    // TOOL_MAINTENANCE — scoped by obraId for restricted users
+    // ============================================
+    if (scope.mode === 'empty') {
+      set({ toolMaintenance: [] });
+    } else if (scope.mode === 'scoped') {
+      // No composite index for (obraId, reportedAt) — orderBy omitted; sort client-side
+      unsubscribers.push(snapListener(
+        query(collection(db, `${basePath}/tool_maintenance`), where('obraId', '==', scope.assignedObraId)),
+        'toolMaintenance', 'tool_maintenance'
+      ));
+    } else {
+      const createToolMaintenanceListener = createCollectionListener(db, `${basePath}/tool_maintenance`, {
+        orderByField: 'reportedAt',
+        orderByDirection: 'desc',
+        onError: (msg, error) => console.debug('[tool_maintenance] listener off:', error?.code || error?.message),
+      });
+      unsubscribers.push(createToolMaintenanceListener((data) => set({ toolMaintenance: data || [] })));
+    }
 
-    // tool_movements — histórico de transferências obra↔armazém
-    const createToolMovementsListener = createCollectionListener(db, `${basePath}/tool_movements`, {
-      orderByField: 'movedAt',
-      orderByDirection: 'desc',
-      onError: (msg, error) => console.debug('[tool_movements] listener off:', error?.code || error?.message),
-    });
-    unsubscribers.push(
-      createToolMovementsListener((data) => set({ toolMovements: data || [] }))
-    );
+    // ============================================
+    // TOOL_MOVEMENTS — scoped by obraScopeIds for restricted users
+    // Composite index (obraScopeIds CONTAINS, movedAt DESC) exists — orderBy safe.
+    // ============================================
+    if (scope.mode === 'empty') {
+      set({ toolMovements: [] });
+    } else if (scope.mode === 'scoped') {
+      unsubscribers.push(snapListener(
+        query(
+          collection(db, `${basePath}/tool_movements`),
+          where('obraScopeIds', 'array-contains', scope.assignedObraId),
+          orderBy('movedAt', 'desc')
+        ),
+        'toolMovements', 'tool_movements'
+      ));
+    } else {
+      const createToolMovementsListener = createCollectionListener(db, `${basePath}/tool_movements`, {
+        orderByField: 'movedAt',
+        orderByDirection: 'desc',
+        onError: (msg, error) => console.debug('[tool_movements] listener off:', error?.code || error?.message),
+      });
+      unsubscribers.push(createToolMovementsListener((data) => set({ toolMovements: data || [] })));
+    }
 
-    // tool_transfers — guias logísticas: armazém→obra, obra→obra, obra→armazém
-    const createToolTransfersListener = createCollectionListener(db, `${basePath}/tool_transfers`, {
-      orderByField: 'createdAt',
-      orderByDirection: 'desc',
-      onError: (msg, error) => console.debug('[tool_transfers] listener off:', error?.code || error?.message),
-    });
-    unsubscribers.push(
-      createToolTransfersListener((data) => set({ toolTransfers: data || [] }))
-    );
+    // ============================================
+    // TOOL_TRANSFERS — scoped by obraScopeIds for restricted users
+    // Composite index (obraScopeIds CONTAINS, createdAt DESC) exists — orderBy safe.
+    // ============================================
+    if (scope.mode === 'empty') {
+      set({ toolTransfers: [] });
+    } else if (scope.mode === 'scoped') {
+      unsubscribers.push(snapListener(
+        query(
+          collection(db, `${basePath}/tool_transfers`),
+          where('obraScopeIds', 'array-contains', scope.assignedObraId),
+          orderBy('createdAt', 'desc')
+        ),
+        'toolTransfers', 'tool_transfers'
+      ));
+    } else {
+      const createToolTransfersListener = createCollectionListener(db, `${basePath}/tool_transfers`, {
+        orderByField: 'createdAt',
+        orderByDirection: 'desc',
+        onError: (msg, error) => console.debug('[tool_transfers] listener off:', error?.code || error?.message),
+      });
+      unsubscribers.push(createToolTransfersListener((data) => set({ toolTransfers: data || [] })));
+    }
 
     // Operators listener
     const createOperatorsListener = createCollectionListener(db, `${basePath}/operators`, {
@@ -201,13 +268,22 @@ const useStore = create((set, get) => ({
     // NOTE: maintenance (legacy heavy machines) listener movido para machinesStore.js (C1)
     // Não duplicar listener aqui.
 
-    // Obras listener
-    const createObrasListener = createCollectionListener(db, `${basePath}/obras`, {
-      onError: (msg, error) => console.error('Erro obras:', error),
-    });
-    unsubscribers.push(
-      createObrasListener((data) => set({ obras: data }))
-    );
+    // ============================================
+    // OBRAS — scoped by documentId for restricted users
+    // ============================================
+    if (scope.mode === 'empty') {
+      set({ obras: [] });
+    } else if (scope.mode === 'scoped') {
+      unsubscribers.push(snapListener(
+        query(collection(db, `${basePath}/obras`), where(documentId(), '==', scope.assignedObraId)),
+        'obras', 'obras'
+      ));
+    } else {
+      const createObrasListener = createCollectionListener(db, `${basePath}/obras`, {
+        onError: (msg, error) => console.error('Erro obras:', error),
+      });
+      unsubscribers.push(createObrasListener((data) => set({ obras: data })));
+    }
 
     // LEGACY — cartões RFID são úteis apenas no DevTools local.
     if (import.meta.env.DEV) {

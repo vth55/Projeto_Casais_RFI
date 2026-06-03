@@ -67,6 +67,9 @@ export default function App() {
   const { activeView, loading, setLoading, initializeListeners, setActiveView } = useStore();
   const { initTheme } = useThemeStore();
   const { currentUser, isAuthenticated, authLoading, getRole, initAuth } = useAuthStore();
+  // Scope deps: when these change, Firestore listeners must be rebuilt with new query filters
+  const restrictedToOwnObra = currentUser?.restrictedToOwnObra ?? false;
+  const assignedObraId = currentUser?.assignedObraId ?? null;
   const currentRole = getRole(currentUser?.systemRole);
   const { active: nfcActive, supported: nfcSupported, startListening } = useNfcStore();
   const nfcInitRef = useRef(false);
@@ -275,7 +278,7 @@ export default function App() {
     initialize().then(fn => { cleanup = fn; });
 
     return () => cleanup?.();
-  }, [isAuthenticated, initializeListeners, setLoading]);
+  }, [isAuthenticated, initializeListeners, setLoading, restrictedToOwnObra, assignedObraId]);
 
   useEffect(() => {
     if (!isAuthenticated || (activeView !== 'dashboard' && !import.meta.env.DEV)) return;
