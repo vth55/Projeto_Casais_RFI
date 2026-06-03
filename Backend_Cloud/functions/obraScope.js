@@ -7,7 +7,7 @@
  * e pelo backfill script. Sem dependências Firebase.
  */
 
-const SCOPE_EXCLUDE = new Set([null, undefined, '', 'WAREHOUSE']);
+const SCOPE_EXCLUDE = new Set(['', 'WAREHOUSE']);
 
 /** Incrementado quando a lógica de cálculo muda, forçando re-backfill. */
 const SCOPE_VERSION = 1;
@@ -32,7 +32,11 @@ function buildObraScopeIds(docData) {
     docData?.from?.obraId,     // tool_transfers
     docData?.to?.obraId,       // tool_transfers
   ];
-  return [...new Set(candidates.filter(id => !SCOPE_EXCLUDE.has(id)))].sort();
+  const normalized = candidates
+    .filter(id => typeof id === 'string')
+    .map(id => id.trim())
+    .filter(id => !SCOPE_EXCLUDE.has(id));
+  return [...new Set(normalized)].sort();
 }
 
 /**

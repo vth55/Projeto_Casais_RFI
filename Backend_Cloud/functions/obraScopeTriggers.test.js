@@ -84,6 +84,14 @@ describe('buildObraScopeIds', () => {
     expect(buildObraScopeIds({ fromObraId: 'WAREHOUSE', toObraId: 'obra-1' })).toEqual(['obra-1']);
   });
 
+  test('trims whitespace around obra IDs', () => {
+    expect(buildObraScopeIds({ fromObraId: ' obra-1 ', toObraId: 'obra-2' })).toEqual(['obra-1', 'obra-2']);
+  });
+
+  test('ignores non-string values', () => {
+    expect(buildObraScopeIds({ fromObraId: 123, toObraId: { id: 'obra-1' } })).toEqual([]);
+  });
+
   test('deduplicates when both sides are same obra', () => {
     expect(buildObraScopeIds({ fromObraId: 'obra-1', toObraId: 'obra-1' })).toEqual(['obra-1']);
   });
