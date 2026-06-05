@@ -63,10 +63,43 @@ const ObraMenuLayout = lazy(() => import('./views/obra/ObraMenuLayout'));
 // Dashboard Router (perfis)
 import DashboardRouter from './views/dashboards/DashboardRouter';
 
+const getAccessMenuIdForView = (viewId) => {
+  if (!viewId) return 'dashboard';
+  if (viewId === 'sessoes-validacoes') return 'sessoes-validacoes';
+  if (viewId === 'obra-detalhe' || viewId.startsWith('obras')) return 'obras';
+  if (viewId.startsWith('maquinas')) return 'maquinas';
+  if (viewId.startsWith('sessoes')) return 'sessoes';
+  if (viewId === 'alertas' || viewId.startsWith('manutencao')) return 'manutencao';
+  if (viewId.startsWith('financeiro')) return 'financeiro';
+  if (viewId.startsWith('analises')) return 'analises';
+  return viewId;
+};
+
+const AccessDeniedView = ({ onNavigateHome }) => (
+  <div className="min-h-[55vh] flex items-center justify-center px-4">
+    <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-8 text-center">
+      <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold mb-4">
+        !
+      </div>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Acesso sem permissao</h1>
+      <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+        O teu perfil nao tem acesso a esta area. Se precisares desta funcao, pede ao administrador para rever as permissoes.
+      </p>
+      <button
+        type="button"
+        onClick={onNavigateHome}
+        className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+      >
+        Voltar aos Equipamentos
+      </button>
+    </div>
+  </div>
+);
+
 export default function App() {
   const { activeView, loading, setLoading, initializeListeners, setActiveView } = useStore();
   const { initTheme } = useThemeStore();
-  const { currentUser, isAuthenticated, authLoading, getRole, initAuth } = useAuthStore();
+  const { currentUser, isAuthenticated, authLoading, getRole, initAuth, canAccess } = useAuthStore();
   // Scope deps: when these change, Firestore listeners must be rebuilt with new query filters
   const restrictedToOwnObra = currentUser?.restrictedToOwnObra ?? false;
   const assignedObraId = currentUser?.assignedObraId ?? null;
@@ -325,6 +358,11 @@ export default function App() {
 
   // Memoizar renderView para evitar re-renders desnecessários
   const renderView = useCallback(() => {
+    const accessMenuId = getAccessMenuIdForView(activeView);
+    if (!canAccess(accessMenuId)) {
+      return <AccessDeniedView onNavigateHome={() => setActiveView('maquinas-lista')} />;
+    }
+
     if (activeView === 'obra-detalhe') return <ObraMenuLayout />;
     if (activeView.startsWith('obras')) return <ObrasView />;
     if (activeView === 'estaleiro') return <EstaleiroView />;
@@ -342,7 +380,7 @@ export default function App() {
     if (activeView === 'catalogo') return <CatalogoModelosView />;
     if (activeView === 'mapa') return <MapaObrasView />;
     return <DashboardRouter DefaultDashboard={DashboardView} />;
-  }, [activeView, currentUser?.systemRole]);
+  }, [activeView, canAccess, setActiveView]);
 
   // Rotas standalone: acessíveis sem login (tag NFC e reporte de avaria)
   // IMPORTANTE: verificar ANTES do loading para não bloquear o operador móvel
