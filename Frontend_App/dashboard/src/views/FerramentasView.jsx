@@ -21,6 +21,8 @@ import {
   X,
 } from 'lucide-react';
 import useStore from '../store/useStore';
+import useAuthStore from '../store/useAuthStore';
+import { PERMISSIONS } from '../config/permissions';
 
 const BASE = `artifacts/${projectId}/public/data`;
 const TOOLS_PATH = `${BASE}/tools`;
@@ -815,6 +817,8 @@ export default function EquipamentosView() {
     equipmentModels, tools, toolSessions, toolAlerts = [],
     getModelStats,
   } = useStore();
+  const { can } = useAuthStore();
+  const canCreateTools = can(PERMISSIONS.TOOLS_CREATE);
 
   const [view, setView] = useState('grouped'); // 'grouped' | 'flat'
   const [search, setSearch] = useState('');
@@ -914,13 +918,15 @@ export default function EquipamentosView() {
               Lista plana
             </button>
           </div>
-          <button
-            onClick={() => setEditing({})}
-            className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-xl font-bold text-sm hover:bg-primary-600 active:scale-95 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Novo
-          </button>
+          {canCreateTools && (
+            <button
+              onClick={() => setEditing({})}
+              className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-xl font-bold text-sm hover:bg-primary-600 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Novo
+            </button>
+          )}
         </div>
       </div>
 
