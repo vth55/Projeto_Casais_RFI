@@ -1058,6 +1058,8 @@ const LegacyDbSection = ({ onClear, loading }) => {
   );
 };
 
+const DEMO_OWNER_EMAIL = 'vitorhugo22.igrejas@gmail.com';
+
 // View principal
 const ConfiguracoesView = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -1089,18 +1091,30 @@ const ConfiguracoesView = () => {
 
   const allRoles = useMemo(() => getAllRoles(), [getAllRoles]);
   const visibleRoles = useMemo(() => getVisibleRoles(), [getVisibleRoles]);
+  const isDemoOwner = currentUser?.email === DEMO_OWNER_EMAIL || String(currentUser?.id || '').startsWith('demo_');
 
-  const tabs = [
+  const tabs = useMemo(() => [
     { id: 'general', label: 'Geral', icon: Settings },
     { id: 'roles', label: 'Perfis de Acesso', icon: Shield },
     { id: 'integrations', label: 'Integrações', icon: Link2 },
-    { id: 'demo', label: 'Modo Demo', icon: Users },
+    ...(isDemoOwner ? [
+      { id: 'demo', label: 'Modo Demo', icon: Users },
+      { id: 'database', label: 'Base de Dados', icon: Database },
+    ] : []),
     { id: 'notifications', label: 'Notificações', icon: Bell },
     { id: 'appearance', label: 'Aparência', icon: Palette },
-    { id: 'database', label: 'Base de Dados', icon: Database },
-  ];
+  ], [isDemoOwner]);
+
+  useEffect(() => {
+    if (!tabs.some(tab => tab.id === activeTab)) setActiveTab('general');
+  }, [activeTab, tabs]);
 
   const handleCreateMockData = async () => {
+    if (!isDemoOwner) {
+      setMessage({ type: 'error', text: 'Ações de demo restritas à conta de demonstração.' });
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
     setLoading(true);
     try {
       const result = await createAllMockData();
@@ -1116,6 +1130,11 @@ const ConfiguracoesView = () => {
   };
 
   const handleClearToolsData = async () => {
+    if (!isDemoOwner) {
+      setMessage({ type: 'error', text: 'Ações destrutivas restritas à conta de demonstração.' });
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
     if (!confirm('Eliminar dados de equipamentos (tools, tool_sessions, tool_alerts)? Esta ação não pode ser revertida.')) return;
     setLoading(true);
     try {
@@ -1135,6 +1154,11 @@ const ConfiguracoesView = () => {
 
   // LEGACY — limpar colecções machines/sessions (mantido para Procore exporter)
   const handleClearLegacyData = async () => {
+    if (!isDemoOwner) {
+      setMessage({ type: 'error', text: 'Ações legacy restritas à conta de demonstração.' });
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
     if (!confirm('[LEGACY] Eliminar dados de equipamentos legacy (machines, sessions)? Esta ação não pode ser revertida.')) return;
     setLoading(true);
     try {
@@ -1258,6 +1282,15 @@ const ConfiguracoesView = () => {
         );
 
       case 'demo':
+        if (!isDemoOwner) {
+          return (
+            <ConfigSection icon={Lock} title="Acesso restrito" description="Ferramentas de demonstração reservadas.">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Esta área só está disponível para a conta usada na demonstração.
+              </p>
+            </ConfigSection>
+          );
+        }
         return (
           <ConfigSection
             icon={Users}
@@ -1633,6 +1666,15 @@ const ConfiguracoesView = () => {
         );
 
       case 'database':
+        if (!isDemoOwner) {
+          return (
+            <ConfigSection icon={Lock} title="Acesso restrito" description="Ferramentas de base de dados reservadas.">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Reset, seed e limpeza de dados só estão disponíveis para a conta usada na demonstração.
+              </p>
+            </ConfigSection>
+          );
+        }
         return (
           <ConfigSection icon={Database} title="Base de Dados" description="Gestão de dados do sistema">
             <div className="space-y-3">

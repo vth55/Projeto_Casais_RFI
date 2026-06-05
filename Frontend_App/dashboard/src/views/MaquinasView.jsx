@@ -376,7 +376,7 @@ const BulkLocationModal = ({ isOpen, onClose, selectedMachines, machines, obras,
 
   const obraOptions = [
     { value: '', label: 'Selecionar obra...' },
-    { value: 'estaleiro', label: '🏗️ Estaleiro (parque de máquinas)' },
+    { value: 'estaleiro', label: '🏗️ Estaleiro (armazém de equipamentos)' },
     ...obras.filter(o => !o.isVirtual).map(o => ({ value: o.id, label: o.name })),
     { value: 'none', label: '-- Remover localização --' },
   ];
