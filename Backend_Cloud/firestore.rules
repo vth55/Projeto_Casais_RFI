@@ -174,7 +174,8 @@ service cloud.firestore {
     }
 
     match /artifacts/casais-rfid/public/data/tool_sessions/{sessionId} {
-      allow read: if isAuthenticated() && canAccessObraId(resource.data.obraId);
+      allow read: if isAuthenticated() &&
+        (resource.data.operatorId == request.auth.uid || canAccessObraId(resource.data.obraId));
       // Operador pode criar a sua própria sessão e fechá-la
       allow create: if isAuthenticated() &&
         request.resource.data.operatorId == request.auth.uid &&

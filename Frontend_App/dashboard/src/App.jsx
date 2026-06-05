@@ -278,8 +278,9 @@ export default function App() {
     let cancelled = false;
 
     const initialize = async () => {
-      // Verificar/criar dados mock
-      if (db) {
+      // Verificar/criar dados mock apenas para perfis globais.
+      // Perfis restritos por obra nao podem executar leituras globais depois das Firestore rules H2-2C.
+      if (db && !currentUser?.restrictedToOwnObra) {
         try {
           const basePath = `artifacts/${projectId}/public/data`;
           const [modelsSnap, toolsSnap, operatorsSnap, toolSessionsSnap, alertsSnap] = await Promise.all([
@@ -326,7 +327,7 @@ export default function App() {
       cancelled = true;
       cleanup?.();
     };
-  }, [isAuthenticated, initializeListeners, setLoading, restrictedToOwnObra, assignedObraId]);
+  }, [isAuthenticated, initializeListeners, setLoading, restrictedToOwnObra, assignedObraId, currentUser?.restrictedToOwnObra]);
 
   useEffect(() => {
     if (!isAuthenticated || (activeView !== 'dashboard' && !import.meta.env.DEV)) return;
