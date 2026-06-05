@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, Search, Wifi, Download, WifiOff } from 'lucide-react';
+import { Bell, Search, Wifi, Download, WifiOff, Menu } from 'lucide-react';
 import useStore from '../../store/useStore';
 import usePWAInstall from '../../hooks/usePWAInstall';
 import useOnlineStatus from '../../hooks/useOnlineStatus';
@@ -70,6 +70,13 @@ const Header = ({ onMenuClick }) => {
     <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 transition-colors">
       {/* Left side */}
       <div className="flex items-center gap-4">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          aria-label="Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <div>
           <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{viewInfo.title}</h1>
           {viewInfo.description && (

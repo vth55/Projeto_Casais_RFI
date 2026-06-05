@@ -46,7 +46,7 @@ const navigation = [
 ];
 
 const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollapse }) => {
-  const { activeView, setActiveView, tools = [], toolSessions = [] } = useStore();
+  const { activeView, setActiveView, tools = [], toolSessions = [], obras = [] } = useStore();
   const { currentUser, canAccess, logout, getRole } = useAuthStore();
   const { active: nfcActive, supported: nfcSupported } = useNfcStore();
 
@@ -68,6 +68,11 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
 
   const filteredNavigation = useMemo(() => navigation.filter(item => canAccess(item.id)), [canAccess, currentUser?.permissions, currentUser?.systemRole]);
   const currentRole = useMemo(() => getRole(currentUser?.systemRole), [currentUser, getRole]);
+  const assignedObra = useMemo(
+    () => currentUser?.assignedObraId ? obras.find(o => o.id === currentUser.assignedObraId) : null,
+    [currentUser?.assignedObraId, obras]
+  );
+  const obraLabel = assignedObra?.name || currentUser?.assignedObraId || null;
 
   const toggleMenu = (menuId) => {
     setExpandedMenus(prev => prev.includes(menuId) ? [] : [menuId]);
@@ -82,8 +87,9 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
   const { toolAlerts = [] } = useStore();
   const alertCount = toolAlerts.filter(a => a.status === 'OPEN' || a.status === 'IN_REVIEW').length;
 
-  const userInitials = currentUser?.name
-    ?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+  const userLabel = currentUser?.name || currentUser?.displayName || currentUser?.email || 'Utilizador';
+  const userInitials = userLabel
+    .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
 
   // ============================================================
   // MODO COLLAPSED (tablet rail — só ícones)
@@ -143,11 +149,21 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
           </div>
         )}
 
-        {/* User avatar */}
-        <div className="p-3 border-t border-slate-700/50 flex justify-center">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+        {/* User avatar + logout */}
+        <div className="p-3 border-t border-slate-700/50 flex flex-col items-center gap-2">
+          <div
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
+            title={`${userLabel} — ${currentRole?.name || 'Sem perfil'}`}
+          >
             <span className="text-white text-xs font-bold">{userInitials}</span>
           </div>
+          <button
+            onClick={logout}
+            title="Terminar sessão"
+            className="w-9 h-9 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </aside>
     );
@@ -304,11 +320,17 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
             <span className="text-white text-xs font-bold">{userInitials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{currentUser?.name || 'Utilizador'}</p>
+            <p className="text-sm font-medium text-white truncate">{userLabel}</p>
             <div className="flex items-center gap-1 text-xs text-slate-500">
               <Shield className="w-3 h-3" />
               <span className="truncate">{currentRole?.name || 'Sem perfil'}</span>
             </div>
+            {obraLabel && (
+              <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+                <Building2 className="w-3 h-3" />
+                <span className="truncate">{obraLabel}</span>
+              </div>
+            )}
           </div>
           <button
             onClick={logout}

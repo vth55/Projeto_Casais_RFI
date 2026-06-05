@@ -15,9 +15,14 @@ import {
   X,
   Warehouse,
   ArrowRightLeft,
+  LogOut,
+  Sun,
+  Moon,
+  Shield,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import useAuthStore from '../../store/useAuthStore';
+import useThemeStore from '../../store/useThemeStore';
 
 // Os 4 tabs principais + "Mais"
 const PRIMARY_TABS = [
@@ -41,9 +46,19 @@ const MORE_ITEMS = [
 ];
 
 const BottomNav = memo(() => {
-  const { activeView, setActiveView, toolSessions = [], toolAlerts = [] } = useStore();
-  const { canAccess } = useAuthStore();
+  const { activeView, setActiveView, toolSessions = [], toolAlerts = [], obras = [] } = useStore();
+  const { canAccess, currentUser, logout, getRole } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const [showMore, setShowMore] = useState(false);
+
+  const currentRole = getRole(currentUser?.systemRole);
+  const assignedObra = currentUser?.assignedObraId
+    ? obras.find(o => o.id === currentUser.assignedObraId)
+    : null;
+  const obraLabel = assignedObra?.name || currentUser?.assignedObraId || null;
+  const userLabel = currentUser?.name || currentUser?.displayName || currentUser?.email || 'Utilizador';
+  const userInitials = userLabel
+    .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
 
   const activeSessions = toolSessions.filter(s => s.status === 'OPEN').length;
   const maintenanceAlerts = toolAlerts.filter(alert => alert.status === 'OPEN' || alert.status === 'IN_REVIEW').length;
@@ -98,6 +113,46 @@ const BottomNav = memo(() => {
               >
                 <X className="w-4 h-4 text-slate-600 dark:text-slate-400" />
               </button>
+            </div>
+
+            {/* Cartão de conta */}
+            <div className="mx-4 mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm font-bold">{userInitials}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                    {userLabel}
+                  </p>
+                  <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                    <Shield className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{currentRole?.name || 'Sem perfil'}</span>
+                  </div>
+                  {obraLabel && (
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <Building2 className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{obraLabel}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={toggleTheme}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-slate-600 transition-colors active:scale-95"
+                >
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  {theme === 'dark' ? 'Claro' : 'Escuro'}
+                </button>
+                <button
+                  onClick={() => { setShowMore(false); logout(); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium border border-red-100 dark:border-red-800 transition-colors active:scale-95"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Terminar sessão
+                </button>
+              </div>
             </div>
 
             {/* Grid de opções */}
