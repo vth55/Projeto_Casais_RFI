@@ -91,12 +91,14 @@ service cloud.firestore {
 
     function hasAssignedObraClaim() {
       return isAuthenticated() &&
+        request.auth.token.keys().hasAny(['assignedObraId']) &&
         request.auth.token.assignedObraId is string &&
         request.auth.token.assignedObraId != '';
     }
 
     function isRestrictedToOwnObra() {
       return isAuthenticated() &&
+        request.auth.token.keys().hasAny(['restrictedToOwnObra']) &&
         request.auth.token.restrictedToOwnObra == true;
     }
 
@@ -179,10 +181,14 @@ service cloud.firestore {
       // Operador pode criar a sua própria sessão e fechá-la
       allow create: if isAuthenticated() &&
         request.resource.data.operatorId == request.auth.uid &&
-        canAccessObraId(request.resource.data.obraId);
+        (!request.resource.data.keys().hasAny(['obraId']) ||
+          request.resource.data.obraId == null ||
+          canAccessObraId(request.resource.data.obraId));
       allow update: if isAuthenticated() &&
-        (resource.data.operatorId == request.auth.uid || canManageMaintenance()) &&
-        canAccessObraId(resource.data.obraId);
+        (
+          resource.data.operatorId == request.auth.uid ||
+          (canManageMaintenance() && canAccessObraId(resource.data.obraId))
+        );
       allow delete: if canManageEquipment();
     }
 
