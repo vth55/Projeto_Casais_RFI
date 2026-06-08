@@ -75,6 +75,14 @@ const getAccessMenuIdForView = (viewId) => {
   return viewId;
 };
 
+const getLandingForUser = (user, role) => {
+  if (role?.defaultDashboard === 'operador') {
+    return { path: '/dashboard', view: 'dashboard' };
+  }
+
+  return { path: '/equipamentos', view: 'maquinas-lista' };
+};
+
 const AccessDeniedView = ({ onNavigateHome }) => (
   <div className="min-h-[55vh] flex items-center justify-center px-4">
     <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-8 text-center">
@@ -90,7 +98,7 @@ const AccessDeniedView = ({ onNavigateHome }) => (
         onClick={onNavigateHome}
         className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
       >
-        Voltar aos Equipamentos
+        Voltar ao início
       </button>
     </div>
   </div>
@@ -258,17 +266,22 @@ export default function App() {
   }, [initAuth]);
 
   useEffect(() => {
-    if (!isAuthenticated || window.location.pathname !== '/login') return;
+    if (!isAuthenticated || !currentUser) return;
 
-    const returnTo = new URLSearchParams(window.location.search).get('returnTo');
-    if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) {
-      window.location.replace(returnTo);
-      return;
+    if (window.location.pathname === '/login') {
+      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+      if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) {
+        window.location.replace(returnTo);
+        return;
+      }
     }
 
-    window.history.replaceState({}, '', '/equipamentos');
-    setActiveView('maquinas-lista');
-  }, [isAuthenticated, setActiveView]);
+    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+      const landing = getLandingForUser(currentUser, currentRole);
+      window.history.replaceState({}, '', landing.path);
+      setActiveView(landing.view);
+    }
+  }, [isAuthenticated, currentUser, currentRole, setActiveView]);
 
   useEffect(() => {
     // Só inicializar dados após o utilizador estar autenticado
@@ -361,7 +374,7 @@ export default function App() {
   const renderView = useCallback(() => {
     const accessMenuId = getAccessMenuIdForView(activeView);
     if (!canAccess(accessMenuId)) {
-      return <AccessDeniedView onNavigateHome={() => setActiveView('maquinas-lista')} />;
+      return <AccessDeniedView onNavigateHome={() => setActiveView(getLandingForUser(currentUser, currentRole).view)} />;
     }
 
     if (activeView === 'obra-detalhe') return <ObraMenuLayout />;
@@ -381,7 +394,7 @@ export default function App() {
     if (activeView === 'catalogo') return <CatalogoModelosView />;
     if (activeView === 'mapa') return <MapaObrasView />;
     return <DashboardRouter DefaultDashboard={DashboardView} />;
-  }, [activeView, canAccess, setActiveView]);
+  }, [activeView, canAccess, currentUser, currentRole, setActiveView]);
 
   // Rotas standalone: acessíveis sem login (tag NFC e reporte de avaria)
   // IMPORTANTE: verificar ANTES do loading para não bloquear o operador móvel
