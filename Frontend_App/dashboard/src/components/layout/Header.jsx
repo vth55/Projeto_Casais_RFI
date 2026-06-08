@@ -18,6 +18,7 @@ const viewTitles = {
   'obras-concluidas': { title: 'Obras Concluídas', description: 'Obras finalizadas' },
   'obras-mapa': { title: 'Mapa de Obras', description: 'Localização geográfica das obras' },
   mapa: { title: 'Onde estão', description: 'Mapa por obra baseado na última leitura NFC' },
+  guias: { title: 'Guias', description: 'Expedição e receção confirmadas por NFC' },
   sessoes: { title: 'Sessões', description: 'Histórico de sessões' },
   'sessoes-ativas': { title: 'Sessões Ativas', description: 'Sessões em curso' },
   'sessoes-historico': { title: 'Histórico de Sessões', description: 'Todas as sessões' },

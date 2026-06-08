@@ -13,8 +13,9 @@
  *   3. Fecha sessão duplicada de MART-001 (motivo: DEMO_CLEANUP_DUPLICATE)
  *   4. Fecha sessões OPEN com startTime > 48h (motivo: DEMO_CLEANUP_OLD)
  *   5. Cria ~15 sessões CLOSED recentes (últimos 3 dias) — demoGenerated: true
- *   6. Cria 3 guias tool_transfers realistas — demoGenerated: true
- *   7. Cria 3 tool_alerts OPEN realistas — demoGenerated: true
+ *   6. Cria 2 sessões OPEN recentes para KPIs vivos — demoActive: true
+ *   7. Cria 3 guias tool_transfers realistas — demoGenerated: true
+ *   8. Cria 3 tool_alerts OPEN realistas — demoGenerated: true
  *
  * Idempotente: documentos com demoGenerated:true não são recriados.
  * Não apaga documentos. Usa update com demoCuratedAt / demoGenerated.
@@ -417,6 +418,77 @@ function planDemoSessions(tools, sessions, obras, operators) {
   return created;
 }
 
+// FASE 2d.1 - Criar sessoes ativas demo para KPIs vivos
+const DEMO_ACTIVE_SESSIONS_TARGET = 2;
+const DEMO_ACTIVE_SESSION_SPECS = [
+  {
+    id: 'demo_active_serra_001',
+    toolId: 'tool_dewalt-dwe-575_serra-001',
+    operatorId: 'OP_001',
+    operatorName: 'João Silva',
+    hoursAgo: 1.5,
+  },
+  {
+    id: 'demo_active_ger_001',
+    toolId: 'tool_honda-eu22i_ger-001',
+    operatorId: 'OP_002',
+    operatorName: 'Maria Santos',
+    hoursAgo: 2.25,
+  },
+];
+
+function planDemoActiveSessions(tools, sessions) {
+  const existingOpenDemo = sessions.filter(s => s.demoActive === true && s.status === 'OPEN');
+  if (existingOpenDemo.length >= DEMO_ACTIVE_SESSIONS_TARGET) {
+    console.log(`   ✓  ${existingOpenDemo.length} sessões ativas demo já existem — skip criação`);
+    return;
+  }
+
+  const activeToolIds = new Set(
+    sessions.filter(s => s.status === 'OPEN').map(s => s.toolId).filter(Boolean)
+  );
+
+  for (const spec of DEMO_ACTIVE_SESSION_SPECS) {
+    if (sessions.some(s => s.id === spec.id && s.status === 'OPEN')) continue;
+    if (activeToolIds.has(spec.toolId)) continue;
+
+    const tool = tools.find(t => t.id === spec.toolId);
+    if (!tool || tool.hiddenFromDemo || tool.demoHidden) continue;
+
+    const startDate = hoursAgo(spec.hoursAgo);
+    const nfcId = tool.nfcTagId || null;
+    const baseName = tool._displayName || tool.name || tool.id;
+    const toolName = nfcId ? `${baseName} (${nfcId})` : baseName;
+
+    planSet(col('tool_sessions').doc(spec.id), {
+      toolId:       tool.id,
+      toolName,
+      toolType:     tool._category || null,
+      modelId:      tool.modelId || null,
+      modelName:    tool._displayName || null,
+      nfcTagId:     nfcId,
+      operatorId:   spec.operatorId,
+      operatorName: spec.operatorName,
+      obraId:       'procore_328122',
+      obraName:     'Torre Boavista — Porto',
+      sapOrigin:    'Torre Boavista — Porto',
+      sapWorker:    spec.operatorId,
+      status:       'OPEN',
+      startTime:    ts(startDate),
+      endTime:      null,
+      durationHours: null,
+      location:     null,
+      procoreSynced: false,
+      sapSynced:    false,
+      demoGenerated: true,
+      demoActive: true,
+      demoCuratedAt: FieldValue.serverTimestamp(),
+    }, `Sessão ativa demo: "${toolName}" · ${spec.operatorName} · Torre Boavista — Porto`);
+
+    activeToolIds.add(spec.toolId);
+  }
+}
+
 // ─── FASE 2e — Criar guias tool_transfers demo ────────────────────────────────
 
 function planDemoTransfers(tools, transfers, obras) {
@@ -721,6 +793,9 @@ async function main() {
 
   console.log('\n── Fase 2d: Sessões demo recentes ────────────────────');
   planDemoSessions(tools, sessions, obras, operators);
+
+  console.log('\n── Fase 2d.1: Sessões ativas demo ────────────────────');
+  planDemoActiveSessions(tools, sessions);
 
   console.log('\n── Fase 2e: Guias tool_transfers demo ────────────────');
   planDemoTransfers(tools, transfers, obras);
