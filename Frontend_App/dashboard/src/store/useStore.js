@@ -43,6 +43,9 @@ const sanitizeData = (data) => {
   );
 };
 
+const visibleForDemo = (item) => item?.hiddenFromDemo !== true && item?.demoHidden !== true;
+const filterHiddenFromDemo = (items) => (items || []).filter(visibleForDemo);
+
 const useStore = create((set, get) => ({
   // Estado
   // NOTE: sessions e machines foram movidos para store/legacy/machinesStore.js (C1 pivot 2026-05)
@@ -129,7 +132,7 @@ const useStore = create((set, get) => ({
     const snapListener = (q, stateKey, logTag) =>
       onSnapshot(
         q,
-        (snap) => set({ [stateKey]: snap.docs.map(d => ({ id: d.id, ...d.data() })) }),
+        (snap) => set({ [stateKey]: filterHiddenFromDemo(snap.docs.map(d => ({ id: d.id, ...d.data() }))) }),
         (err) => console.debug(`[${logTag}] listener off:`, err?.code || err?.message)
       );
 
@@ -140,7 +143,7 @@ const useStore = create((set, get) => ({
       onError: (msg, error) => console.debug('[tools] listener off:', error?.code || error?.message),
     });
     unsubscribers.push(
-      createToolsListener((data) => set({ tools: data || [] }))
+      createToolsListener((data) => set({ tools: filterHiddenFromDemo(data) }))
     );
 
     // ============================================
@@ -160,7 +163,7 @@ const useStore = create((set, get) => ({
         orderByDirection: 'desc',
         onError: (msg, error) => console.debug('[tool_sessions] listener off:', error?.code || error?.message),
       });
-      unsubscribers.push(createToolSessionsListener((data) => set({ toolSessions: data || [] })));
+      unsubscribers.push(createToolSessionsListener((data) => set({ toolSessions: filterHiddenFromDemo(data) })));
     }
 
     // ============================================
@@ -174,7 +177,7 @@ const useStore = create((set, get) => ({
       onError: (msg, error) => console.debug('[tool_alerts] listener off:', error?.code || error?.message),
     });
     unsubscribers.push(
-      createToolAlertsListener((data) => set({ toolAlerts: data || [] }))
+      createToolAlertsListener((data) => set({ toolAlerts: filterHiddenFromDemo(data) }))
     );
 
     // ============================================
@@ -194,7 +197,7 @@ const useStore = create((set, get) => ({
         orderByDirection: 'desc',
         onError: (msg, error) => console.debug('[tool_maintenance] listener off:', error?.code || error?.message),
       });
-      unsubscribers.push(createToolMaintenanceListener((data) => set({ toolMaintenance: data || [] })));
+      unsubscribers.push(createToolMaintenanceListener((data) => set({ toolMaintenance: filterHiddenFromDemo(data) })));
     }
 
     // ============================================
@@ -218,7 +221,7 @@ const useStore = create((set, get) => ({
         orderByDirection: 'desc',
         onError: (msg, error) => console.debug('[tool_movements] listener off:', error?.code || error?.message),
       });
-      unsubscribers.push(createToolMovementsListener((data) => set({ toolMovements: data || [] })));
+      unsubscribers.push(createToolMovementsListener((data) => set({ toolMovements: filterHiddenFromDemo(data) })));
     }
 
     // ============================================
@@ -242,7 +245,7 @@ const useStore = create((set, get) => ({
         orderByDirection: 'desc',
         onError: (msg, error) => console.debug('[tool_transfers] listener off:', error?.code || error?.message),
       });
-      unsubscribers.push(createToolTransfersListener((data) => set({ toolTransfers: data || [] })));
+      unsubscribers.push(createToolTransfersListener((data) => set({ toolTransfers: filterHiddenFromDemo(data) })));
     }
 
     // Operators listener
@@ -282,7 +285,7 @@ const useStore = create((set, get) => ({
       const createObrasListener = createCollectionListener(db, `${basePath}/obras`, {
         onError: (msg, error) => console.error('Erro obras:', error),
       });
-      unsubscribers.push(createObrasListener((data) => set({ obras: data })));
+      unsubscribers.push(createObrasListener((data) => set({ obras: filterHiddenFromDemo(data) })));
     }
 
     // LEGACY — cartões RFID são úteis apenas no DevTools local.
