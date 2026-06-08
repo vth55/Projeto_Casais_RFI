@@ -11,7 +11,7 @@
  *   1. Renomeia/oculta "Testeee 1" (ID: XL7IcDTM6bz8wj4Tmcbt)
  *   2. Marca "Sandbox Test Project" como hiddenFromDemo
  *   3. Fecha sessão duplicada de MART-001 (motivo: DEMO_CLEANUP_DUPLICATE)
- *   4. Fecha sessões OPEN com startTime > 5 dias (motivo: DEMO_CLEANUP_OLD)
+ *   4. Fecha sessões OPEN com startTime > 48h (motivo: DEMO_CLEANUP_OLD)
  *   5. Cria ~15 sessões CLOSED recentes (últimos 3 dias) — demoGenerated: true
  *   6. Cria 3 guias tool_transfers realistas — demoGenerated: true
  *   7. Cria 3 tool_alerts OPEN realistas — demoGenerated: true
@@ -260,28 +260,30 @@ function planCleanSessions(sessions) {
     }
   }
 
-  // Fechar sessões muito antigas (> 5 dias)
-  const FIVE_DAYS_MS = 5 * 86_400_000;
+  // Fechar sessões antigas (> 48h) para a demo não parecer abandonada.
+  const OLD_OPEN_SESSION_MS = 48 * 3_600_000;
   for (const s of open) {
     const startMs = s.startTime?.toMillis?.() ?? null;
     if (!startMs) continue;
     const ageMs = now - startMs;
-    if (ageMs < FIVE_DAYS_MS) continue;
+    if (ageMs < OLD_OPEN_SESSION_MS) continue;
     // Já está a ser tratada como duplicado? Skip.
     const alreadyPlanned = changes.some(c => c.ref.path.endsWith(s.id));
     if (alreadyPlanned) continue;
 
     const endDate  = new Date(startMs + 6 * 3_600_000); // 6h de sessão
     const durHours = durH(new Date(startMs), endDate);
-    const ageDays  = Math.round(ageMs / 86_400_000);
+    const ageHours = Math.round(ageMs / 3_600_000);
 
     planUpdate(col('tool_sessions').doc(s.id), {
       status:        'CLOSED',
       endTime:       ts(endDate),
       durationHours: durHours,
+      obraId:        s.obraId || 'procore_328122',
+      obraName:      s.obraName || 'Torre Boavista — Porto',
       closedReason:  'DEMO_CLEANUP_OLD',
       demoCuratedAt: FieldValue.serverTimestamp(),
-    }, `Fechar sessão antiga ${ageDays}d: tool="${s.toolName}" op="${s.operatorName}" (${s.id})`);
+    }, `Fechar sessao antiga ${ageHours}h: tool="${s.toolName}" op="${s.operatorName}" (${s.id})`);
   }
 }
 
@@ -659,37 +661,38 @@ function planDemoAlerts(tools, alerts, sessions) {
 
 // ─── FASE 3 — Atualizar valores de reposição das ferramentas ──────────────────
 
-// Mapa aproximado: categoria → valor de reposição em EUR
+// Mapa aproximado: modelId → valor de reposição em EUR.
 const REPLACEMENT_VALUES = {
-  'Martelo Pneumatico':  1000,
-  'Perfurador':          1500,
-  'Lixadora':             300,
-  'Laser Nivelador':      800,
-  'Rebarbadora':          350,
-  'Serra':                500,
-  'Gerador':             2500,
-  'Compactador':         2000,
-  'Betoneira':           1200,
-  'Cortadora':            400,
-  'Parafusadora':         350,
-  'Vibrador de Betao':    800,
+  'bomag-bp-25':       4500,
+  'bosch-gex-125':      600,
+  'bosch-grl-300':     1800,
+  'bosch-gsh-16-30':   3500,
+  'bosch-gws-22-230':   900,
+  'dewalt-dwe-575':    1200,
+  'hilti-te-70-atc':   4500,
+  'honda-eu22i':       5000,
+  'imer-syntesi-140':  2200,
+  'makita-df-001':      750,
+  'rubi-dc-250':       2000,
+  'wacker-irfu-38':    2500,
 };
 
 function planFixReplacementValues(tools) {
   let updated = 0;
   for (const t of tools) {
     if (t.id === TESTEE_TOOL_ID) continue;
-    const category  = t.category || t.toolType || '';
-    const newValue  = REPLACEMENT_VALUES[category];
+    if (t.hiddenFromDemo || t.demoHidden) continue;
+    const modelId   = t.modelId || '';
+    const newValue  = REPLACEMENT_VALUES[modelId];
     if (!newValue) continue;
-    const current   = t.replacementValue || 0;
-    // Só actualizar se o valor actual for 0, null, undefined, ou muito baixo (<50€)
-    if (current >= 50) continue;
+    const current   = Number(t.replacementCost) || 0;
+    // Mantem idempotencia: so atualiza quando o valor alvo mudou.
+    if (current === newValue) continue;
 
     planUpdate(col('tools').doc(t.id), {
-      replacementValue: newValue,
-      demoCuratedAt:    FieldValue.serverTimestamp(),
-    }, `replacementValue: ${current} → €${newValue} para "${t.displayName || t.id}" (${category})`);
+      replacementCost: newValue,
+      demoCuratedAt:  FieldValue.serverTimestamp(),
+    }, `replacementCost: ${current} -> EUR ${newValue} para "${t.displayName || t.name || t.id}" (${modelId})`);
     updated++;
   }
   if (updated === 0) console.log('   ✓  Valores de reposição já configurados — skip');
