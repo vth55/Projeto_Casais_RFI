@@ -85,7 +85,7 @@ const FinanceiroView = () => {
         const obraId = session.obraId || tool?.currentObraId || 'sem_obra';
         const existing = obraToolValues.get(obraId) || {
           obraId,
-          obraName: session.obraName || tool?.currentObraName || 'Sem obra',
+          obraName: session.obraName || tool?.currentObraName || 'Local não atribuído',
           toolIds: new Set(),
           value: 0,
         };
@@ -105,7 +105,7 @@ const FinanceiroView = () => {
           id: key,
           toolId: session.toolId,
           toolName: session.toolName || tool?.name || 'Equipamento sem nome',
-          obraName: session.obraName || tool?.currentObraName || 'Sem obra',
+          obraName: session.obraName || tool?.currentObraName || 'Local não atribuído',
           operatorName: session.operatorName || 'Sem operador',
           daysOpen,
           estimatedValue,
@@ -125,7 +125,7 @@ const FinanceiroView = () => {
             id: `tool:${tool.id}`,
             toolId: tool.id,
             toolName: tool.name || 'Equipamento sem nome',
-            obraName: tool.currentObraName || 'Sem obra',
+            obraName: tool.currentObraName || 'Local não atribuído',
             operatorName: 'Sem operador',
             daysOpen: null,
             estimatedValue: replacementValue(tool),
@@ -149,7 +149,7 @@ const FinanceiroView = () => {
       fleetValue,
       openValue,
       lostValue,
-      topObra: valueByObra[0] || { name: 'Sem obra', value: 0 },
+      topObra: valueByObra[0] || { name: 'Sem equipamentos em obra', value: 0 },
       riskRows: [...riskByKey.values()].sort((a, b) => b.estimatedValue - a.estimatedValue),
       valueByObra,
     };
