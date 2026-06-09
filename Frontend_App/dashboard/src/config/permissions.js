@@ -87,6 +87,9 @@ export const PERMISSIONS = {
   SETTINGS_USERS: 'settings:users', // Gerir utilizadores
   SETTINGS_SYSTEM: 'settings:system',
 
+  // Catálogo de Modelos (master data SAP) — só admin / it / gestor_frota
+  CATALOG_VIEW: 'catalog:view',
+
   // Auditoria (ISO)
   AUDIT_VIEW: 'audit:view',
   AUDIT_EXPORT: 'audit:export',
@@ -164,6 +167,7 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.SETTINGS_VIEW,
       PERMISSIONS.SETTINGS_GENERAL,
       PERMISSIONS.SETTINGS_ROLES,
+      PERMISSIONS.CATALOG_VIEW,
     ],
     isSystem: true,
     canCreateRolesBelow: true,
@@ -369,7 +373,7 @@ export const MENU_PERMISSIONS = {
   analises: [PERMISSIONS.ANALYTICS_VIEW],
   relatorios: [PERMISSIONS.REPORTS_VIEW],
   configuracoes: [PERMISSIONS.SETTINGS_VIEW],
-  catalogo: [PERMISSIONS.SETTINGS_VIEW],
+  catalogo: [PERMISSIONS.CATALOG_VIEW],
 };
 
 // Helpers para verificar permissões

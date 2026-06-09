@@ -41,7 +41,7 @@ const navigation = [
   { id: 'financeiro',  label: 'Financeiro',    icon: Wallet },
   { id: 'analises',    label: 'Análises',      icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',    icon: FileText },
-  { id: 'catalogo',    label: 'Catálogo',       icon: BookOpen },
+  { id: 'catalogo',    label: 'Catálogo de Modelos', icon: BookOpen },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
 

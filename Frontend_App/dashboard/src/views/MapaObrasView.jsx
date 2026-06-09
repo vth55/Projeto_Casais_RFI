@@ -78,8 +78,12 @@ export default function MapaObrasView() {
       scrollWheelZoom: true,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
+    // CARTO Voyager: labels latinizados/internacionais (evita árabe/cirílico/CJK
+    // nativos do OSM padrão). Sem API key. Attribution dupla obrigatória.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
 
     const markersLayer = L.layerGroup().addTo(map);
