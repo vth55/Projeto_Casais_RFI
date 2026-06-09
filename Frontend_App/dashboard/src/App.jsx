@@ -89,9 +89,9 @@ const AccessDeniedView = ({ onNavigateHome }) => (
       <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold mb-4">
         !
       </div>
-      <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Acesso sem permissao</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Acesso sem permissão</h1>
       <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-        O teu perfil nao tem acesso a esta area. Se precisares desta funcao, pede ao administrador para rever as permissoes.
+        O teu perfil não tem acesso a esta área. Se precisares desta função, pede ao administrador para rever as permissões.
       </p>
       <button
         type="button"
@@ -119,6 +119,7 @@ export default function App() {
   const [validationToken, setValidationToken] = useState(null);
   const [isReporteAvaria, setIsReporteAvaria] = useState(false);
   const [isToolTag, setIsToolTag] = useState(false);
+  const lastUserIdRef = useRef(null);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -268,15 +269,19 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
 
+    const currentUserId = currentUser.uid || currentUser.email || currentUser.id;
+    const userChanged = currentUserId && lastUserIdRef.current && lastUserIdRef.current !== currentUserId;
+    lastUserIdRef.current = currentUserId || null;
+
     if (window.location.pathname === '/login') {
       const returnTo = new URLSearchParams(window.location.search).get('returnTo');
-      if (returnTo?.startsWith('/') && !returnTo.startsWith('//')) {
+      if (!userChanged && returnTo?.startsWith('/') && !returnTo.startsWith('//')) {
         window.location.replace(returnTo);
         return;
       }
     }
 
-    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+    if (userChanged || window.location.pathname === '/' || window.location.pathname === '/login') {
       const landing = getLandingForUser(currentUser, currentRole);
       window.history.replaceState({}, '', landing.path);
       setActiveView(landing.view);

@@ -198,6 +198,18 @@ function planFixTesteee(tools, sessions) {
 
 // ─── FASE 2b — Ocultar Sandbox Test Project ───────────────────────────────────
 
+function planFixStorageLocations(tools) {
+  for (const tool of tools) {
+    const storageLocation = String(tool.storageLocation || '');
+    if (!/Armazem/i.test(storageLocation)) continue;
+
+    planUpdate(col('tools').doc(tool.id), {
+      storageLocation: storageLocation.replace(/Armazem/g, 'Armazém'),
+      demoCuratedAt: FieldValue.serverTimestamp(),
+    }, `Corrigir acento storageLocation "${storageLocation}" (${tool.id})`);
+  }
+}
+
 function planHideSandbox(obras) {
   const sandbox = obras.find(o =>
     (o.name || '').toLowerCase().includes('sandbox') ||
@@ -490,6 +502,75 @@ function planDemoActiveSessions(tools, sessions) {
 }
 
 // ─── FASE 2e — Criar guias tool_transfers demo ────────────────────────────────
+
+// FASE 2d.2 - Historico fechado do utilizador operador de teste
+const DEMO_OPERATOR_UID = '7TwVpdJkLESxmBEQFSAu5kzNLOw1';
+const DEMO_OPERATOR_NAME = 'Teste Operador';
+const DEMO_OPERATOR_SESSIONS = [
+  {
+    id: 'demo_operator_closed_lixa_002',
+    toolId: 'tool_bosch-gex-125_lixa-002',
+    dayStart: 1,
+    hourStart: 9,
+    durH: 2.5,
+  },
+  {
+    id: 'demo_operator_closed_laser_001',
+    toolId: 'tool_bosch-grl-300_laser-001',
+    dayStart: 2,
+    hourStart: 13.5,
+    durH: 3,
+  },
+  {
+    id: 'demo_operator_closed_paraf_003',
+    toolId: 'tool_makita-df-001_paraf-003',
+    dayStart: 3,
+    hourStart: 8,
+    durH: 4,
+  },
+];
+
+function planDemoOperatorSessions(tools, sessions) {
+  for (const spec of DEMO_OPERATOR_SESSIONS) {
+    if (sessions.some(s => s.id === spec.id)) continue;
+
+    const tool = tools.find(t => t.id === spec.toolId);
+    if (!tool || tool.hiddenFromDemo || tool.demoHidden) continue;
+
+    const startDate = daysAgo(spec.dayStart);
+    startDate.setHours(Math.floor(spec.hourStart), (spec.hourStart % 1) * 60, 0, 0);
+    const endDate = new Date(startDate.getTime() + spec.durH * 3_600_000);
+    const nfcId = tool.nfcTagId || null;
+    const baseName = tool._displayName || tool.name || tool.id;
+    const toolName = nfcId ? `${baseName} (${nfcId})` : baseName;
+
+    planSet(col('tool_sessions').doc(spec.id), {
+      toolId:       tool.id,
+      toolName,
+      toolType:     tool._category || null,
+      modelId:      tool.modelId || null,
+      modelName:    tool._displayName || null,
+      nfcTagId:     nfcId,
+      operatorId:   DEMO_OPERATOR_UID,
+      operatorName: DEMO_OPERATOR_NAME,
+      obraId:       'procore_328122',
+      obraName:     'Torre Boavista — Porto',
+      sapOrigin:    'Torre Boavista — Porto',
+      sapWorker:    DEMO_OPERATOR_UID,
+      status:       'CLOSED',
+      startTime:    ts(startDate),
+      endTime:      ts(endDate),
+      durationHours: durH(startDate, endDate),
+      location:     null,
+      endLocation:  null,
+      procoreSynced: false,
+      sapSynced:    false,
+      demoGenerated: true,
+      demoOperator: true,
+      demoCuratedAt: FieldValue.serverTimestamp(),
+    }, `Sessão operador demo: "${toolName}" · ${DEMO_OPERATOR_NAME} · ${spec.durH}h`);
+  }
+}
 
 function planDemoTransfers(tools, transfers, obras) {
   const existingDemo = transfers.filter(t => t.demoGenerated === true);
@@ -784,6 +865,7 @@ async function main() {
   // Planeamento
   console.log('\n── Fase 2a: Testeee 1 ────────────────────────────────');
   planFixTesteee(tools, sessions);
+  planFixStorageLocations(tools);
 
   console.log('\n── Fase 2b: Sandbox Test Project ─────────────────────');
   planHideSandbox(obras);
@@ -796,6 +878,9 @@ async function main() {
 
   console.log('\n── Fase 2d.1: Sessões ativas demo ────────────────────');
   planDemoActiveSessions(tools, sessions);
+
+  console.log('\n── Fase 2d.2: Sessões do operador demo ───────────────');
+  planDemoOperatorSessions(tools, sessions);
 
   console.log('\n── Fase 2e: Guias tool_transfers demo ────────────────');
   planDemoTransfers(tools, transfers, obras);
