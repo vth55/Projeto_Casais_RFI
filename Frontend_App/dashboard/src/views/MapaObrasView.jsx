@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import useStore from '../store/useStore';
@@ -39,6 +39,7 @@ export default function MapaObrasView() {
   const mapNodeRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const [showInfoPanel, setShowInfoPanel] = useState(true);
 
   const {
     obras = [],
@@ -97,6 +98,7 @@ export default function MapaObrasView() {
 
   useEffect(() => {
     const markersLayer = markersLayerRef.current;
+    const map = mapInstanceRef.current;
     if (!markersLayer) return;
 
     markersLayer.clearLayers();
@@ -136,21 +138,46 @@ export default function MapaObrasView() {
       marker.bindPopup(popup);
       marker.addTo(markersLayer);
     });
+
+    if (map && obrasWithCoords.length > 0) {
+      const bounds = L.latLngBounds(obrasWithCoords.map(({ coords }) => coords));
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: 11 });
+    }
   }, [obrasWithCoords, tools, toolSessions, setActiveView]);
+
+  useEffect(() => {
+    if (!showInfoPanel) return undefined;
+    const timer = setTimeout(() => setShowInfoPanel(false), 4500);
+    return () => clearTimeout(timer);
+  }, [showInfoPanel]);
 
   return (
     <div className="relative h-full w-full min-h-[calc(100vh-64px)] overflow-hidden">
-      <div className="absolute left-4 right-4 top-20 z-[500] max-w-xl rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-        <p className="text-sm font-bold text-slate-900 dark:text-white">Onde estão</p>
-        <p className="text-xs text-slate-600 dark:text-slate-300">
-          Mapa por obra com base na última leitura NFC. Não é localização real-time dos equipamentos.
-        </p>
-        {missingGpsCount > 0 && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-            {missingGpsCount} obra{missingGpsCount !== 1 ? 's' : ''} sem coordenadas GPS (não aparecem no mapa)
-          </p>
-        )}
-      </div>
+      {showInfoPanel && (
+        <div className="absolute left-4 bottom-6 z-[500] max-w-sm rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">Onde estão</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Última leitura NFC por obra. Não é localização real-time dos equipamentos.
+              </p>
+              {missingGpsCount > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  {missingGpsCount} obra{missingGpsCount !== 1 ? 's' : ''} sem coordenadas GPS.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowInfoPanel(false)}
+              className="rounded-full px-2 py-1 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              aria-label="Fechar informação do mapa"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       <div
         ref={mapNodeRef}
         className="h-full w-full min-h-[calc(100vh-64px)]"

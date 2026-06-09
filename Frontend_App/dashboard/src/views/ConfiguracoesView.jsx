@@ -826,7 +826,7 @@ const OperationalSettingsSection = () => {
       toolOverdueDays: String(systemSettings.toolOverdueDays ?? 7),
       toolLostDays: String(systemSettings.toolLostDays ?? 30),
       dormantToolDays: String(systemSettings.dormantToolDays ?? 30),
-      defaultReplacementCost: String(systemSettings.defaultReplacementCost ?? 0),
+      defaultReplacementCost: String(systemSettings.defaultReplacementCost ?? 400),
       toolReportRequiresPhoto: Boolean(systemSettings.toolReportRequiresPhoto ?? false),
       fuelPricePerLitre: String(systemSettings.fuelPricePerLitre ?? ''),
       co2FactorPerLitre: String(systemSettings.co2FactorPerLitre ?? ''),
@@ -841,7 +841,7 @@ const OperationalSettingsSection = () => {
         toolOverdueDays: parseInt(form.toolOverdueDays, 10) || 7,
         toolLostDays: parseInt(form.toolLostDays, 10) || 30,
         dormantToolDays: Math.max(7, Math.min(365, parseInt(form.dormantToolDays, 10) || 30)),
-        defaultReplacementCost: Math.max(0, parseFloat(form.defaultReplacementCost) || 0),
+        defaultReplacementCost: Math.max(0, parseFloat(form.defaultReplacementCost) || 400),
         toolReportRequiresPhoto: Boolean(form.toolReportRequiresPhoto),
       });
       setSaved(true);
@@ -855,7 +855,7 @@ const OperationalSettingsSection = () => {
     String(systemSettings.toolOverdueDays ?? 7) !== form.toolOverdueDays ||
     String(systemSettings.toolLostDays ?? 30) !== form.toolLostDays ||
     String(systemSettings.dormantToolDays ?? 30) !== form.dormantToolDays ||
-    String(systemSettings.defaultReplacementCost ?? 0) !== form.defaultReplacementCost ||
+    String(systemSettings.defaultReplacementCost ?? 400) !== form.defaultReplacementCost ||
     Boolean(systemSettings.toolReportRequiresPhoto ?? false) !== form.toolReportRequiresPhoto;
 
   // Helper para campo numérico
@@ -1059,6 +1059,15 @@ const LegacyDbSection = ({ onClear, loading }) => {
 };
 
 const DEMO_OWNER_EMAIL = 'vitorhugo22.igrejas@gmail.com';
+const DEMO_SAFE_EMAIL = 'demo.admin@casais.pt';
+
+const getDemoSafeEmail = (email) => {
+  if (!email) return '-';
+  if (email === DEMO_OWNER_EMAIL) return DEMO_SAFE_EMAIL;
+  const [name, domain] = String(email).split('@');
+  if (!name || !domain) return email;
+  return `${name[0]}***@${domain}`;
+};
 
 // View principal
 const ConfiguracoesView = () => {
@@ -1714,7 +1723,7 @@ const ConfiguracoesView = () => {
             {canEditOperationalParams && <OperationalSettingsSection />}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ConfigSection icon={Settings} title="Limites Operacionais" description="Thresholds activos para alertas de equipamentos">
+              <ConfigSection icon={Settings} title="Limites Operacionais" description="Thresholds ativos para alertas de equipamentos">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                     <div>
@@ -1744,7 +1753,7 @@ const ConfiguracoesView = () => {
                   <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium text-slate-900 dark:text-white">Email</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email || '-'}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{getDemoSafeEmail(currentUser?.email)}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">

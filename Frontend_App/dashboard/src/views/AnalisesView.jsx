@@ -229,19 +229,19 @@ const AnalisesView = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">Equipamentos com maior rotação no período.</p>
           </div>
           {topToolsByUsage.length ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={topToolsByUsage} layout="vertical" margin={{ left: 20, right: 24 }}>
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={topToolsByUsage} layout="vertical" margin={{ left: 8, right: 24 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} stroke="#94a3b8" fontSize={12} />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={150}
+                  width={230}
                   stroke="#94a3b8"
                   fontSize={12}
                   tickFormatter={(value) => {
                     const label = String(value);
-                    return label.length > 20 ? `${label.slice(0, 20)}...` : label;
+                    return label.length > 32 ? `${label.slice(0, 32)}...` : label;
                   }}
                 />
                 <Tooltip

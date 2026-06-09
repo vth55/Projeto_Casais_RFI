@@ -64,6 +64,7 @@ const BottomNav = memo(() => {
   const maintenanceAlerts = toolAlerts.filter(alert => alert.status === 'OPEN' || alert.status === 'IN_REVIEW').length;
 
   const isTabActive = (id) => {
+    if (activeView === 'dashboard' && id === 'obras' && currentRole?.defaultDashboard !== 'operador') return true;
     if (id === 'mapa') return activeView === id;
     return activeView === id || activeView.startsWith(id.split('-')[0] + '-') || activeView === id.split('-')[0];
   };

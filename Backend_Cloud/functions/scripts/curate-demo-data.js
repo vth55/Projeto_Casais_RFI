@@ -74,6 +74,10 @@ function planSet(ref, data, description) {
   changes.push({ type: 'SET', ref, data, description });
 }
 
+function planSetMerge(ref, data, description) {
+  changes.push({ type: 'SET_MERGE', ref, data, description });
+}
+
 function printChanges() {
   if (changes.length === 0) {
     console.log('\n✅ Nenhuma alteração necessária — dados já curados.\n');
@@ -103,6 +107,7 @@ async function applyChanges() {
     const batch = db.batch();
     for (const c of slice) {
       if (c.type === 'SET')    batch.set(c.ref, c.data);
+      if (c.type === 'SET_MERGE') batch.set(c.ref, c.data, { merge: true });
       if (c.type === 'UPDATE') batch.update(c.ref, c.data);
     }
     await batch.commit();
@@ -117,7 +122,7 @@ async function applyChanges() {
 async function readState() {
   console.log('🔍 A ler estado actual do Firestore...');
 
-  const [toolsSnap, sessionsSnap, transfersSnap, alertsSnap, obrasSnap, operatorsSnap, modelsSnap] =
+  const [toolsSnap, sessionsSnap, transfersSnap, alertsSnap, obrasSnap, operatorsSnap, modelsSnap, settingsSnap] =
     await Promise.all([
       col('tools').get(),
       col('tool_sessions').get(),
@@ -126,11 +131,13 @@ async function readState() {
       col('obras').get(),
       col('operators').get(),
       col('equipment_models').get(),
+      db.doc(`${BASE}/settings/system`).get(),
     ]);
 
   // modelMap: modelId → { displayName, category }
   const modelMap = {};
   modelsSnap.docs.forEach(d => { modelMap[d.id] = d.data(); });
+  const models = modelsSnap.docs.map(d => ({ id: d.id, ref: d.ref, ...d.data() }));
 
   // Enrich tools with display name from equipment_models
   const tools = toolsSnap.docs.map(d => {
@@ -149,12 +156,13 @@ async function readState() {
   const alerts    = alertsSnap.docs.map(d  => ({ id: d.id, ...d.data() }));
   const obras     = obrasSnap.docs.map(d   => ({ id: d.id, ...d.data() }));
   const operators = operatorsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const settings = settingsSnap.exists ? { id: settingsSnap.id, ref: settingsSnap.ref, ...settingsSnap.data() } : null;
 
   console.log(`   tools: ${tools.length} | sessions: ${sessions.length} | transfers: ${transfers.length}`);
   console.log(`   alerts: ${alerts.length} | obras: ${obras.length} | operators: ${operators.length}`);
   console.log(`   equipment_models: ${modelsSnap.size}`);
 
-  return { tools, sessions, transfers, alerts, obras, operators, modelMap };
+  return { tools, sessions, transfers, alerts, obras, operators, models, settings, modelMap };
 }
 
 // ─── FASE 2a — Corrigir "Testeee 1" ──────────────────────────────────────────
@@ -208,6 +216,74 @@ function planFixStorageLocations(tools) {
       demoCuratedAt: FieldValue.serverTimestamp(),
     }, `Corrigir acento storageLocation "${storageLocation}" (${tool.id})`);
   }
+}
+
+function normalizeDemoPortuguese(value) {
+  if (typeof value !== 'string') return value;
+  return value
+    .replace(/Pneumatico/g, 'Pneumático')
+    .replace(/Portatil/g, 'Portátil')
+    .replace(/Betao/g, 'Betão');
+}
+
+function planFixPortugueseNames(tools, sessions, alerts, models) {
+  for (const model of models) {
+    const patch = {};
+    for (const field of ['displayName', 'name', 'category', 'type']) {
+      const next = normalizeDemoPortuguese(model[field]);
+      if (next !== model[field]) patch[field] = next;
+    }
+    if (Object.keys(patch).length) {
+      patch.demoCuratedAt = FieldValue.serverTimestamp();
+      planUpdate(col('equipment_models').doc(model.id), patch, `Corrigir acento Pneumático no modelo ${model.id}`);
+    }
+  }
+
+  for (const tool of tools) {
+    const patch = {};
+    for (const field of ['displayName', 'name', 'category', 'type']) {
+      const next = normalizeDemoPortuguese(tool[field]);
+      if (next !== tool[field]) patch[field] = next;
+    }
+    if (Object.keys(patch).length) {
+      patch.demoCuratedAt = FieldValue.serverTimestamp();
+      planUpdate(col('tools').doc(tool.id), patch, `Corrigir acento Pneumático no equipamento ${tool.id}`);
+    }
+  }
+
+  for (const session of sessions) {
+    const next = normalizeDemoPortuguese(session.toolName);
+    if (next !== session.toolName) {
+      planUpdate(col('tool_sessions').doc(session.id), {
+        toolName: next,
+        demoCuratedAt: FieldValue.serverTimestamp(),
+      }, `Corrigir acento Pneumático na sessão ${session.id}`);
+    }
+  }
+
+  for (const alert of alerts) {
+    const patch = {};
+    for (const field of ['toolName', 'title', 'message', 'description']) {
+      const next = normalizeDemoPortuguese(alert[field]);
+      if (next !== alert[field]) patch[field] = next;
+    }
+    if (Object.keys(patch).length) {
+      patch.demoCuratedAt = FieldValue.serverTimestamp();
+      planUpdate(col('tool_alerts').doc(alert.id), patch, `Corrigir acento Pneumático no alerta ${alert.id}`);
+    }
+  }
+}
+
+function planFixSystemSettings(settings) {
+  const current = Number(settings?.defaultReplacementCost ?? 0);
+  if (current >= 400) {
+    console.log('   ✓  defaultReplacementCost já é >= 400 — skip');
+    return;
+  }
+  planSetMerge(db.doc(`${BASE}/settings/system`), {
+    defaultReplacementCost: 400,
+    demoCuratedAt: FieldValue.serverTimestamp(),
+  }, `defaultReplacementCost: ${current} -> EUR 400`);
 }
 
 function planHideSandbox(obras) {
@@ -301,6 +377,173 @@ function planCleanSessions(sessions) {
 }
 
 // ─── FASE 2d — Criar sessões demo recentes ────────────────────────────────────
+
+function sessionToMillis(session) {
+  return session?.startTime?.toMillis?.() ?? null;
+}
+
+function visibleDemoTools(tools) {
+  return tools.filter(t =>
+    t.id !== TESTEE_TOOL_ID &&
+    !t.hiddenFromDemo &&
+    !t.demoHidden &&
+    t.status !== 'RETIRED' &&
+    t.status !== 'LOST' &&
+    t.status !== 'IN_REPAIR'
+  );
+}
+
+function findDemoObra(obras, terms) {
+  return obras.find(o =>
+    !o.hiddenFromDemo &&
+    terms.some(term => String(o.name || '').toLowerCase().includes(term))
+  );
+}
+
+function planFixMissingObraSessions(sessions, tools) {
+  const toolsById = new Map(tools.map(t => [t.id, t]));
+  for (const session of sessions) {
+    if (session.hiddenFromDemo) continue;
+    if (session.obraId && !String(session.obraName || '').includes('Local não atribuído')) continue;
+
+    const tool = toolsById.get(session.toolId);
+    const obraId = tool?.currentObraId || 'procore_328122';
+    const obraName = tool?.currentObraName || 'Torre Boavista — Porto';
+    planUpdate(col('tool_sessions').doc(session.id), {
+      obraId,
+      obraName,
+      sapOrigin: session.sapOrigin || obraName,
+      demoCuratedAt: FieldValue.serverTimestamp(),
+    }, `Atribuir obra à sessão sem localização (${session.id}) -> ${obraName}`);
+  }
+}
+
+function planPopulateSecondaryObras(tools, sessions, obras) {
+  const targetObras = [
+    findDemoObra(obras, ['viaduto', 'ip2']),
+    findDemoObra(obras, ['gaia', 'urbanização', 'urbanizacao']),
+  ].filter(Boolean);
+
+  const openToolIds = new Set(sessions.filter(s => s.status === 'OPEN').map(s => s.toolId).filter(Boolean));
+  const availablePool = visibleDemoTools(tools)
+    .filter(t => !t.currentObraId && !openToolIds.has(t.id))
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+  let poolIndex = 0;
+  for (const obra of targetObras) {
+    const alreadyAssigned = tools.filter(t => t.currentObraId === obra.id);
+    const needed = Math.max(0, 4 - alreadyAssigned.length);
+    const newlyAssigned = [];
+
+    for (let i = 0; i < needed && poolIndex < availablePool.length; i++) {
+      newlyAssigned.push(availablePool[poolIndex++]);
+    }
+
+    const openForObra = sessions.some(s => s.status === 'OPEN' && s.obraId === obra.id);
+    const activeTool = [...newlyAssigned, ...alreadyAssigned].find(t => t && !openToolIds.has(t.id));
+
+    for (const tool of newlyAssigned) {
+      const isActive = !openForObra && activeTool?.id === tool.id;
+      planUpdate(col('tools').doc(tool.id), {
+        currentObraId: obra.id,
+        currentObraName: obra.name,
+        status: isActive ? 'IN_USE' : 'AVAILABLE',
+        lastSeenAt: ts(hoursAgo(isActive ? 1 : 8)),
+        lastSeenBy: isActive ? 'demo-curator' : (tool.lastSeenBy || 'demo-curator'),
+        demoCuratedAt: FieldValue.serverTimestamp(),
+      }, `Atribuir ${tool.id} à obra ${obra.name}${isActive ? ' (em uso)' : ''}`);
+    }
+
+    if (!openForObra && activeTool) {
+      const docId = `demo_active_${obra.id.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}`;
+      if (!sessions.some(s => s.id === docId)) {
+        const startDate = hoursAgo(2);
+        const nfcId = activeTool.nfcTagId || null;
+        const baseName = activeTool._displayName || activeTool.name || activeTool.id;
+        planSet(col('tool_sessions').doc(docId), {
+          toolId: activeTool.id,
+          toolName: nfcId ? `${baseName} (${nfcId})` : baseName,
+          toolType: activeTool._category || null,
+          modelId: activeTool.modelId || null,
+          modelName: activeTool._displayName || null,
+          nfcTagId: nfcId,
+          operatorId: 'OP_002',
+          operatorName: 'Maria Santos',
+          obraId: obra.id,
+          obraName: obra.name,
+          sapOrigin: obra.name,
+          sapWorker: 'OP_002',
+          status: 'OPEN',
+          startTime: ts(startDate),
+          endTime: null,
+          durationHours: null,
+          location: null,
+          procoreSynced: false,
+          sapSynced: false,
+          demoGenerated: true,
+          demoActive: true,
+          demoCuratedAt: FieldValue.serverTimestamp(),
+        }, `Sessão ativa demo em ${obra.name}: ${baseName}`);
+      }
+    }
+  }
+}
+
+function planRecentCoverageSessions(tools, sessions, obras, operators) {
+  const recentCutoff = Date.now() - 7 * 86_400_000;
+  const hasRecent = new Set(
+    sessions
+      .filter(s => {
+        const startMs = sessionToMillis(s);
+        return startMs && startMs >= recentCutoff;
+      })
+      .map(s => s.toolId)
+      .filter(Boolean)
+  );
+
+  const validObras = obras.filter(o => !o.hiddenFromDemo && !(o.name || '').toLowerCase().includes('sandbox'));
+  const validOps = operators.filter(o => o.name && !String(o.name).toLowerCase().includes('teste'));
+  const candidates = visibleDemoTools(tools).filter(t => !hasRecent.has(t.id)).slice(0, 10);
+
+  candidates.forEach((tool, index) => {
+    const docId = `demo_recent_${tool.id.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}`;
+    if (sessions.some(s => s.id === docId)) return;
+
+    const obra = validObras[index % Math.max(1, validObras.length)] || { id: 'procore_328122', name: 'Torre Boavista — Porto' };
+    const op = validOps[index % Math.max(1, validOps.length)] || { id: 'OP_001', name: 'João Silva' };
+    const startDate = daysAgo((index % 4) + 1);
+    startDate.setHours(8 + (index % 5), 0, 0, 0);
+    const endDate = new Date(startDate.getTime() + (2 + (index % 4)) * 3_600_000);
+    const nfcId = tool.nfcTagId || null;
+    const baseName = tool._displayName || tool.name || tool.id;
+
+    planSet(col('tool_sessions').doc(docId), {
+      toolId: tool.id,
+      toolName: nfcId ? `${baseName} (${nfcId})` : baseName,
+      toolType: tool._category || null,
+      modelId: tool.modelId || null,
+      modelName: tool._displayName || null,
+      nfcTagId: nfcId,
+      operatorId: op.id,
+      operatorName: op.name,
+      obraId: obra.id,
+      obraName: obra.name,
+      sapOrigin: obra.name,
+      sapWorker: op.id,
+      status: 'CLOSED',
+      startTime: ts(startDate),
+      endTime: ts(endDate),
+      durationHours: durH(startDate, endDate),
+      location: null,
+      endLocation: null,
+      procoreSynced: false,
+      sapSynced: false,
+      demoGenerated: true,
+      demoCoverage: true,
+      demoCuratedAt: FieldValue.serverTimestamp(),
+    }, `Sessão recente de cobertura: ${baseName} · ${obra.name}`);
+  });
+}
 
 const DEMO_SESSIONS_TARGET = 15;
 
@@ -860,21 +1103,26 @@ async function main() {
   console.log(`╚══════════════════════════════════════════════════════╝\n`);
 
   // Leitura
-  const { tools, sessions, transfers, alerts, obras, operators } = await readState(); // modelMap is merged into tools._displayName
+  const { tools, sessions, transfers, alerts, obras, operators, models, settings } = await readState(); // modelMap is merged into tools._displayName
 
   // Planeamento
   console.log('\n── Fase 2a: Testeee 1 ────────────────────────────────');
   planFixTesteee(tools, sessions);
   planFixStorageLocations(tools);
+  planFixPortugueseNames(tools, sessions, alerts, models);
+  planFixSystemSettings(settings);
 
   console.log('\n── Fase 2b: Sandbox Test Project ─────────────────────');
   planHideSandbox(obras);
 
   console.log('\n── Fase 2c: Sessões duplicadas/antigas ───────────────');
   planCleanSessions(sessions);
+  planFixMissingObraSessions(sessions, tools);
+  planPopulateSecondaryObras(tools, sessions, obras);
 
   console.log('\n── Fase 2d: Sessões demo recentes ────────────────────');
   planDemoSessions(tools, sessions, obras, operators);
+  planRecentCoverageSessions(tools, sessions, obras, operators);
 
   console.log('\n── Fase 2d.1: Sessões ativas demo ────────────────────');
   planDemoActiveSessions(tools, sessions);

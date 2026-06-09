@@ -306,7 +306,7 @@ const Sidebar = ({ className = '', onNavigate, collapsed = false, onToggleCollap
           <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${nfcActive ? 'bg-emerald-500/10' : 'bg-slate-800/50'}`}>
             <Nfc className={`w-3.5 h-3.5 flex-shrink-0 ${nfcActive ? 'text-emerald-400' : 'text-slate-500'}`} />
             <span className={`text-xs ${nfcActive ? 'text-emerald-400' : 'text-slate-500'}`}>
-              NFC {nfcActive ? 'activo' : 'inactivo'}
+              NFC {nfcActive ? 'ativo' : 'inativo'}
             </span>
             {nfcActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-auto" />}
           </div>

@@ -8,7 +8,7 @@
  * A guia é a intenção logística. As leituras NFC confirmam as unidades físicas,
  * evitando o erro clássico de enviar "um martelo igual" em vez daquele toolId.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRightLeft, CheckCircle2, ClipboardList, Nfc, PackageCheck,
   Search, Send, Truck, Warehouse, X, AlertTriangle,
@@ -84,6 +84,13 @@ export default function GuiasTransferenciaView() {
   const [error, setError] = useState(null);
 
   const userId = currentUser?.id || currentUser?.uid || currentUser?.email || 'system';
+  const firstObraId = obras.find(o => !o.hiddenFromDemo)?.id || obras[0]?.id || null;
+
+  useEffect(() => {
+    if (fromId === 'WAREHOUSE' && toId === 'WAREHOUSE' && firstObraId) {
+      setToId(firstObraId);
+    }
+  }, [firstObraId, fromId, toId]);
 
   const locations = useMemo(() => [
     { id: 'WAREHOUSE', name: 'Armazém' },

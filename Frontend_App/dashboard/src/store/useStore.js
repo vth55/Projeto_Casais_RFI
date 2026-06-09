@@ -76,7 +76,7 @@ const useStore = create((set, get) => ({
     toolOverdueDays: 7,   // pivot — dias antes de disparar TOOL_OVERDUE
     toolLostDays: 30,     // pivot — dias antes de TOOL_PRESUMED_LOST
     dormantToolDays: 30,
-    defaultReplacementCost: 0,
+    defaultReplacementCost: 400,
     toolReportRequiresPhoto: false,
     notifications: {
       emailEnabled: false,
@@ -345,7 +345,7 @@ const useStore = create((set, get) => ({
               toolOverdueDays: docData.toolOverdueDays ?? 7,
               toolLostDays: docData.toolLostDays ?? 30,
               dormantToolDays: docData.dormantToolDays ?? 30,
-              defaultReplacementCost: docData.defaultReplacementCost ?? 0,
+              defaultReplacementCost: docData.defaultReplacementCost ?? 400,
               toolReportRequiresPhoto: docData.toolReportRequiresPhoto ?? false,
               notifications: {
                 emailEnabled: docData.notifications?.emailEnabled ?? false,
