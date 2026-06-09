@@ -1,0 +1,30 @@
+{
+  "name": "casais-fiori-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SAP BTP CAP/Fiori demo for CASAIS Fleet Intelligence integration.",
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "deploy:sqlite": "cds deploy --to sqlite",
+    "test": "cds compile srv --to edmx > .tmp-equipment-service.edmx"
+  },
+  "dependencies": {
+    "@cap-js/sqlite": "^2.4.0",
+    "@sap/cds": "^9.3.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@sap/cds-dk": "^9.9.2"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sqlite"
+      }
+    },
+    "odata": {
+      "version": "v4"
+    }
+  }
+}
