@@ -11,6 +11,7 @@ import TabNav from '../components/TabNav';
 import { PERMISSIONS } from '../config/permissions';
 import { getDateRangeFromPreset } from '../utils/chartDataHelpers';
 import { detectToolSessionAnomalies, resolveTimestamp } from '../utils/sessionHelpers';
+import { getVisibleSessionsForUser } from '../utils/sessionVisibility';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -381,10 +382,11 @@ const SessoesView = () => {
     dateFilter,
     customRange,
   } = useStore();
-  const { can } = useAuthStore();
+  const { can, currentUser } = useAuthStore();
 
   const canViewValidations = can(PERMISSIONS.QUALITY_VIEW) || can(PERMISSIONS.SESSIONS_VIEW_ALL);
   const canValidate = can(PERMISSIONS.QUALITY_VALIDATE);
+  const isFieldOperator = currentUser?.systemRole === 'operador';
 
   const activeTab = activeView === 'sessoes-historico'
     ? 'history'
@@ -395,17 +397,22 @@ const SessoesView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [validatingSession, setValidatingSession] = useState(null);
 
+  const visibleSessions = useMemo(
+    () => getVisibleSessionsForUser(toolSessions, currentUser),
+    [toolSessions, currentUser],
+  );
+
   const filteredSessions = useMemo(() => {
     const { start, end } = getDateRangeFromPreset(dateFilter, customRange);
-    return toolSessions.filter(session => {
+    return visibleSessions.filter(session => {
       const sessionDate = getSessionStart(session);
       return sessionDate && sessionDate >= start && sessionDate <= end;
     });
-  }, [toolSessions, dateFilter, customRange]);
+  }, [visibleSessions, dateFilter, customRange]);
 
   const activeSessions = useMemo(
-    () => toolSessions.filter(session => session.status === 'OPEN'),
-    [toolSessions],
+    () => visibleSessions.filter(session => session.status === 'OPEN'),
+    [visibleSessions],
   );
 
   const closedSessions = useMemo(
@@ -414,8 +421,8 @@ const SessoesView = () => {
   );
 
   const anomalySessions = useMemo(
-    () => toolSessions.filter(session => detectToolSessionAnomalies(session).length > 0),
-    [toolSessions],
+    () => visibleSessions.filter(session => detectToolSessionAnomalies(session).length > 0),
+    [visibleSessions],
   );
 
   const stats = useMemo(() => ({
@@ -520,8 +527,14 @@ const SessoesView = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sessões</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Histórico de utilização de equipamentos</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+            {isFieldOperator ? 'Minhas Sessões' : 'Sessões'}
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            {isFieldOperator
+              ? 'Equipamentos que levantaste, devolveste ou tens em mãos'
+              : 'Histórico de utilização de equipamentos'}
+          </p>
         </div>
         <Button variant="outline" icon={Download} onClick={handleExportCSV}>Exportar CSV</Button>
       </div>
