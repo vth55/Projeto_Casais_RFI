@@ -1,0 +1,43 @@
+_schema-version: "3.1"
+ID: casais-fiori-demo
+version: 0.1.0
+description: CASAIS Fleet Intelligence - SAP BTP CAP/Fiori Demo
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx -p @sap/cds-dk cds build --production
+
+modules:
+  - name: casais-fiori-demo-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      buildpack: nodejs_buildpack
+      memory: 256M
+      disk-quota: 512M
+    build-parameters:
+      builder: npm
+      ignore:
+        - node_modules/
+    requires:
+      - name: casais-fiori-demo-db
+
+  - name: casais-fiori-demo-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: casais-fiori-demo-db
+
+resources:
+  - name: casais-fiori-demo-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana-cloud
+      service-plan: hdi-shared
+    properties:
+      hdi-service-name: ${service-name}
