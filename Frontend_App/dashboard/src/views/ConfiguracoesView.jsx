@@ -4,7 +4,7 @@ import {
   Users, Plus, Edit2, Check, X, ChevronRight, Lock, Unlock,
   Eye, EyeOff, Save, AlertTriangle, Layers, Sun, Moon,
   Truck, Building2, Wallet, Leaf, Link2, Cloud, CloudOff, Activity,
-  Fuel, Wrench, BarChart3, CreditCard, MapPin, Clock, Zap, TrendingUp, CheckCircle2
+  Fuel, Wrench, BarChart3, CreditCard, MapPin, Clock, TrendingUp, CheckCircle2
 } from 'lucide-react';
 import { createAllMockData } from '../utils/mockData';
 import { collection, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -97,6 +97,19 @@ const ProcoreLivePanel = ({ data, loading, lastUpdate, onRefresh, projectName })
     : [];
   const hasLogData = logEntries.length > 0;
   const totalLogEntries = logEntries.reduce((s, [, v]) => s + v, 0);
+
+  const isEmpty = !data.timecards_count && !data.unique_workers && !data.total_hours;
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-400 dark:text-slate-500">
+        <Activity className="w-6 h-6 opacity-30" />
+        <p className="text-sm font-medium">Sem atividade Procore registada hoje.</p>
+        <p className="text-xs text-center max-w-xs opacity-70">
+          A atividade operacional atual está a ser registada na PWA através de sessões NFC.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -211,20 +224,6 @@ const ProcoreLivePanel = ({ data, loading, lastUpdate, onRefresh, projectName })
         </div>
       )}
 
-      {/* Telematics callout — Procore GA Jan 2026 */}
-      <div className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-200/60 dark:border-amber-700/30 bg-amber-50/50 dark:bg-amber-900/10">
-        <Zap className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-            Procore Telematics
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 dark:bg-amber-800/40 border border-amber-200 dark:border-amber-700">GA Jan 2026</span>
-          </p>
-          <p className="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1 leading-relaxed">
-            GPS em tempo real via <code className="text-[10px] bg-amber-100 dark:bg-amber-800/30 px-1 rounded">/rest/v1.0/telematics/</code> —
-            Preparado para enriquecer obras, diretório, equipamentos e movimentos quando a integração ficar activa.
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
