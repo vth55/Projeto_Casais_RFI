@@ -1597,6 +1597,12 @@ exports.onToolTransferWritten   = onToolTransferWritten;
 exports.processSapTransferQueue = processSapTransferQueue;
 exports.reconcileSapTransfers   = reconcileSapTransfers;
 
+// ──────────────────────────────────────────────────────────────────────────────
+// SAP BTP Triggers — tool_maintenance → BTP FaultReports (flag off por defeito)
+// ──────────────────────────────────────────────────────────────────────────────
+const sapBtpTriggers = require('./sapBtp/sapBtpTriggers');
+exports.onToolMaintenanceCreated = sapBtpTriggers.onToolMaintenanceCreated;
+
 // Equipment Model triggers + reconciliation (Fase 6 pivot 2026-05)
 const equipmentModelTriggers = require('./equipmentModelTriggers');
 exports.onToolCreated          = equipmentModelTriggers.onToolCreated;

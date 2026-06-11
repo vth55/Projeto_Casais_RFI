@@ -151,6 +151,10 @@ jest.mock('firebase-functions/v2/firestore', () => ({
 jest.mock('firebase-functions/v2/scheduler', () => ({
   onSchedule: (_opts, fn) => fn,
 }));
+jest.mock('../sapBtp/sapBtpBridge', () => ({
+  syncTransferMovementToSapBtp: jest.fn().mockResolvedValue({ skipped: true, reason: 'SAP_BTP_DISABLED' }),
+  syncToolLocationToSapBtp: jest.fn().mockResolvedValue({ skipped: true, reason: 'SAP_BTP_DISABLED' }),
+}));
 
 const {
   __test: {
@@ -168,6 +172,7 @@ const {
   },
   onToolTransferWritten,
 } = require('./sapTransferBridge');
+const { syncTransferMovementToSapBtp, syncToolLocationToSapBtp } = require('../sapBtp/sapBtpBridge');
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -554,5 +559,100 @@ describe('completeQueueItem — DISPATCHED e RECEIVED independentes', () => {
     // RECEIVED actualizado
     expect(transferDoc.externalSync.sap.RECEIVED.status).toBe('mocked');
     expect(transferDoc.externalSync.sap.RECEIVED.sapNotificationId).toBe('SAP-200');
+  });
+});
+
+// ─────────────────────────────────────────────────
+// SAP BTP integration em onToolTransferWritten
+// ─────────────────────────────────────────────────
+
+describe('SAP BTP integration em onToolTransferWritten', () => {
+  function mkEvent(beforeStatus, afterStatus, transferOverrides = {}) {
+    return {
+      params: { transferId: 'transfer_btp' },
+      data: {
+        before: {
+          exists: beforeStatus !== null,
+          data: () => (beforeStatus !== null ? { status: beforeStatus } : null),
+        },
+        after: {
+          exists: true,
+          data: () => mkTransfer({ status: afterStatus, ...transferOverrides }),
+        },
+      },
+    };
+  }
+
+  beforeEach(() => {
+    syncTransferMovementToSapBtp.mockClear();
+    syncTransferMovementToSapBtp.mockResolvedValue({ skipped: true, reason: 'SAP_BTP_DISABLED' });
+    syncToolLocationToSapBtp.mockClear();
+    syncToolLocationToSapBtp.mockResolvedValue({ skipped: true, reason: 'SAP_BTP_DISABLED' });
+  });
+
+  test('DISPATCHED → syncTransferMovementToSapBtp chamado com primeiro item', async () => {
+    await onToolTransferWritten(mkEvent('DRAFT', 'DISPATCHED'));
+    expect(syncTransferMovementToSapBtp).toHaveBeenCalledTimes(1);
+    expect(syncTransferMovementToSapBtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tool: { code: 'tool_a' },
+        transfer: expect.objectContaining({
+          fromLocation: 'Armazém Central',
+          toLocation: 'Porto Norte',
+        }),
+        operator: { name: 'operador_001' },
+      })
+    );
+    expect(syncToolLocationToSapBtp).not.toHaveBeenCalled();
+  });
+
+  test('RECEIVED → syncToolLocationToSapBtp chamado com eventType checkin', async () => {
+    await onToolTransferWritten(mkEvent('DISPATCHED', 'RECEIVED', { receivedBy: 'Pedro Sousa' }));
+    expect(syncToolLocationToSapBtp).toHaveBeenCalledTimes(1);
+    expect(syncToolLocationToSapBtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tool: { code: 'tool_a' },
+        operator: { name: 'Pedro Sousa' },
+        eventType: 'checkin',
+        location: expect.objectContaining({ name: 'Porto Norte' }),
+      })
+    );
+    expect(syncTransferMovementToSapBtp).not.toHaveBeenCalled();
+  });
+
+  test('DISPATCHED com items vazios não chama bridge', async () => {
+    await onToolTransferWritten(mkEvent('DRAFT', 'DISPATCHED', { items: [] }));
+    expect(syncTransferMovementToSapBtp).not.toHaveBeenCalled();
+  });
+
+  test('PARTIAL (sem transição BTP) não chama bridge', async () => {
+    await onToolTransferWritten(mkEvent('DRAFT', 'PARTIAL'));
+    expect(syncTransferMovementToSapBtp).not.toHaveBeenCalled();
+    expect(syncToolLocationToSapBtp).not.toHaveBeenCalled();
+  });
+
+  test('bridge DISPATCHED throw não quebra trigger', async () => {
+    syncTransferMovementToSapBtp.mockRejectedValue(new Error('BTP down'));
+    await expect(
+      onToolTransferWritten(mkEvent('DRAFT', 'DISPATCHED'))
+    ).resolves.not.toThrow();
+    await new Promise(r => setTimeout(r, 10));
+  });
+
+  test('bridge RECEIVED throw não quebra trigger', async () => {
+    syncToolLocationToSapBtp.mockRejectedValue(new Error('BTP timeout'));
+    await expect(
+      onToolTransferWritten(mkEvent('DISPATCHED', 'RECEIVED'))
+    ).resolves.not.toThrow();
+    await new Promise(r => setTimeout(r, 10));
+  });
+
+  test('flag off — bridge retorna skipped, trigger continua normalmente', async () => {
+    syncTransferMovementToSapBtp.mockResolvedValue({ skipped: true, reason: 'SAP_BTP_DISABLED' });
+    await onToolTransferWritten(mkEvent('DRAFT', 'DISPATCHED'));
+    // Queue doc still created (SAP PM side)
+    expect(getDoc(QUEUE_PATH, queueDocId('transfer_btp', 'DISPATCHED'))).toBeDefined();
+    // Bridge was called (but returned skipped)
+    expect(syncTransferMovementToSapBtp).toHaveBeenCalledTimes(1);
   });
 });

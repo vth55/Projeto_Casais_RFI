@@ -16,6 +16,7 @@
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { syncToolLocationToSapBtp } = require('../sapBtp/sapBtpBridge');
 
 // SAP API key opcional — se não configurado, módulo corre em modo mock.
 // Para activar modo live: firebase functions:secrets:set SAP_API_KEY
@@ -164,6 +165,17 @@ async function processToolSession(sessionId, sessionData, eventType, apiKey) {
 
   const payload = buildSapNotificationPayload({ ...sessionData, id: sessionId }, eventType);
   const result = await sendToSap(payload, apiKey);
+
+  // SAP BTP Equipment sync — fire-and-forget, não bloqueia fluxo principal
+  syncToolLocationToSapBtp({
+    tool: { code: sessionData.toolCode || sessionData.toolId },
+    operator: { name: sessionData.operatorName || sessionData.operatorId || 'unknown' },
+    location: {
+      name: sessionData.sapDestination || sessionData.obraName || 'ARMAZEM',
+      timestamp: new Date().toISOString(),
+    },
+    eventType,
+  }).catch(err => console.warn('[sapBtpBridge] session sync non-fatal:', err.message));
 
   // Completar a reserva mantém um único registo por sessão + evento.
   await logRef.set({

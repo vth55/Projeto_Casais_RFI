@@ -24,6 +24,7 @@
 const admin = require('firebase-admin');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { syncTransferMovementToSapBtp, syncToolLocationToSapBtp } = require('../sapBtp/sapBtpBridge');
 
 // ─── Caminhos ────────────────────────────────────────────────────────────────
 const APP_ID = 'casais-rfid';
@@ -373,6 +374,27 @@ exports.onToolTransferWritten = onDocumentWritten(
         const enqueued = await enqueueTransfer(transferId, eventType, afterData);
         if (enqueued) {
           console.log(`[sapTransfer] enqueued ${transferId}:${eventType}`);
+          // SAP BTP sync — fire-and-forget, non-fatal
+          const firstItem = (afterData.items || [])[0];
+          if (firstItem) {
+            const toolCode = firstItem.toolCode || firstItem.toolId || null;
+            const fromLoc = afterData.from?.name || afterData.from?.obraId || 'WAREHOUSE';
+            const toLoc = afterData.to?.name || afterData.to?.obraId || 'WAREHOUSE';
+            if (eventType === 'DISPATCHED') {
+              syncTransferMovementToSapBtp({
+                tool: { code: toolCode },
+                transfer: { fromLocation: fromLoc, toLocation: toLoc, transferredAt: new Date().toISOString() },
+                operator: { name: afterData.dispatchedBy || 'unknown' },
+              }).catch(err => console.warn('[sapBtpBridge] transfer DISPATCHED sync non-fatal:', err.message));
+            } else if (eventType === 'RECEIVED') {
+              syncToolLocationToSapBtp({
+                tool: { code: toolCode },
+                operator: { name: afterData.receivedBy || 'unknown' },
+                location: { name: toLoc, timestamp: new Date().toISOString() },
+                eventType: 'checkin',
+              }).catch(err => console.warn('[sapBtpBridge] transfer RECEIVED sync non-fatal:', err.message));
+            }
+          }
         } else {
           console.log(`[sapTransfer] already queued ${transferId}:${eventType} — skip`);
         }
