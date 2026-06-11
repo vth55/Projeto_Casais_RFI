@@ -25,7 +25,9 @@ annotate EquipmentService.Equipments with @(
   ],
   UI.Facets: [
     { $Type: 'UI.ReferenceFacet', Label: 'Operational Status', Target: '@UI.FieldGroup#Operational' },
-    { $Type: 'UI.ReferenceFacet', Label: 'Commercial Data', Target: '@UI.FieldGroup#Commercial' }
+    { $Type: 'UI.ReferenceFacet', Label: 'Commercial Data', Target: '@UI.FieldGroup#Commercial' },
+    { $Type: 'UI.ReferenceFacet', Label: 'Fault Reports', Target: 'faults/@UI.LineItem' },
+    { $Type: 'UI.ReferenceFacet', Label: 'Movements', Target: 'movements/@UI.LineItem' }
   ],
   UI.FieldGroup #Operational: {
     Data: [
