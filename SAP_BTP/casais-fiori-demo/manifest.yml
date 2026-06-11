@@ -5,7 +5,7 @@ applications:
     disk_quota: 512M
     buildpack: nodejs_buildpack
     path: gen/srv
-    command: npm start
+    command: node_modules/.bin/cds-serve
     health-check-type: http
     health-check-http-endpoint: /equipment/$metadata
     services:

@@ -29,8 +29,10 @@
       },
       "[production]": {
         "db": {
-          "kind": "postgres"
-        }
+          "kind": "postgres",
+          "migrate": "auto"
+        },
+        "auth": "dummy"
       }
     },
     "odata": {
