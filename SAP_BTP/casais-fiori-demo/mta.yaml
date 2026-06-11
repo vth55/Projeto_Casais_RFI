@@ -37,7 +37,7 @@ resources:
   - name: casais-fiori-demo-db
     type: com.sap.xs.hdi-container
     parameters:
-      service: hana-cloud
+      service: hana
       service-plan: hdi-shared
     properties:
       hdi-service-name: ${service-name}

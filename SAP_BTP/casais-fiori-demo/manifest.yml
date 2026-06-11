@@ -1,0 +1,14 @@
+---
+applications:
+  - name: casais-fiori-demo-srv
+    memory: 256M
+    disk_quota: 512M
+    buildpack: nodejs_buildpack
+    path: gen/srv
+    command: npm start
+    health-check-type: http
+    health-check-http-endpoint: /equipment/$metadata
+    services:
+      - casais-fiori-demo-db
+    env:
+      NODE_ENV: production
