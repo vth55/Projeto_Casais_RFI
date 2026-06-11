@@ -1,0 +1,148 @@
+<mvc:View
+    controllerName="casais.equipment.controller.Detail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:form="sap.ui.layout.form"
+    displayBlock="true">
+
+    <f:DynamicPage id="detailPage" fitContent="true">
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:navigationActions>
+                    <Button icon="sap-icon://nav-back" press=".onNavBack" tooltip="Back"/>
+                </f:navigationActions>
+                <f:heading>
+                    <Title text="{name}" level="H1"/>
+                </f:heading>
+                <f:snappedContent>
+                    <Text text="{equipmentCode}"/>
+                </f:snappedContent>
+                <f:actions>
+                    <Button
+                        icon="sap-icon://refresh"
+                        tooltip="Refresh"
+                        press=".onRefresh"/>
+                </f:actions>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <f:header>
+            <f:DynamicPageHeader pinnable="true">
+                <HBox wrap="Wrap" class="sapUiSmallMargin">
+                    <VBox class="sapUiSmallMarginEnd">
+                        <ObjectStatus
+                            title="Status"
+                            text="{status}"
+                            state="{= ${status} === 'AVAILABLE' ? 'Success' :
+                                     ${status} === 'IN_USE'    ? 'Information' :
+                                     ${status} === 'MAINTENANCE' ? 'Warning' : 'None' }"/>
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd">
+                        <ObjectStatus
+                            title="Open Fault"
+                            icon="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'sap-icon://alert' : 'sap-icon://accept' }"
+                            state="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'Error' : 'Success' }"
+                            text="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'Yes' : 'No' }"/>
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd">
+                        <ObjectStatus title="Project" text="{assignedProject}"/>
+                    </VBox>
+                </HBox>
+            </f:DynamicPageHeader>
+        </f:header>
+
+        <f:content>
+            <VBox>
+                <Panel headerText="Operational Status" expandable="true" expanded="true" class="sapUiResponsiveMargin">
+                    <form:SimpleForm editable="false" layout="ResponsiveGridLayout"
+                        labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
+                        columnsXL="2" columnsL="2" columnsM="1">
+                        <form:content>
+                            <Label text="NFC Tag"/>
+                            <Text text="{rfidTag}"/>
+                            <Label text="Location"/>
+                            <Text text="{currentLocationName}"/>
+                            <Label text="Latitude"/>
+                            <Text text="{latitude}"/>
+                            <Label text="Longitude"/>
+                            <Text text="{longitude}"/>
+                            <Label text="Last Seen By"/>
+                            <Text text="{lastSeenBy}"/>
+                            <Label text="Last Seen At"/>
+                            <Text text="{lastSeenAt}"/>
+                        </form:content>
+                    </form:SimpleForm>
+                </Panel>
+
+                <Panel headerText="Commercial Data" expandable="true" expanded="true" class="sapUiResponsiveMargin">
+                    <form:SimpleForm editable="false" layout="ResponsiveGridLayout"
+                        labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
+                        columnsXL="2" columnsL="2" columnsM="1">
+                        <form:content>
+                            <Label text="Replacement Value"/>
+                            <Text text="{
+                                path: 'replacementValue',
+                                type: 'sap.ui.model.odata.type.Decimal',
+                                formatOptions: { decimals: 2 },
+                                constraints: { scale: 2 }
+                            }"/>
+                            <Label text="Criticality"/>
+                            <Text text="{criticality}"/>
+                        </form:content>
+                    </form:SimpleForm>
+                </Panel>
+
+                <Panel headerText="Fault Reports" expandable="true" expanded="true" class="sapUiResponsiveMargin">
+                    <Table id="faultsTable"
+                        items="{faults}"
+                        noDataText="No fault reports">
+                        <columns>
+                            <Column><Text text="Type"/></Column>
+                            <Column><Text text="Status"/></Column>
+                            <Column><Text text="Reported At"/></Column>
+                            <Column><Text text="Reported By"/></Column>
+                            <Column><Text text="Description"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem>
+                                <cells>
+                                    <Text text="{faultType}"/>
+                                    <ObjectStatus text="{status}" state="{= ${status} === 'OPEN' ? 'Error' : 'Success'}"/>
+                                    <Text text="{reportedAt}"/>
+                                    <Text text="{reportedBy}"/>
+                                    <Text text="{description}" wrapping="true"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+                    </Table>
+                </Panel>
+
+                <Panel headerText="Movements" expandable="true" expanded="true" class="sapUiResponsiveMargin">
+                    <Table id="movementsTable"
+                        items="{movements}"
+                        noDataText="No movements recorded">
+                        <columns>
+                            <Column><Text text="Type"/></Column>
+                            <Column><Text text="From"/></Column>
+                            <Column><Text text="To"/></Column>
+                            <Column><Text text="Date"/></Column>
+                            <Column><Text text="By"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem>
+                                <cells>
+                                    <Text text="{movementType}"/>
+                                    <Text text="{fromLocation}"/>
+                                    <Text text="{toLocation}"/>
+                                    <Text text="{createdAt}"/>
+                                    <Text text="{createdBy}"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+                    </Table>
+                </Panel>
+            </VBox>
+        </f:content>
+    </f:DynamicPage>
+</mvc:View>

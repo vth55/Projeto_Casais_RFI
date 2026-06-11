@@ -1,0 +1,92 @@
+<mvc:View
+    controllerName="casais.equipment.controller.List"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:t="sap.ui.table"
+    displayBlock="true">
+
+    <f:DynamicPage id="listPage" fitContent="true" preserveHeaderStateOnScroll="true">
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <Title text="Equipment" level="H1"/>
+                </f:heading>
+                <f:snappedContent>
+                    <Text text="{= ${/Equipments/$count} + ' items'}"/>
+                </f:snappedContent>
+                <f:actions>
+                    <Button
+                        icon="sap-icon://refresh"
+                        tooltip="Refresh"
+                        press=".onRefresh"/>
+                </f:actions>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <f:content>
+            <Table
+                id="equipmentTable"
+                items="{
+                    path: '/Equipments',
+                    parameters: {
+                        $orderby: 'equipmentCode',
+                        $count: true
+                    }
+                }"
+                growing="true"
+                growingThreshold="20"
+                selectionChange=".onSelectionChange"
+                mode="SingleSelectMaster"
+                sticky="ColumnHeaders,HeaderToolbar">
+
+                <headerToolbar>
+                    <OverflowToolbar>
+                        <Title id="tableTitle" text="Equipment" level="H2"/>
+                        <ToolbarSpacer/>
+                        <SearchField
+                            width="20rem"
+                            liveChange=".onSearch"
+                            placeholder="Search by code or name..."/>
+                    </OverflowToolbar>
+                </headerToolbar>
+
+                <columns>
+                    <Column width="8rem"><Text text="Code"/></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Equipment"/></Column>
+                    <Column width="10rem"><Text text="Status"/></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Project"/></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Location"/></Column>
+                    <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Last NFC Read"/></Column>
+                    <Column width="8rem" hAlign="Center"><Text text="Open Fault"/></Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem type="Navigation" press=".onItemPress">
+                        <cells>
+                            <ObjectIdentifier title="{equipmentCode}" text="{rfidTag}"/>
+                            <Text text="{name}"/>
+                            <ObjectStatus
+                                text="{status}"
+                                state="{= ${status} === 'AVAILABLE' ? 'Success' :
+                                         ${status} === 'IN_USE'    ? 'Information' :
+                                         ${status} === 'MAINTENANCE' ? 'Warning' : 'None' }"/>
+                            <Text text="{assignedProject}"/>
+                            <Text text="{currentLocationName}"/>
+                            <Text text="{lastSeenAt}"/>
+                            <ObjectStatus
+                                icon="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'sap-icon://alert' : 'sap-icon://accept' }"
+                                state="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'Error' : 'Success' }"
+                                text="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'Yes' : 'No' }"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+
+                <noData><IllustratedMessage
+                    illustrationType="sapIllus-EmptyList"
+                    title="No equipment found"
+                    description="Try adjusting your search criteria"/></noData>
+            </Table>
+        </f:content>
+    </f:DynamicPage>
+</mvc:View>

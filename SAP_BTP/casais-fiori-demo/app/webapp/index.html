@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CASAIS Fleet Intelligence</title>
+    <script id="sap-ui-bootstrap"
+        src="https://ui5.sap.com/1.120/resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-resourceroots='{"casais.equipment": "./"}'
+        data-sap-ui-compatVersion="edge"
+        data-sap-ui-async="true"
+        data-sap-ui-frameOptions="trusted"
+        data-sap-ui-xx-waitForTheme="true"
+        data-sap-ui-oninit="module:sap/ui/core/ComponentSupport">
+    </script>
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; }
+        .casaisShellBar { background: #005EB8 !important; }
+    </style>
+</head>
+<body class="sapUiBody" id="content">
+    <!-- ShellBar header -->
+    <div id="shellBarContainer"></div>
+
+    <div data-sap-ui-component
+         data-name="casais.equipment"
+         data-id="container"
+         data-height="calc(100vh - 44px)"
+         style="height:calc(100vh - 44px);"
+         data-settings='{"id": "equipment"}'>
+    </div>
+
+    <script>
+        sap.ui.require([
+            "sap/f/ShellBar",
+            "sap/m/Avatar",
+            "sap/ui/core/Core"
+        ], function(ShellBar, Avatar, Core) {
+            Core.ready(function() {
+                var oShellBar = new ShellBar({
+                    title: "CASAIS Fleet Intelligence",
+                    secondTitle: "SAP BTP Demo",
+                    profile: new Avatar({ initials: "CF", backgroundColor: "Accent6" })
+                });
+                oShellBar.placeAt("shellBarContainer");
+            });
+        });
+    </script>
+</body>
+</html>
