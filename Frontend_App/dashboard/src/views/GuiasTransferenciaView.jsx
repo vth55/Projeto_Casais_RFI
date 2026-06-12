@@ -82,6 +82,8 @@ export default function GuiasTransferenciaView() {
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState(null);
+  const [receivingGuideId, setReceivingGuideId] = useState(null);
+  const [receiveSuccess, setReceiveSuccess] = useState(null);
 
   const userId = currentUser?.id || currentUser?.uid || currentUser?.email || 'system';
   const firstObraId = obras.find(o => !o.hiddenFromDemo)?.id || obras[0]?.id || null;
@@ -191,17 +193,20 @@ export default function GuiasTransferenciaView() {
   }
 
   async function receiveGuide(guide) {
-    setBusy(true);
+    setReceivingGuideId(guide.id);
     setError(null);
+    setReceiveSuccess(null);
     try {
       await receiveToolTransferGuide(guide.id, {
         receivedBy: userId,
         receivedToolIds: guide.toolIds || [],
       });
+      setReceiveSuccess(`Guia recebida com sucesso (${(guide.toolIds || []).length} equipamento(s))`);
+      setTimeout(() => setReceiveSuccess(null), 5000);
     } catch (err) {
       setError(err.message || 'Erro ao receber guia');
     } finally {
-      setBusy(false);
+      setReceivingGuideId(null);
     }
   }
 
@@ -329,6 +334,13 @@ export default function GuiasTransferenciaView() {
             <h2 className="font-bold text-slate-900 dark:text-white">Guias recentes</h2>
           </div>
 
+          {receiveSuccess && (
+            <div className="mx-4 mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-sm text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              {receiveSuccess}
+            </div>
+          )}
+
           {toolTransfers.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
               <PackageCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -338,17 +350,18 @@ export default function GuiasTransferenciaView() {
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
               {toolTransfers.slice(0, 30).map(g => {
                 const meta = STATUS_META[g.status] || STATUS_META.DRAFT;
+                const isReceiving = receivingGuideId === g.id;
                 return (
-                  <div key={g.id} className="p-4 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
+                  <div key={g.id} className="p-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${meta.cls}`}>{meta.label}</span>
                         <span className="text-xs text-slate-400">{TYPE_LABEL[g.type] || g.type}</span>
                       </div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">
                         {g.from?.name || 'Origem'} → {g.to?.name || 'Destino'}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         {(g.toolIds || []).length} equipamento(s) · criada {formatDate(g.createdAt)}
                       </p>
                     </div>
@@ -356,10 +369,10 @@ export default function GuiasTransferenciaView() {
                       <button
                         type="button"
                         onClick={() => receiveGuide(g)}
-                        disabled={busy}
-                        className="shrink-0 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold disabled:opacity-50"
+                        disabled={isReceiving || receivingGuideId !== null}
+                        className="shrink-0 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold disabled:opacity-50 min-w-[90px] text-center"
                       >
-                        Receber tudo
+                        {isReceiving ? 'A receber...' : 'Receber tudo'}
                       </button>
                     )}
                   </div>

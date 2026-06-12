@@ -232,7 +232,7 @@ function AlertRow({ alert, onClick }) {
           <span className={`text-xs font-semibold ${anomaly.labelCls}`}>{anomaly.label}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${status.badge}`}>{status.label}</span>
         </div>
-        <p className="font-semibold text-slate-900 truncate">
+        <p className="font-semibold text-slate-900 leading-snug">
           {alert.brand && <span className="text-slate-500">{alert.brand} · </span>}
           {alert.displayName}
           {alert.customNumber && <span className="text-slate-500"> · {alert.customNumber}</span>}
