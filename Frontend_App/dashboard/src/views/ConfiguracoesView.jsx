@@ -303,8 +303,8 @@ const ProcoreIntegrationSection = () => {
                     : <Badge variant="default" size="sm">Desconectado</Badge>}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                <code>sandbox.procore.com</code>
-                {status?.company_id && <> · Company <code>{status.company_id}</code></>}
+                Ambiente Procore configurado
+                {status?.company_id && <> · Company {status.company_id}</>}
               </p>
               {statusError && <p className="text-xs text-red-500 mt-0.5">{statusError}</p>}
             </div>
@@ -389,7 +389,7 @@ const ProcoreIntegrationSection = () => {
       {/* ── 3. Entidades sincronizadas ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Projetos', count: procoreProjects.length, sub: 'Mirror read-only', icon: Building2, color: 'text-[#005EB8]', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'Projetos', count: procoreProjects.length, sub: 'Apenas leitura', icon: Building2, color: 'text-[#005EB8]', bg: 'bg-blue-50 dark:bg-blue-900/20' },
           { label: 'Equipamentos', count: procoreEquipment.length, sub: 'Catálogo Procore', icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: 'Diretório', count: procoreDirectory.length, sub: 'Utilizadores', icon: Users, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
         ].map(({ label, count, sub, icon: Icon, color, bg }) => (
@@ -434,7 +434,7 @@ const ProcoreIntegrationSection = () => {
                       Ativo
                     </span>
                   )}
-                  <Badge variant="default" size="sm">ID {p.id}</Badge>
+                  <Badge variant="default" size="sm">Ref. Procore: {p.id}</Badge>
                 </div>
               </div>
             ))}
@@ -901,7 +901,7 @@ const OperationalSettingsSection = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Devolução atrasada (dias)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Alerta TOOL_OVERDUE</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Limiar de alerta de atraso</p>
             </div>
           </div>
           <input
@@ -925,7 +925,7 @@ const OperationalSettingsSection = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Equipamento dado como perdido (dias)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Escalação TOOL_PRESUMED_LOST</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Limiar de escalação de perda</p>
             </div>
           </div>
           <input
@@ -1031,7 +1031,7 @@ const LegacyDbSection = ({ onClear, loading }) => {
       >
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Legacy — Equipamentos Pesados</span>
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Equipamentos Pesados (histórico)</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Procore</span>
         </div>
         <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`} />
@@ -1129,9 +1129,9 @@ const ConfiguracoesView = () => {
       const summary = result.success
         ? `Equipamentos: ${result.tools ?? 0} | Operadores: ${result.operators ?? 0} | Sessões: ${result.toolSessions ?? 0} | Obras: ${result.obras ?? 0}`
         : (result.error ?? 'Erro desconhecido');
-      setMessage({ type: result.success ? 'success' : 'error', text: `Reset equipamentos mock — ${summary}` });
+      setMessage({ type: result.success ? 'success' : 'error', text: `Dados de demonstração reprogramados — ${summary}` });
     } catch {
-      setMessage({ type: 'error', text: 'Erro ao criar dados mock de equipamentos' });
+      setMessage({ type: 'error', text: 'Erro ao repor dados de demonstração' });
     }
     setLoading(false);
     setTimeout(() => setMessage(null), 6000);
@@ -1143,7 +1143,7 @@ const ConfiguracoesView = () => {
       setTimeout(() => setMessage(null), 4000);
       return;
     }
-    if (!confirm('Eliminar dados de equipamentos (tools, tool_sessions, tool_alerts)? Esta ação não pode ser revertida.')) return;
+    if (!confirm('Eliminar todos os equipamentos, sessões, alertas e dados operacionais da demonstração? Esta ação não pode ser revertida.')) return;
     setLoading(true);
     try {
       const basePath = `artifacts/${projectId}/public/data`;
@@ -1167,7 +1167,7 @@ const ConfiguracoesView = () => {
       setTimeout(() => setMessage(null), 4000);
       return;
     }
-    if (!confirm('[LEGACY] Eliminar dados de equipamentos legacy (machines, sessions)? Esta ação não pode ser revertida.')) return;
+    if (!confirm('Eliminar dados de histórico (máquinas e sessões legacy)? Esta ação não pode ser revertida.')) return;
     setLoading(true);
     try {
       const basePath = `artifacts/${projectId}/public/data`;
@@ -1176,7 +1176,7 @@ const ConfiguracoesView = () => {
         const snapshot = await getDocs(collection(db, `${basePath}/${col}`));
         await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, `${basePath}/${col}`, d.id))));
       }
-      setMessage({ type: 'success', text: '[Legacy] Dados de equipamentos legacy eliminados' });
+      setMessage({ type: 'success', text: 'Dados de histórico eliminados' });
     } catch {
       setMessage({ type: 'error', text: 'Erro ao eliminar dados legacy' });
     }
@@ -1689,9 +1689,9 @@ const ConfiguracoesView = () => {
               {/* Equipamentos — primário */}
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">Reset equipamentos mock</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Repor dados de demonstração</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Criar/repor dados de exemplo: tools, tool_sessions, operadores, obras
+                    Criar/repor equipamentos, sessões e dados operacionais de demonstração
                   </p>
                 </div>
                 <Button size="sm" icon={RefreshCw} onClick={handleCreateMockData} loading={loading}>
@@ -1702,7 +1702,7 @@ const ConfiguracoesView = () => {
                 <div>
                   <p className="text-sm font-medium text-red-700 dark:text-red-400">Limpar dados de equipamentos</p>
                   <p className="text-xs text-red-600 dark:text-red-500">
-                    Eliminar tools, tool_sessions, tool_alerts, operadores, obras
+                    Eliminar todos os equipamentos, sessões, alertas e dados operacionais da demonstração
                   </p>
                 </div>
                 <Button variant="danger" size="sm" icon={Trash2} onClick={handleClearToolsData} loading={loading}>

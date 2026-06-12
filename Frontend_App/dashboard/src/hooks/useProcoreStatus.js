@@ -16,7 +16,10 @@ export const useProcoreStatus = () => {
       setStatus(json);
       setError(null);
     } catch (err) {
-      setError(err.message || 'Falha a obter estado Procore');
+      const isSyntaxError = err instanceof SyntaxError || err.message?.includes('JSON');
+      setError(isSyntaxError
+        ? 'Ligação Procore indisponível — verifique a ligação OAuth ou tente sincronizar novamente.'
+        : (err.message || 'Falha a obter estado Procore'));
     } finally {
       setLoading(false);
     }
