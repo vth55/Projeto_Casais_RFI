@@ -17,18 +17,39 @@ annotate EquipmentService.Equipments with @(
   UI.LineItem: [
     { Value: equipmentCode, Label: 'Code' },
     { Value: name, Label: 'Equipment' },
+    { Value: brand, Label: 'Marca' },
+    { Value: model, Label: 'Modelo' },
     { Value: status, Label: 'Status' },
-    { Value: assignedProject, Label: 'Project' },
-    { Value: currentLocationName, Label: 'Location' },
-    { Value: lastSeenAt, Label: 'Last NFC Read' },
-    { Value: hasOpenFault, Label: 'Open Fault' }
+    { Value: assignedProject, Label: 'Projeto' },
+    { Value: currentLocationName, Label: 'Localização' },
+    { Value: sapAssetNumber, Label: 'N.º Ativo SAP' }
   ],
   UI.Facets: [
+    { $Type: 'UI.ReferenceFacet', Label: 'Dados Mestre SAP', Target: '@UI.FieldGroup#MasterData' },
     { $Type: 'UI.ReferenceFacet', Label: 'Operational Status', Target: '@UI.FieldGroup#Operational' },
     { $Type: 'UI.ReferenceFacet', Label: 'Commercial Data', Target: '@UI.FieldGroup#Commercial' },
     { $Type: 'UI.ReferenceFacet', Label: 'Fault Reports', Target: 'faults/@UI.LineItem' },
     { $Type: 'UI.ReferenceFacet', Label: 'Movements', Target: 'movements/@UI.LineItem' }
   ],
+  UI.FieldGroup #MasterData: {
+    Data: [
+      { Value: sapEquipmentId, Label: 'SAP Equipment ID' },
+      { Value: sapAssetNumber, Label: 'N.º Ativo SAP' },
+      { Value: serialNumber, Label: 'N.º Série' },
+      { Value: brand, Label: 'Marca' },
+      { Value: model, Label: 'Modelo' },
+      { Value: manufacturer, Label: 'Fabricante' },
+      { Value: category, Label: 'Categoria' },
+      { Value: acquisitionValue, Label: 'Valor de Aquisição' },
+      { Value: acquisitionDate, Label: 'Data de Aquisição' },
+      { Value: costCenter, Label: 'Centro de Custo' },
+      { Value: plant, Label: 'Instalação SAP' },
+      { Value: storageLocation, Label: 'Local de Armazenagem' },
+      { Value: technicalStatus, Label: 'Estado Técnico' },
+      { Value: source, Label: 'Origem' },
+      { Value: lastSapSyncAt, Label: 'Última Sincronização SAP' }
+    ]
+  },
   UI.FieldGroup #Operational: {
     Data: [
       { Value: status, Label: 'Status' },

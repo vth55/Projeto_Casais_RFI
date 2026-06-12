@@ -54,23 +54,78 @@
 
         <f:content>
             <VBox>
+                <Panel headerText="Dados Mestre SAP" expandable="true" expanded="true" class="sapUiResponsiveMargin">
+                    <VBox class="sapUiTinyMarginBegin sapUiTinyMarginBottom">
+                        <Text text="SAP Master Data" class="sapUiTinyMarginBottom"
+                            style="font-size: 0.75rem; color: #005EB8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;"/>
+                    </VBox>
+                    <form:SimpleForm editable="false" layout="ResponsiveGridLayout"
+                        labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
+                        columnsXL="2" columnsL="2" columnsM="1">
+                        <form:content>
+                            <Label text="SAP Equipment ID"/>
+                            <Text text="{sapEquipmentId}"/>
+                            <Label text="N.º Ativo SAP"/>
+                            <Text text="{sapAssetNumber}"/>
+                            <Label text="N.º Série"/>
+                            <Text text="{serialNumber}"/>
+                            <Label text="Marca"/>
+                            <Text text="{brand}"/>
+                            <Label text="Modelo"/>
+                            <Text text="{model}"/>
+                            <Label text="Fabricante"/>
+                            <Text text="{manufacturer}"/>
+                            <Label text="Categoria"/>
+                            <Text text="{category}"/>
+                            <Label text="Valor de Aquisição (€)"/>
+                            <Text text="{
+                                path: 'acquisitionValue',
+                                type: 'sap.ui.model.odata.type.Decimal',
+                                formatOptions: { decimals: 2 },
+                                constraints: { scale: 2 }
+                            }"/>
+                            <Label text="Data de Aquisição"/>
+                            <Text text="{acquisitionDate}"/>
+                            <Label text="Centro de Custo"/>
+                            <Text text="{costCenter}"/>
+                            <Label text="Instalação SAP"/>
+                            <Text text="{plant}"/>
+                            <Label text="Local de Armazenagem"/>
+                            <Text text="{storageLocation}"/>
+                            <Label text="Estado Técnico"/>
+                            <ObjectStatus
+                                text="{technicalStatus}"
+                                state="{= ${technicalStatus} === 'OPERATIONAL' ? 'Success' :
+                                         ${technicalStatus} === 'INSPECTION_DUE' ? 'Warning' :
+                                         ${technicalStatus} === 'DEFECTIVE' ? 'Error' : 'None' }"/>
+                            <Label text="Origem"/>
+                            <Text text="{source}"/>
+                            <Label text="Última Sincronização SAP"/>
+                            <Text text="{lastSapSyncAt}"/>
+                        </form:content>
+                    </form:SimpleForm>
+                </Panel>
+
                 <Panel headerText="Operational Status" expandable="true" expanded="true" class="sapUiResponsiveMargin">
                     <form:SimpleForm editable="false" layout="ResponsiveGridLayout"
                         labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
                         columnsXL="2" columnsL="2" columnsM="1">
                         <form:content>
-                            <Label text="NFC Tag"/>
-                            <Text text="{rfidTag}"/>
-                            <Label text="Location"/>
+                            <Label text="Tag NFC"/>
+                            <ObjectStatus
+                                icon="{= ${rfidTag} ? 'sap-icon://tag' : 'sap-icon://pending' }"
+                                text="{= ${rfidTag} ? ${rfidTag} : 'Pendente de etiquetagem'}"
+                                state="{= ${rfidTag} ? 'Success' : 'None' }"/>
+                            <Label text="Localização"/>
                             <Text text="{currentLocationName}"/>
+                            <Label text="Última Leitura NFC"/>
+                            <Text text="{= ${lastSeenAt} ? ${lastSeenAt} : '—'}"/>
+                            <Label text="Lido por"/>
+                            <Text text="{= ${lastSeenBy} ? ${lastSeenBy} : '—'}"/>
                             <Label text="Latitude"/>
                             <Text text="{latitude}"/>
                             <Label text="Longitude"/>
                             <Text text="{longitude}"/>
-                            <Label text="Last Seen By"/>
-                            <Text text="{lastSeenBy}"/>
-                            <Label text="Last Seen At"/>
-                            <Text text="{lastSeenAt}"/>
                         </form:content>
                     </form:SimpleForm>
                 </Panel>

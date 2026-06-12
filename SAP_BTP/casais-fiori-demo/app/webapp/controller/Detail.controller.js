@@ -17,7 +17,7 @@ sap.ui.define([
                 path: sPath,
                 parameters: {
                     $expand: "faults,movements",
-                    $select: "ID,equipmentCode,name,rfidTag,status,assignedProject,currentLocationName,latitude,longitude,lastSeenAt,lastSeenBy,hasOpenFault,replacementValue,criticality"
+                    $select: "ID,equipmentCode,name,rfidTag,status,assignedProject,currentLocationName,latitude,longitude,lastSeenAt,lastSeenBy,hasOpenFault,replacementValue,criticality,sapEquipmentId,sapAssetNumber,serialNumber,brand,model,category,costCenter,plant,storageLocation,acquisitionValue,acquisitionDate,manufacturer,source,lastSapSyncAt,technicalStatus"
                 }
             });
         },

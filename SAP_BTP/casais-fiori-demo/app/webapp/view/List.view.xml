@@ -47,25 +47,28 @@
                         <SearchField
                             width="20rem"
                             liveChange=".onSearch"
-                            placeholder="Search by code or name..."/>
+                            placeholder="Pesquisar código, equipamento ou projeto..."/>
                     </OverflowToolbar>
                 </headerToolbar>
 
                 <columns>
                     <Column width="8rem"><Text text="Code"/></Column>
-                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Equipment"/></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Equipamento"/></Column>
+                    <Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Marca / Modelo"/></Column>
                     <Column width="10rem"><Text text="Status"/></Column>
-                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Project"/></Column>
-                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Location"/></Column>
-                    <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Last NFC Read"/></Column>
-                    <Column width="8rem" hAlign="Center"><Text text="Open Fault"/></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Projeto"/></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Localização"/></Column>
+                    <Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="N.º Ativo SAP"/></Column>
                 </columns>
 
                 <items>
                     <ColumnListItem type="Navigation" press=".onItemPress">
                         <cells>
-                            <ObjectIdentifier title="{equipmentCode}" text="{rfidTag}"/>
+                            <ObjectIdentifier
+                                title="{equipmentCode}"
+                                text="{= ${rfidTag} ? ${rfidTag} : '— sem tag NFC'}"/>
                             <Text text="{name}"/>
+                            <Text text="{= ${brand} ? (${brand} + ' ' + (${model} || '')) : '—'}"/>
                             <ObjectStatus
                                 text="{status}"
                                 state="{= ${status} === 'AVAILABLE' ? 'Success' :
@@ -73,11 +76,7 @@
                                          ${status} === 'MAINTENANCE' ? 'Warning' : 'None' }"/>
                             <Text text="{assignedProject}"/>
                             <Text text="{currentLocationName}"/>
-                            <Text text="{lastSeenAt}"/>
-                            <ObjectStatus
-                                icon="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'sap-icon://alert' : 'sap-icon://accept' }"
-                                state="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'Error' : 'Success' }"
-                                text="{= ${path:'hasOpenFault', targetType:'any'} === true ? 'Yes' : 'No' }"/>
+                            <Text text="{sapAssetNumber}"/>
                         </cells>
                     </ColumnListItem>
                 </items>
