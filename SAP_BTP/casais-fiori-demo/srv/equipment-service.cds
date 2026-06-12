@@ -53,7 +53,7 @@ annotate EquipmentService.Equipments with @(
   UI.FieldGroup #Operational: {
     Data: [
       { Value: status, Label: 'Status' },
-      { Value: rfidTag, Label: 'NFC Tag' },
+      { Value: rfidTag, Label: 'Tag NFC (gerida pela PWA)' },
       { Value: assignedProject, Label: 'Project' },
       { Value: currentLocationName, Label: 'Location' },
       { Value: latitude, Label: 'Latitude' },

@@ -5,6 +5,9 @@ using { cuid, managed } from '@sap/cds/common';
 entity Equipments : cuid, managed {
   equipmentCode       : String(40);
   name                : String(120);
+  // PWA-managed: atribuída e gerida pela PWA (Casais Fleet Intelligence).
+  // O SAP BTP armazena este campo como espelho/enriquecimento recebido da PWA.
+  // Fonte de verdade: PWA (campo nfcTagId em Firestore tools/).
   rfidTag             : String(80);
   status              : String(30);
   assignedProject     : String(120);
@@ -16,7 +19,7 @@ entity Equipments : cuid, managed {
   hasOpenFault        : Boolean default false;
   replacementValue    : Decimal(13, 2);
   criticality         : Integer default 1;
-  // SAP Master Data
+  // SAP Master Data (origem: SAP — rfidTag não está aqui, é gerido pela PWA)
   sapEquipmentId      : String(20);
   sapAssetNumber      : String(20);
   serialNumber        : String(60);

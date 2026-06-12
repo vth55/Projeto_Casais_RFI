@@ -111,10 +111,10 @@
                         labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
                         columnsXL="2" columnsL="2" columnsM="1">
                         <form:content>
-                            <Label text="Tag NFC"/>
+                            <Label text="Tag NFC (PWA)"/>
                             <ObjectStatus
                                 icon="{= ${rfidTag} ? 'sap-icon://tag' : 'sap-icon://pending' }"
-                                text="{= ${rfidTag} ? ${rfidTag} : 'Pendente de etiquetagem'}"
+                                text="{= ${rfidTag} ? ${rfidTag} : 'Pendente de etiquetagem na PWA'}"
                                 state="{= ${rfidTag} ? 'Success' : 'None' }"/>
                             <Label text="Localização"/>
                             <Text text="{currentLocationName}"/>

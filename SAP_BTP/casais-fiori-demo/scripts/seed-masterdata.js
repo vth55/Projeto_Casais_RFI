@@ -19,15 +19,23 @@ const BASE_URL = process.env.ODATA_BASE_URL
 
 // ─── Master data ───────────────────────────────────────────────────────────
 //
-// NFC split: apenas 5 equipamentos têm tag física (rfidTag preenchido).
-// Os restantes 11 são master data SAP sem tag atribuída (rfidTag: null).
+// OWNERSHIP: rfidTag é PWA-managed enrichment data mirrored to SAP BTP for demo.
+//   - Fonte de verdade da tag NFC: PWA Casais Fleet Intelligence (Firestore tools/).
+//   - O SAP BTP armazena rfidTag como espelho/enriquecimento recebido da PWA.
+//   - SAP não é o dono da tag. Atribuição e revogação são feitas na PWA.
 //
-// NFC-ready (5): MART-002, LIXA-001, LASER-004, SERRA-006, APAR-005
-// Sem tag (11):  REBARB-003, COMP-008, PERF-007, ASPI-009, BETON-010,
-//                COMP-011, GER-012, MART-013, LIXA-014, LASER-015, REBARB-016
+// NFC split (5 com tag / 11 sem tag):
+//   Com tag (simulando já etiquetados pela PWA):
+//     MART-002, LIXA-001, LASER-004, SERRA-006, APAR-005
+//   Sem tag (pendentes de etiquetagem na PWA):
+//     REBARB-003, COMP-008, PERF-007, ASPI-009, BETON-010,
+//     COMP-011, GER-012, MART-013, LIXA-014, LASER-015, REBARB-016
 //
-// Na PWA, ao importar SAP: só equipamentos com rfidTag podem usar fluxo NFC.
-// Admin pode atribuir tag depois via PWA (campo rfidTag editável).
+// Regra de merge SAP->PWA (import):
+//   1. Importar todos os 16 equipamentos SAP como registos tools/ no Firestore.
+//   2. Preservar nfcTagId/rfidTag local se ja existir na PWA (nao sobrescrever).
+//   3. Se SAP/BTP tiver rfidTag, tratar como espelho/backup -- PWA continua fonte.
+//   4. Admin pode atribuir nova tag NFC na PWA apos importacao (campo editavel).
 const MASTER_DATA = [
   // ── NFC-ready ──────────────────────────────────────────────────────────────
   {
