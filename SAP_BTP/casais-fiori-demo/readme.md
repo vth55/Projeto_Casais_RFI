@@ -61,9 +61,36 @@ Content-Type: application/json
 
 Then refresh the Fiori preview. The updated location is visible in the SAP UI.
 
+## Cloud Foundry Deploy
+
+CF CLI required at `C:\Users\vitor\cf-cli-bin\cf.exe` (not in PATH).
+
+```bash
+# 1. Login (SSO passcode from https://login.cf.us10-001.hana.ondemand.com/passcode)
+C:\Users\vitor\cf-cli-bin\cf.exe login -a https://api.cf.us10-001.hana.ondemand.com --sso
+
+# 2. Build production artifacts
+npm run build
+cp -r app/webapp gen/srv/app/webapp   # webapp not copied by cds build
+
+# 3. Deploy DB schema + seed data (run once per schema change)
+# Creates manifest-pg-deployer.yml temporarily:
+#   path: gen/pg, no-route: true, services: [casais-fiori-demo-db]
+C:\Users\vitor\cf-cli-bin\cf.exe push -f manifest-pg-deployer.yml
+
+# 4. Deploy app
+C:\Users\vitor\cf-cli-bin\cf.exe push
+
+# 5. Apply / refresh master data via OData
+node scripts/seed-masterdata.js --write
+```
+
+**Note:** `gen/` is gitignored. Always run `npm run build` + copy `app/webapp` before `cf push`.
+The pg deployer (`gen/pg`) must run before (or after) any schema change to migrate the PostgreSQL tables.
+
 ## BTP Environment
 
-Validated on 2026-06-09:
+Validated on 2026-06-12:
 
 - SAP BTP Trial global account: `b6dfb9f3trial`
 - Subaccount: `trial`
@@ -71,6 +98,8 @@ Validated on 2026-06-09:
 - Cloud Foundry org: `b6dfb9f3trial`
 - Space: `dev`
 - BAS dev space: `casaisfioridemo`
+- CF service `casais-fiori-demo-db`: PostgreSQL (`postgresql-db / trial`)
+- App route: `casais-fiori-demo-srv.cfapps.us10-001.hana.ondemand.com`
 - Required services visible in marketplace: Business Application Studio, SAP HANA Cloud, SAP HANA Schemas & HDI Containers, XSUAA, Destination, HTML5 Application Repository.
 
 ## Positioning
