@@ -220,7 +220,7 @@ export default function GuiasTransferenciaView() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Guias de Equipamentos</h1>
             <p className="text-sm text-slate-500">
-              Expedição e receção confirmadas por NFC, preparadas para SAP/Procore.
+              Planeamento e acompanhamento de transferências entre armazém e obras.
             </p>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function GuiasTransferenciaView() {
           <div>
             <h2 className="font-bold text-slate-900 dark:text-white">Nova guia</h2>
             <p className="text-xs text-slate-500 mt-1">
-              A leitura NFC confirma a unidade física exacta que saiu ou entrou.
+              Cria a guia logística no desktop; a confirmação física por NFC fica para o telemóvel/APK.
             </p>
           </div>
 
@@ -257,11 +257,23 @@ export default function GuiasTransferenciaView() {
             </label>
           </div>
 
+          <div className="hidden md:flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3">
+            <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <Nfc className="w-4 h-4 text-primary-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">NFC reservado ao fluxo de campo</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                No desktop a equipa prepara a guia. A leitura das tags acontece no telemóvel durante a expedição ou receção.
+              </p>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={scanTool}
             disabled={scanning}
-            className="w-full py-3 rounded-xl border-2 border-dashed border-primary-300 bg-primary-50 text-primary-700 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            className="md:hidden w-full py-3 rounded-xl border-2 border-dashed border-primary-300 bg-primary-50 text-primary-700 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Nfc className="w-4 h-4" />
             {scanning ? 'A aproximar tag...' : 'Ler equipamento NFC'}
@@ -272,7 +284,7 @@ export default function GuiasTransferenciaView() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Pesquisar para adicionar manualmente..."
+              placeholder="Pesquisar equipamento, código ou modelo..."
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900"
             />
           </div>
@@ -281,8 +293,8 @@ export default function GuiasTransferenciaView() {
             <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
               {filteredTools.map(t => (
                 <button key={t.id} type="button" onClick={() => addTool(t.id)} className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-700">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t.name || t.customNumber || t.id}</p>
-                  <p className="text-xs text-slate-500 truncate">{t.type || '—'} · {t.currentObraName || 'Armazém'}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">{t.name || t.customNumber || t.id}</p>
+                  <p className="text-xs text-slate-500 leading-snug">{t.type || '—'} · {t.currentObraName || 'Armazém'}</p>
                 </button>
               ))}
             </div>
@@ -292,13 +304,13 @@ export default function GuiasTransferenciaView() {
             <p className="text-xs font-semibold text-slate-500">Equipamentos na guia ({selectedTools.length})</p>
             {selectedTools.length === 0 ? (
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 text-sm text-slate-400 text-center">
-                Lê tags NFC ou adiciona por pesquisa.
+                Adiciona equipamentos por pesquisa. No telemóvel podes confirmar por NFC.
               </div>
             ) : selectedTools.map(t => (
               <div key={t.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-900">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t.name || t.customNumber || t.id}</p>
-                  <p className="text-xs text-slate-500 truncate">{t.nfcTagId || 'sem tag'} · {t.currentObraName || 'Armazém'}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">{t.name || t.customNumber || t.id}</p>
+                  <p className="text-xs text-slate-500 leading-snug">{t.nfcTagId || 'sem tag'} · {t.currentObraName || 'Armazém'}</p>
                 </div>
                 <button type="button" onClick={() => setSelectedIds(prev => prev.filter(id => id !== t.id))} className="p-1 rounded-lg hover:bg-white dark:hover:bg-slate-700">
                   <X className="w-4 h-4 text-slate-400" />
