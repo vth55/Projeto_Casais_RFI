@@ -76,6 +76,10 @@ const getAccessMenuIdForView = (viewId) => {
 };
 
 const getLandingForUser = (user, role) => {
+  if (Capacitor.isNativePlatform()) {
+    return { path: '/dashboard', view: 'dashboard' };
+  }
+
   if (role?.defaultDashboard === 'operador') {
     return { path: '/dashboard', view: 'dashboard' };
   }
@@ -149,8 +153,9 @@ export default function App() {
     }
 
     // Sincronizar URL com activeView no carregamento inicial (deep links)
+    const nativeDefaultView = Capacitor.isNativePlatform() ? 'dashboard' : 'maquinas-lista';
     const PATH_TO_VIEW = {
-      '/': 'maquinas-lista',
+      '/': nativeDefaultView,
       '/equipamentos': 'maquinas-lista',
       '/equipamentos/categorias': 'maquinas-categorias',
       '/dashboard': 'dashboard',
