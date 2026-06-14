@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Cog, Construction, Drill, Gauge, Hammer, Package, Ruler, Wrench, Zap,
 } from 'lucide-react';
@@ -8,6 +8,7 @@ const VISUALS = [
     keys: ['parafusadora', 'berbequim', 'ddf', 'drill'],
     label: 'Parafusadora',
     Icon: Drill,
+    image: commonsFile('Makita 18v electric drill.jpg'),
     bg: 'from-slate-950 via-sky-900 to-cyan-600',
     ring: 'bg-cyan-300/25',
   },
@@ -15,6 +16,7 @@ const VISUALS = [
     keys: ['martelo', 'pneumatico', 'gsh', 'te 2000'],
     label: 'Martelo',
     Icon: Hammer,
+    image: commonsFile('Bosch GBH2-26 professional Rotary Hammer Drill PICT4578.jpg'),
     bg: 'from-stone-950 via-orange-900 to-amber-500',
     ring: 'bg-amber-300/25',
   },
@@ -22,6 +24,7 @@ const VISUALS = [
     keys: ['perfurador', 'sds', 'te 70', 'te 60'],
     label: 'Perfurador',
     Icon: Drill,
+    image: commonsFile('Bosch GBH2-26 professional Rotary Hammer Drill PICT4578.jpg'),
     bg: 'from-red-950 via-rose-800 to-orange-500',
     ring: 'bg-red-300/25',
   },
@@ -29,6 +32,7 @@ const VISUALS = [
     keys: ['rebarbadora', 'gws', 'dwe4120'],
     label: 'Rebarbadora',
     Icon: Cog,
+    image: commonsFile('Makita GA9050 Angle Grinder.jpg'),
     bg: 'from-zinc-950 via-slate-700 to-zinc-500',
     ring: 'bg-zinc-200/25',
   },
@@ -36,6 +40,7 @@ const VISUALS = [
     keys: ['serra', 'circular', 'dwe575', 'dhs680'],
     label: 'Serra',
     Icon: Construction,
+    image: commonsFile('Circular saw.jpg'),
     bg: 'from-yellow-950 via-amber-800 to-yellow-500',
     ring: 'bg-yellow-200/25',
   },
@@ -43,6 +48,7 @@ const VISUALS = [
     keys: ['lixadora', 'gex'],
     label: 'Lixadora',
     Icon: Wrench,
+    image: commonsFile('Random orbit sander.jpg'),
     bg: 'from-blue-950 via-indigo-800 to-sky-500',
     ring: 'bg-blue-200/25',
   },
@@ -50,6 +56,7 @@ const VISUALS = [
     keys: ['laser', 'nivelador', 'grl', 'rugby'],
     label: 'Laser',
     Icon: Ruler,
+    image: commonsFile('Laser-Level.jpg'),
     bg: 'from-emerald-950 via-teal-800 to-lime-500',
     ring: 'bg-lime-200/25',
   },
@@ -57,6 +64,7 @@ const VISUALS = [
     keys: ['gerador', 'honda', 'eu22', 'eu70'],
     label: 'Gerador',
     Icon: Zap,
+    image: commonsFile('Generator.jpg'),
     bg: 'from-neutral-950 via-emerald-900 to-green-500',
     ring: 'bg-green-200/25',
   },
@@ -64,17 +72,39 @@ const VISUALS = [
     keys: ['compactador', 'placa', 'bomag', 'wacker'],
     label: 'Compactador',
     Icon: Gauge,
+    image: commonsFile('Plate compactor.jpg'),
     bg: 'from-stone-950 via-stone-700 to-orange-600',
     ring: 'bg-orange-200/25',
+  },
+  {
+    keys: ['compressor', 'xams', 'atlas copco'],
+    label: 'Compressor',
+    Icon: Gauge,
+    image: commonsFile('Single Stage Portable Air Compressor.jpg'),
+    bg: 'from-stone-950 via-slate-700 to-cyan-600',
+    ring: 'bg-cyan-200/25',
+  },
+  {
+    keys: ['aspirador', 'aspi', 'gas 25', 'vacuum'],
+    label: 'Aspirador',
+    Icon: Package,
+    image: commonsFile('Craftsman 16 Gallon Wet-Dry Vac.jpg'),
+    bg: 'from-slate-950 via-slate-700 to-blue-500',
+    ring: 'bg-blue-200/25',
   },
   {
     keys: ['betoneira', 'vibrador', 'betao', 'betão', 'cortadora'],
     label: 'Obra',
     Icon: Construction,
+    image: commonsFile('Concrete mixer.jpg'),
     bg: 'from-slate-950 via-cyan-900 to-blue-500',
     ring: 'bg-cyan-200/25',
   },
 ];
+
+function commonsFile(filename) {
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=900`;
+}
 
 function normalize(value) {
   return String(value || '')
@@ -100,9 +130,42 @@ function pickVisual(model) {
 }
 
 export default function EquipmentModelCover({ model, compact = false, className = '' }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const visual = pickVisual(model);
   const Icon = visual.Icon;
   const title = model?.displayName || model?.name || visual.label;
+
+  if (visual.image && !imageFailed) {
+    return (
+      <div className={`relative h-full w-full overflow-hidden bg-slate-200 ${className}`}>
+        <img
+          src={visual.image}
+          alt={title}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent" />
+        <div className={`absolute ${compact ? 'inset-0 flex items-end p-1.5' : 'inset-x-0 bottom-0 p-3'}`}>
+          <div className={compact ? 'hidden' : 'min-w-0'}>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-900 shadow-sm">
+                {model?.brand || visual.label}
+              </span>
+              {model?.modelCode && (
+                <span className="rounded-full border border-white/30 bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
+                  {model.modelCode}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 line-clamp-1 text-sm font-black leading-tight text-white drop-shadow-sm">
+              {visual.label}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-br ${visual.bg} ${className}`}>
