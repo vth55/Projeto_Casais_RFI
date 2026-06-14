@@ -42,7 +42,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // SPA: todas as navegações servem index.html do cache (React Router trata o routing)
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/validar/],
+        navigateFallbackDenylist: [/^\/api/, /^\/validar/, /^\/downloads\//],
         runtimeCaching: [
           {
             // Assets estáticos com hash - CacheFirst é seguro
