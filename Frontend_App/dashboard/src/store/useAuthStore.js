@@ -14,7 +14,7 @@ import {
   onAuthStateChanged,
   getIdTokenResult,
 } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import {
   DEFAULT_ROLES,
@@ -32,6 +32,27 @@ import {
  * Estrutura: artifacts/casais-rfid/public/data/users/{uid}
  */
 const USERS_COLLECTION = 'artifacts/casais-rfid/public/data/users';
+
+const ACCESS_TOUCH_THROTTLE_MS = 5 * 60 * 1000;
+const lastAccessTouchByUid = new Map();
+
+const touchUserLastSeen = async (uid) => {
+  if (!uid || !db) return;
+
+  const now = Date.now();
+  const lastTouch = lastAccessTouchByUid.get(uid) || 0;
+  if (now - lastTouch < ACCESS_TOUCH_THROTTLE_MS) return;
+  lastAccessTouchByUid.set(uid, now);
+
+  try {
+    await updateDoc(doc(db, USERS_COLLECTION, uid), {
+      lastSeenAt: serverTimestamp(),
+    });
+  } catch (err) {
+    // Non-fatal: access tracking must never block login.
+    console.debug('useAuthStore: lastSeenAt nao atualizado:', err?.code || err?.message);
+  }
+};
 
 /**
  * Carrega o perfil do utilizador no Firestore e devolve o systemRole.
@@ -99,6 +120,7 @@ const useAuthStore = create(
             const cached = get().currentUser;
             if (cached?.id === firebaseUser.uid) {
               set({ isAuthenticated: true, authLoading: false });
+              void touchUserLastSeen(firebaseUser.uid);
               // Background refresh of Firestore profile
               fetchUserProfile(firebaseUser.uid).then(profile => {
                 const cur = get().currentUser;
@@ -139,6 +161,7 @@ const useAuthStore = create(
                 isAuthenticated: true,
                 authLoading: false,
               });
+              void touchUserLastSeen(firebaseUser.uid);
             }
 
             // Watch users/{uid} for admin-driven changes (systemRole / assignedObraId).
@@ -220,6 +243,7 @@ const useAuthStore = create(
           },
           isAuthenticated: true,
         });
+        void touchUserLastSeen(firebaseUser.uid);
       },
 
       /**
