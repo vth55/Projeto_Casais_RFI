@@ -7,6 +7,7 @@ import {
 import { LogOut, LogIn, Package, MapPin, User, CheckCircle, AlertCircle, Loader2, Wrench } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { getCurrentPosition } from '../utils/geolocation';
+import EquipmentModelCover from '../components/EquipmentModelCover';
 
 const BASE = `artifacts/${projectId}/public/data`;
 
@@ -297,13 +298,8 @@ export default function ToolTagPage({ onExit }) {
 
         {/* Foto modelo + icon overlay */}
         <div className="w-full max-w-xs aspect-[16/10] bg-white/5 rounded-2xl overflow-hidden relative">
-          {model?.photoUrl ? (
-            <img
-              src={model.photoUrl}
-              alt={model.displayName}
-              className="w-full h-full object-cover"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+          {model ? (
+            <EquipmentModelCover model={model} />
           ) : (
             <div className="flex items-center justify-center h-full">
               <Wrench className="w-16 h-16 text-slate-600" />

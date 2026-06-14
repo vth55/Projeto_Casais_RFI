@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Package, Plus, Search, X, Edit2, Trash2, Wrench,
+  Package, Plus, Search, X, Edit2, Trash2,
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
+import EquipmentModelCover from '../components/EquipmentModelCover';
 
 export default function CatalogoModelosView() {
   const {
@@ -100,16 +101,7 @@ export default function CatalogoModelosView() {
             return (
               <div key={model.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                 <div className="aspect-[16/10] bg-slate-100 relative">
-                  {model.photoUrl ? (
-                    <img src={model.photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full"><Wrench className="w-12 h-12 text-slate-300" /></div>
-                  )}
-                  {model.brand && (
-                    <span className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 backdrop-blur text-xs font-bold text-slate-700 rounded">
-                      {model.brand}
-                    </span>
-                  )}
+                  <EquipmentModelCover model={model} />
                 </div>
                 <div className="p-4">
                   <p className="text-xs uppercase tracking-wide text-primary-700 font-semibold">{model.category || '—'}</p>

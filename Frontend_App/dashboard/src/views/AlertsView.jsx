@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import AlertDetailDrawer from '../components/AlertDetailDrawer';
+import EquipmentModelCover from '../components/EquipmentModelCover';
 
 // NOTE: classes Tailwind para anomaly icon/label têm de ser literais — o JIT do
 // Tailwind não consegue inferir classes geradas dinamicamente.
@@ -58,6 +59,7 @@ export default function AlertsView() {
         obraName: obra?.name || tool?.currentObraName || '—',
         displayName: model?.displayName || tool?.name || a.toolName || (a.transferId ? `Guia ${a.transferId.slice(-8)}` : a.toolId),
         photoUrl: model?.photoUrl || null,
+        coverModel: model || null,
         brand: model?.brand || null,
         customNumber: tool?.customNumber || null,
       };
@@ -218,8 +220,8 @@ function AlertRow({ alert, onClick }) {
     >
       {/* Foto/icon */}
       <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
-        {alert.photoUrl ? (
-          <img src={alert.photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+        {alert.coverModel ? (
+          <EquipmentModelCover model={alert.coverModel} compact />
         ) : (
           <Wrench className="w-6 h-6 text-slate-400" />
         )}

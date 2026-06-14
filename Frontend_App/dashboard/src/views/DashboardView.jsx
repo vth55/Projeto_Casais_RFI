@@ -17,6 +17,7 @@ import LiveTimer from '../components/ui/LiveTimer';
 import useDeviceType from '../hooks/useDeviceType';
 import { useProcoreStatus } from '../hooks/useProcoreStatus';
 import { authFetch } from '../utils/authFetch';
+import EquipmentModelCover from '../components/EquipmentModelCover';
 
 // Filtros de período — 3 presets + calendário personalizado
 const toIsoDate = (d) => {
@@ -1089,9 +1090,7 @@ const DashboardView = () => {
                 className="text-left flex gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary-400 hover:shadow-sm transition-all"
               >
                 <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
-                  {stat.model.photoUrl ? (
-                    <img src={stat.model.photoUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  ) : <Wrench className="w-8 h-8 text-slate-400" />}
+                  <EquipmentModelCover model={stat.model} compact />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs uppercase tracking-wide text-primary-700 dark:text-primary-400 font-semibold truncate">{stat.model.brand}</p>

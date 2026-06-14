@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
+import EquipmentModelCover from './EquipmentModelCover';
 
 const ANOMALY_LABELS = {
   TOOL_OVERDUE: 'Devolução atrasada',
@@ -116,8 +117,8 @@ export default function AlertDetailDrawer({ alertId, onClose }) {
           {/* Foto + nome */}
           <div className="p-4 border-b border-slate-100">
             <div className="aspect-[16/10] bg-slate-100 rounded-xl overflow-hidden mb-3">
-              {model?.photoUrl ? (
-                <img src={model.photoUrl} alt="" className="w-full h-full object-cover" />
+              {model ? (
+                <EquipmentModelCover model={model} />
               ) : (
                 <div className="flex items-center justify-center h-full"><Wrench className="w-12 h-12 text-slate-300" /></div>
               )}

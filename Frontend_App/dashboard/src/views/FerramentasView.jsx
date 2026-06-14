@@ -23,6 +23,7 @@ import {
 import useStore from '../store/useStore';
 import useAuthStore from '../store/useAuthStore';
 import { PERMISSIONS } from '../config/permissions';
+import EquipmentModelCover from '../components/EquipmentModelCover';
 
 const BASE = `artifacts/${projectId}/public/data`;
 const TOOLS_PATH = `${BASE}/tools`;
@@ -118,24 +119,7 @@ function ModelCard({ stat, onClick }) {
     >
       {/* Foto cover */}
       <div className="aspect-[16/10] bg-slate-100 dark:bg-slate-700 relative">
-        {model.photoUrl ? (
-          <img
-            src={model.photoUrl}
-            alt={model.displayName}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <Wrench className="w-12 h-12 text-slate-300" />
-          </div>
-        )}
-        {model.brand && (
-          <span className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 backdrop-blur text-xs font-bold text-slate-700 rounded">
-            {model.brand}
-          </span>
-        )}
+        <EquipmentModelCover model={model} />
       </div>
 
       <div className="p-4">
@@ -221,13 +205,7 @@ function UnitDetailDrawer({ unit, model, sessions, maintenance, onClose }) {
         <div className="p-4 space-y-4">
           {/* Foto modelo */}
           <div className="aspect-[16/10] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
-            {model?.photoUrl ? (
-              <img src={model.photoUrl} alt={model.displayName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Wrench className="w-12 h-12 text-slate-300" />
-              </div>
-            )}
+            <EquipmentModelCover model={model} />
           </div>
 
           {/* Identificação */}
@@ -400,13 +378,7 @@ function ModelDrilldownView({ modelId, onBack }) {
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-0">
           <div className="aspect-square md:aspect-auto bg-slate-100 dark:bg-slate-700">
-            {model.photoUrl ? (
-              <img src={model.photoUrl} alt={model.displayName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Wrench className="w-16 h-16 text-slate-300" />
-              </div>
-            )}
+            <EquipmentModelCover model={model} />
           </div>
           <div className="p-5">
             <p className="text-xs uppercase tracking-wide text-primary-700 dark:text-primary-300 font-semibold">
@@ -597,13 +569,9 @@ function FlatUnitsList({ tools, models, sessions, search, categoryFilter }) {
                 <tr key={unit.id} className="border-t border-slate-100 dark:border-slate-700">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {model?.photoUrl ? (
-                        <img src={model.photoUrl} alt="" className="w-8 h-8 rounded object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                          <Wrench className="w-4 h-4 text-slate-400" />
-                        </div>
-                      )}
+                      <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0">
+                        <EquipmentModelCover model={model} compact />
+                      </div>
                       <div>
                         <p className="font-medium text-slate-900 dark:text-white truncate max-w-[200px]">
                           {model?.displayName || unit.name}
