@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logotipo_2024_azul.svg', 'logo_casais.png'],
+      includeAssets: ['logotipo_2024_azul.svg', 'logo_casais.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       manifest: {
         name: 'CASAIS Fleet Intelligence',
         short_name: 'CASAIS Fleet',
@@ -23,13 +23,13 @@ export default defineConfig({
         categories: ['business', 'productivity', 'utilities'],
         icons: [
           {
-            src: 'logo_casais.png',
+            src: 'pwa-icon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'logo_casais.png',
+            src: 'pwa-icon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'

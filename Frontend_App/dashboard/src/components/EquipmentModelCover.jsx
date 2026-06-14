@@ -119,7 +119,7 @@ const VISUALS = [
 ];
 
 function commonsFile(filename) {
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=900`;
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=560`;
 }
 
 function normalize(value) {
@@ -159,6 +159,7 @@ export default function EquipmentModelCover({ model, compact = false, className 
           alt={title}
           className="h-full w-full object-cover"
           loading="lazy"
+          decoding="async"
           onError={() => setImageFailed(true)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent" />
