@@ -18,7 +18,7 @@ const viewTitles = {
   'obras-concluidas': { title: 'Obras Concluídas', description: 'Obras finalizadas' },
   'obras-mapa': { title: 'Mapa de Obras', description: 'Localização geográfica das obras' },
   mapa: { title: 'Onde estão', description: 'Mapa por obra baseado na última leitura NFC' },
-  guias: { title: 'Guias', description: 'Expedição e receção confirmadas por NFC' },
+  guias: { title: 'Guias', description: 'Planeamento e acompanhamento de transferências' },
   sessoes: { title: 'Sessões', description: 'Histórico de sessões' },
   'sessoes-ativas': { title: 'Sessões Ativas', description: 'Sessões em curso' },
   'sessoes-historico': { title: 'Histórico de Sessões', description: 'Todas as sessões' },
@@ -87,7 +87,7 @@ const Header = ({ onMenuClick }) => {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-2">
+      <div className="hidden md:flex items-center gap-2">
         {/* Connection status */}
         <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 border rounded-full transition-colors ${
           isOnline 
